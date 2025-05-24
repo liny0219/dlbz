@@ -60,11 +60,11 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='Traveler's Inn',
+          name="Traveler's Inn",
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
           # icon='assets/icon_exe.ico', # 如有图标可取消注释
-          console=False,
+          console=True,
           runtime_tmpdir=None)

@@ -22,13 +22,14 @@ def main():
         return
     print("[打包脚本] PyInstaller 打包完成！")
 
-    # 2. 复制配置文件
-    src = os.path.join('config', 'settings.yaml')
-    dst_dir = os.path.join('dist', 'config')
-    dst = os.path.join(dst_dir, 'settings.yaml')
-    os.makedirs(dst_dir, exist_ok=True)
-    shutil.copy(src, dst)
-    print(f"[打包脚本] 已将 {src} 复制到 {dst}")
+    # 2. 复制多个资源目录
+    src_dirs = ['config', 'assets']  # 可根据需要添加更多目录
+    for src_dir in src_dirs:
+        dst_dir = os.path.join('dist', src_dir)
+        if os.path.exists(dst_dir):
+            shutil.rmtree(dst_dir)
+        shutil.copytree(src_dir, dst_dir)
+        print(f"[打包脚本] 已将 {src_dir} 目录完整复制到 {dst_dir}")
     # TODO: 在此添加更多打包相关自动化逻辑
 
     # 检查 paddle/libs 目录

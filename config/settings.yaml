@@ -1,13 +1,2 @@
-device:
-  connection_timeout: 30
-  retry_count: 3
-  adb_address: "127.0.0.1:5555"
-
-ocr:
-  lang: "ch"
-  use_angle_cls: true
-  threshold: 0.5
-
-logging:
-  level: "INFO"
-  format: "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>" 
+# 默认指令间隔（秒）
+command_interval: 1.0 

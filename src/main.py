@@ -2,6 +2,7 @@ from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
 from core.game_controller import GameController
 from utils.logger import setup_logger
+from modes.fengmo import FengmoMode
 import time
 import traceback
 
@@ -21,29 +22,16 @@ def main():
         
         # 初始化OCR处理器
         logger.info("Initializing OCR handler...")
-        ocr_handler = OCRHandler()
+        ocr_handler = OCRHandler(device_manager)
         
         # 初始化游戏控制器
         logger.info("Initializing game controller...")
         game_controller = GameController(device_manager, ocr_handler)
         
-        # Demo操作示例
-        logger.info("Starting demo operations...")
-        
-        # 示例1：查找并点击文字
-        game_controller.find_and_click_text("歧路旅人")
-        time.sleep(2)
-        
-        # 示例3：OCR识别当前屏幕
-        screenshot = device_manager.get_screenshot()
-        if screenshot is not None:
-            screenshot.save("debug_screenshot.png")  # 保存截图到本地
-            results = ocr_handler.recognize_text(screenshot)
-            logger.info("OCR Results:")
-            for result in results:
-                logger.info(f"Text: {result['text']}, Confidence: {result['confidence']:.2f}")
-        else:
-            print("截图失败，未获取到图片")
+        # 初始化并运行逢魔玩法模块
+        logger.info("启动逢魔玩法模块 FengmoMode ...")
+        fengmo_mode = FengmoMode(device_manager, ocr_handler)
+        fengmo_mode.run()
         
     except Exception as e:
         print("\n[程序发生异常]")

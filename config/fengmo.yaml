@@ -1,0 +1,4 @@
+# 逢魔玩法配置
+rest_in_inn: true  # 是否在旅馆休息，true为休息，false为不休息 
+city: newdelsta  # 当前城市名 
+fengmo_depth: 1  # 逢魔深度

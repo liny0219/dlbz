@@ -1,12 +1,13 @@
 import sys
 import os
 from src.core.device_manager import DeviceManager
+from src.core.ocr_handler import OCRHandler
 
 # 示例参数（可根据实际需求修改）
 adb_addr = '127.0.0.1:5555'  # 模拟器/设备的ADB地址
-x1, y1, x2, y2 = 100, 200, 400, 600  # 截图区域坐标
-save_path = 'output/crop.png'  # 图片保存路径
-
+x1, y1, x2, y2 = 438, 388,451, 402  # 截图区域坐标
+save_path = 'asset/world/fengmo_entry_light.png'  # 图片保存路径
+is_append = False
 def screenshot_and_save(adb_addr, x1, y1, x2, y2, save_path):
     """
     连接设备，截图指定区域并保存
@@ -22,8 +23,10 @@ def screenshot_and_save(adb_addr, x1, y1, x2, y2, save_path):
     if img is None:
         print("[ERROR] Failed to get screenshot region.")
         return
-    dm.save_image(img, save_path)
-    print(f"[INFO] Cropped screenshot saved to {save_path}")
+    # 使用OCRHandler.save_with_region保存，自动拼接region到文件名
+    region = (x1, y1, x2, y2)
+    save_path_actual = OCRHandler.save_with_region(img, save_path, region=region,is_append=is_append)
+    print(f"[INFO] Cropped screenshot saved to {save_path_actual}")
 
 if __name__ == '__main__':
     # 直接运行脚本时的示例调用

@@ -1,33 +1,28 @@
 import uiautomator2 as u2
 from loguru import logger
-import yaml
 import time
 from PIL import Image
 import cv2
 import numpy as np
 import os
+from typing import Optional, Tuple
+from common.config import config
 
 class DeviceManager:
-    def __init__(self, adb_address=None):
-        """
-        初始化设备管理器
-        :param adb_address: 可选，优先使用此ADB地址连接设备
-        """
+    def __init__(self):
         self.device = None
-        with open("config/settings.yaml", "r", encoding="utf-8") as f:
-            self.config = yaml.safe_load(f)
-        self.adb_address = adb_address
+        self.config = config.device
+        self.adb_address = self.config.adb_address
     
-    def connect_device(self, device_id=None):
+    def connect_device(self, device_id: Optional[str] = None) -> bool:
         """
         连接设备，优先级：device_id参数 > adb_address参数 > 配置文件
         :param device_id: 可选，直接指定设备ID/地址
         :return: 是否连接成功
         """
         try:
-            retry_count = self.config["device"]["retry_count"]
-            timeout = self.config["device"]["connection_timeout"]
-            config_adb_address = self.config["device"].get("adb_address")
+            retry_count = self.config.retry_count
+            config_adb_address = self.config.adb_address
             
             for i in range(retry_count):
                 try:
@@ -55,7 +50,7 @@ class DeviceManager:
             logger.error(f"Error connecting to device: {str(e)}")
             return False
     
-    def get_screenshot(self):
+    def get_screenshot(self) -> Optional[Image.Image]:
         """
         获取当前屏幕截图，返回PIL.Image对象
         :return: PIL.Image 或 None
@@ -66,15 +61,21 @@ class DeviceManager:
                 img = self.device.screenshot(format='opencv')
                 if img is not None:
                     # OpenCV格式(BGR)转PIL(RGB)
-                    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                    pil_img = Image.fromarray(img_rgb)
-                    return pil_img
+                    if isinstance(img, np.ndarray):
+                        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                        pil_img = Image.fromarray(img_rgb)
+                        return pil_img
+                    elif isinstance(img, Image.Image):
+                        return img
+                    else:
+                        logger.error("Unknown screenshot image type")
+                        return None
             return None
         except Exception as e:
             logger.error(f"Failed to take screenshot: {str(e)}")
-            return None
+            return None 
 
-    def get_screenshot_region(self, x1, y1, x2, y2):
+    def get_screenshot_region(self, x1: int, y1: int, x2: int, y2: int) -> Optional[Image.Image]:
         """
         获取指定区域的屏幕截图，返回PIL.Image对象
         :param x1: 区域左上角x
@@ -94,7 +95,7 @@ class DeviceManager:
             logger.error(f"Failed to crop screenshot region: {str(e)}")
             return None
 
-    def save_image(self, img, save_path):
+    def save_image(self, img: Image.Image, save_path: str) -> None:
         """
         保存PIL.Image对象到指定路径
         :param img: PIL.Image对象
@@ -105,4 +106,19 @@ class DeviceManager:
             img.save(save_path)
             logger.info(f"Image saved to {save_path}")
         except Exception as e:
-            logger.error(f"Failed to save image: {str(e)}") 
+            logger.error(f"Failed to save image: {str(e)}")
+
+    def click(self, x: int, y: int) -> None:
+        """
+        点击指定坐标，并输出日志
+        :param x: 横坐标
+        :param y: 纵坐标
+        """
+        try:
+            if self.device:
+                logger.info(f"点击坐标 ({x}, {y})")
+                self.device.click(x, y)
+            else:
+                logger.error("设备未连接，无法点击")
+        except Exception as e:
+            logger.error(f"点击坐标 ({x}, {y}) 失败: {str(e)}") 

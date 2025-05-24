@@ -1,0 +1,2 @@
+level: "INFO"
+format: "{time} {level} {message}" 
