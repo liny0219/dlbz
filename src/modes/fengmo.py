@@ -1,4 +1,5 @@
 import time
+from cv2 import log
 from loguru import logger
 from common import world
 from common import app
@@ -42,7 +43,7 @@ class FengmoMode:
         # self.world.rest_in_inn()
         # self.world.go_fengmo()
         while True:
-            if self.battle.in_battle():
-                logger.info("在战斗中")
+            depth = self.world.read_fengmo_depth()
+            logger.info(f"当前逢魔深度: {depth}")
             time.sleep(1)
         

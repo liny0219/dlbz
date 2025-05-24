@@ -4,7 +4,7 @@ from loguru import logger
 import yaml
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 from typing import List, Any, Union, Optional, Tuple
 import os
 from core.device_manager import DeviceManager
@@ -157,22 +157,42 @@ class OCRHandler:
             logger.error(f"match_click_text 执行异常: {e}")
             return False
 
-    def recognize_text(self, image:Union[Image.Image, np.ndarray, str, None] = None):
+    def recognize_text(self, image:Union[Image.Image, np.ndarray, str, None] = None, region: Optional[Tuple[int, int, int, int]] = None):
         """
-        识别图片中的文字
+        识别图片中的文字，可指定识别区域。
         :param image: 支持 PIL.Image、OpenCV numpy.ndarray、图片路径
+        :param region: (x1, y1, x2, y2) 可选，指定识别区域坐标，默认全图
         :return: 识别结果列表
         """
         try:
             if image is None:
                 image = self.device_manager.get_screenshot()
+            # 区域裁剪前，若指定region，保存画红框的调试图片
+            if region is not None:
+                # 只支持PIL.Image调试保存
+                if isinstance(image, Image.Image):
+                    os.makedirs("debug", exist_ok=True)
+                    img_copy = image.copy()
+                    draw = ImageDraw.Draw(img_copy)
+                    draw.rectangle(region, outline="red", width=2)
+                    filename = f"debug/ocr_region.png"
+                    img_copy.save(filename)
+                    logger.info(f"已保存OCR裁剪区域调试图: {filename}")
+                # 裁剪
+                if isinstance(image, Image.Image):
+                    image = image.crop(region)
+                elif isinstance(image, np.ndarray):
+                    x1, y1, x2, y2 = region
+                    image = image[y1:y2, x1:x2]
+                else:
+                    logger.warning("region参数仅支持PIL.Image或np.ndarray类型图片裁剪")
             # 如果是 PIL.Image，先转成 OpenCV 格式（BGR）
             if isinstance(image, Image.Image):
                 image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
             result = self.ocr.ocr(image, cls=True)
             
-            if not result:
+            if result is None or not result:
                 logger.warning("OCR无结果")
                 return []
             
@@ -236,6 +256,7 @@ class OCRHandler:
             if template is None:
                 logger.error(f"模板图片读取失败: {template_path}")
                 return None
+            th, tw = template.shape[:2]
 
             # 3. 匹配区域裁剪
             if region is not None:
@@ -256,26 +277,25 @@ class OCRHandler:
             # 5. 模板匹配
             res = cv2.matchTemplate(img_proc, template_proc, cv2.TM_CCOEFF_NORMED)
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-            logger.info(f"模板匹配最大相关系数: {max_val:.3f}")
+            # logger.info(f"模板匹配最大相关系数: {max_val:.3f}")
 
-            # 6. debug保存图片
+            # 6. debug保存图片，画出匹配区域
             if debug:
                 os.makedirs("debug", exist_ok=True)
-                cv2.imwrite("debug/match_image_input_full.png", orig_image)
                 debug_img = orig_image.copy()
-                cv2.rectangle(debug_img, (x1, y1), (x2, y2), (0, 0, 255), 2)
-                cv2.imwrite("debug/match_image_input_with_region.png", debug_img)
-                cv2.imwrite("debug/match_image_input_crop.png", image_crop)
-                cv2.imwrite("debug/match_image_template.png", template)
-                if gray:
-                    cv2.imwrite("debug/match_image_input_gray.png", img_proc)
-                    cv2.imwrite("debug/match_image_template_gray.png", template_proc)
+                # 匹配区域左上角坐标
+                match_x = max_loc[0] + (region[0] if region else 0)
+                match_y = max_loc[1] + (region[1] if region else 0)
+                # 画矩形框
+                cv2.rectangle(debug_img, (match_x, match_y), (match_x + tw, match_y + th), (0, 0, 255), 2)
+                cv2.imwrite("debug/match_image_result.png", debug_img)
+                logger.info(f"匹配区域已保存到debug/match_image_result.png")
 
             # 7. 匹配结果坐标
             if max_val >= threshold:
-                match_x = max_loc[0] + x1
-                match_y = max_loc[1] + y1
-                logger.info(f"模板匹配成功，坐标: ({match_x}, {match_y})")
+                match_x = max_loc[0] + (region[0] if region else 0)
+                match_y = max_loc[1] + (region[1] if region else 0)
+                # logger.info(f"模板匹配成功，坐标: ({match_x}, {match_y})")
                 return (match_x, match_y)
             else:
                 logger.info("模板未匹配成功")
@@ -424,6 +444,8 @@ class OCRHandler:
             region = image.crop((x1, y1, x2, y2)).convert('RGB')
             width, height = region.size
             pixels = region.load()
+            if pixels is None:
+                return False
             for dx in range(width):
                 for dy in range(height):
                     pix = pixels[dx, dy][:3]
@@ -431,6 +453,121 @@ class OCRHandler:
                         return True
             return False
         else:
-            # 走原有16进制字符串逻辑
+            # 走原有16进制字符串逻辑，确保color为str
+            if not isinstance(color, str):
+                color = '{:02X}{:02X}{:02X}'.format(*color)
             idx, intX, intY = self.FindColor(image, x1, y1, x2, y2, color, ambiguity, dir)
-            return intX is not None and intY is not None and intX > -1 and intY > -1 
+            return intX is not None and intY is not None and intX > -1 and intY > -1
+
+    def match_image_multi(
+        self,
+        image: Union[Image.Image, np.ndarray, str, None],
+        template_path: str,
+        threshold: float = 0.95,
+        region: Optional[Tuple[int, int, int, int]] = None,
+        gray: bool = False,
+    ) -> list[tuple[int, int, float]]:
+        """
+        多模板匹配，返回所有相关系数大于等于阈值的点坐标及分数，并将所有匹配区域画框保存到debug目录。
+        :param image: 支持 PIL.Image、OpenCV numpy.ndarray、图片路径
+        :param template_path: 模板图片路径
+        :param threshold: 匹配阈值，默认0.8
+        :param region: (x1, y1, x2, y2) 匹配区域，默认全图
+        :param gray: 是否灰度匹配
+        :return: [(x, y, score), ...]，所有匹配点的左上角坐标及分数
+        """
+        import numpy as np
+        try:
+            # 1. 读取主图像，转为BGR格式
+            if image is None:
+                logger.error("Input image is None")
+                return []
+            if isinstance(image, str):
+                image = cv2.imread(get_asset_path(image))
+            elif isinstance(image, Image.Image):
+                image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+            orig_image = image.copy()
+
+            # 2. 读取模板
+            base, ext = os.path.splitext(template_path)
+            if "__" in base:
+                region_str = base.split("__")[-1]
+                region_tuple = tuple(map(int, region_str.split("_")))
+                if len(region_tuple) == 4:
+                    region = region_tuple
+                    logger.info(f"自动提取region坐标: {region}")
+            template = cv2.imread(get_asset_path(template_path))
+            if template is None:
+                logger.error(f"模板图片读取失败: {template_path}")
+                return []
+            th, tw = template.shape[:2]
+
+            # 3. 匹配区域裁剪
+            offset_x, offset_y = 0, 0
+            if region is not None:
+                x1, y1, x2, y2 = region
+                image_crop = image[y1:y2, x1:x2]
+                offset_x, offset_y = x1, y1
+            else:
+                image_crop = image
+
+            # 4. 灰度化
+            if gray:
+                img_proc = cv2.cvtColor(image_crop, cv2.COLOR_BGR2GRAY)
+                template_proc = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+            else:
+                img_proc = image_crop
+                template_proc = template
+
+            # 5. 模板匹配
+            res = cv2.matchTemplate(img_proc, template_proc, cv2.TM_CCOEFF_NORMED)
+            y_idxs, x_idxs = np.where(res >= threshold)
+            matches = []
+            debug_img = orig_image.copy()
+            for (x, y) in zip(x_idxs, y_idxs):
+                score = float(res[y, x])
+                abs_x, abs_y = x + offset_x, y + offset_y
+                matches.append((abs_x, abs_y, score))
+                # 画矩形框
+                cv2.rectangle(debug_img, (abs_x, abs_y), (abs_x + tw, abs_y + th), (0, 0, 255), 2)
+            # 保存debug图片
+            os.makedirs("debug", exist_ok=True)
+            cv2.imwrite("debug/match_image_multi_result.png", debug_img)
+            return matches
+        except Exception as e:
+            logger.error(f"match_image_multi 执行异常: {e}")
+            return [] 
+
+    @staticmethod
+    def save_debug_rect(image: Image.Image, rect: tuple, save_path: str, outline: str = "red", width: int = 2) -> None:
+        """
+        在图片指定区域画框并保存到指定路径，常用于调试截图。
+        :param image: PIL.Image对象
+        :param rect: (x1, y1, x2, y2) 矩形区域
+        :param save_path: 保存路径
+        :param outline: 框线颜色，默认红色
+        :param width: 框线宽度，默认2
+        """
+        import os
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        img_copy = image.copy()
+        draw = ImageDraw.Draw(img_copy)
+        draw.rectangle(rect, outline=outline, width=width)
+        img_copy.save(save_path) 
+
+    def match_point_color_mult(self, image: Image.Image, points: list[tuple[int, int]], color, range_: int, ambiguity: float = 0.95, dir: int = 0) -> list[tuple[int, int]]:
+        """
+        支持多点颜色匹配，返回所有匹配的点坐标。
+        :param image: PIL.Image，原始图片
+        :param points: [(x, y), ...]，待检测的点坐标列表
+        :param color: 颜色字符串（"BBGGRR"）或RGB列表/元组([B,G,R])
+        :param range_: 匹配范围
+        :param ambiguity: 相似度
+        :param dir: 查找方向
+        :return: 匹配成功的点坐标列表
+        """
+        matched_points = []
+        for x, y in points:
+            if self.match_point_color(image, x, y, color, range_, ambiguity, dir):
+                matched_points.append((x, y))
+        return matched_points 

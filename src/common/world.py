@@ -1,11 +1,15 @@
+from re import X
 import time
 from loguru import logger
 from common.app import AppManager
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
-from typing import Optional, Any, Tuple
+from typing import Optional, Any, Tuple, Union
 from PIL import Image
 from utils.singleton import singleton
+import glob
+import cv2
+import numpy as np
 
 @singleton
 class World:
@@ -101,19 +105,94 @@ class World:
             logger.info("不在旅馆门口")
             return None
         
-    def find_fengmo_point(self, image: Optional[Image.Image] = None) -> Optional[Tuple[int, int]] | None:
+    def find_fengmo_point(self, image: Optional[Image.Image] = None) -> Optional[list[tuple[int, int, float]]] | None:
         """
         判断当前是否在逢魔入口。
         """
         if image is None:
             image = self.device_manager.get_screenshot()
-        find = self.ocr_handler.match_image(image, "assets/fengmo_point.png")
+        find = self.ocr_handler.match_image_multi(image, "assets/fengmo_point.png")
         if find:
             logger.info("检测到在逢魔入口")
             return find
         else:
             logger.info("不在逢魔入口")
             return None
+    
+    def find_fengmo_point_treasure(self, image: Optional[Image.Image] = None) -> Optional[list[tuple[int, int]]]:
+        """
+        判断当前是否已发现的宝箱点。
+        支持多模板批量匹配，只要任意模板有颜色匹配点即返回。
+        :param image: 可选，外部传入截图
+        :return: 匹配的点坐标列表，若无则返回None
+        """
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否已发现的宝箱点")
+            return None
+
+        # 自动发现所有相关模板文件
+        template_files = sorted(glob.glob("assets/fengmo_point_treasure_*.png"))
+
+        # 只做一次RGB转换和像素访问对象
+        rgb_img = image.convert('RGB')
+        pixels = rgb_img.load()
+        if pixels is None:
+            logger.warning("像素访问对象为None，图片可能无效")
+            return None
+        width, height = rgb_img.size
+
+        def color_sim(c1, c2):
+            dist = sum((c1[i] - c2[i]) ** 2 for i in range(3)) ** 0.5
+            return 1 - dist / (3 * 255)
+
+        target_color = (220, 220, 220)
+        tolerance = 10  # 匹配范围
+
+        for template_path in template_files:
+            candidates = self.ocr_handler.match_image_multi(image, template_path, threshold=0.75)
+            if not candidates:
+                continue
+            points = [(x, y) for x, y, _ in candidates]
+            matched_points = []
+            for x, y in points:
+                found = False
+                # 只在(x, y)为中心，tolerance为半径的正方形区域内查找
+                for dx in range(-tolerance, tolerance + 1):
+                    for dy in range(-tolerance, tolerance + 1):
+                        nx, ny = x + dx, y + dy
+                        if 0 <= nx < width and 0 <= ny < height:
+                            pix = pixels[nx, ny]
+                            if color_sim(pix, target_color) >= 0.95:
+                                matched_points.append((x, y))
+                                found = True
+                                break
+                    if found:
+                        break
+            if matched_points:
+                # logger.info(f"模板 {template_path} 检测到已发现的宝箱点: {matched_points}")
+                # for x, y in matched_points:
+                #     filename = f"debug/treasure.png"
+                #     rect = (x, y, x + 20, y + 20)
+                #     self.ocr_handler.save_debug_rect(image, rect, filename, outline="red", width=2)
+                #     break
+                return matched_points
+
+        logger.info("所有模板均未检测到已发现的宝箱点")
+        return None
+    
+    def read_fengmo_depth(self):
+        text_list = self.ocr_handler.recognize_text(region=(580, 320, 700, 400) )
+        if len(text_list) == 0:
+            return
+        # 可以转为数字的直接返回
+        for text in text_list:
+            try:
+                return int(text['text'])
+            except:
+                pass
+        return None
 
     def open_minimap(self):
         """
