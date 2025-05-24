@@ -8,7 +8,7 @@ from PIL import Image
 from utils.singleton import singleton
 
 @singleton
-class WorldMode:
+class World:
     """
     世界地图玩法模块
     负责实现世界地图相关的自动化逻辑
@@ -25,8 +25,9 @@ class WorldMode:
     def in_world(self, image: Optional[Image.Image] = None) -> bool:
         """
         判断当前是否在城镇主界面且人物停止移动。
-        通过检测左下角菜单的两个点颜色判断。
+        通过检测左下角菜单的多个点颜色判断。
         :param image: 可选，外部传入截图
+        :param points_colors: 可选，[(x, y, color, range)] 数组，默认用原有2点
         :return: bool，是否在世界中
         """
         if image is None:
@@ -34,10 +35,12 @@ class WorldMode:
         if image is None:
             logger.warning("无法获取截图，无法判断是否在世界中")
             return False
-        # 检查左下角菜单的两个点颜色
-        cond1 = self.ocr_handler.match_point_color(image, 73,632, "E8EBF0", 1)
-        cond2 = self.ocr_handler.match_point_color(image, 68,575, "F6F5F6", 1)
-        if cond1 and cond2:
+        points_colors = [
+            (73, 632, "E8EBF0", 1),
+            (68, 575, "F6F5F6", 1),
+        ]
+        results = [self.ocr_handler.match_point_color(image, x, y, color, rng) for x, y, color, rng in points_colors]
+        if all(results):
             logger.info("检测到在世界中")
             return True
         else:
@@ -47,8 +50,9 @@ class WorldMode:
     def in_minimap(self, image: Optional[Image.Image] = None) -> bool:
         """
         判断当前是否在小地图中。
-        通过检测地图界面两个关键点的颜色判断。
+        通过检测地图界面多个关键点的颜色判断。
         :param image: 可选，外部传入截图
+        :param points_colors: 可选，[(x, y, color, range)] 数组，默认用原有3点
         :return: bool，是否在地图中
         """
         if image is None:
@@ -56,10 +60,13 @@ class WorldMode:
         if image is None:
             logger.warning("无法获取截图，无法判断是否在地图中")
             return False
-        cond1 = self.ocr_handler.match_point_color(image, 33,638,[255, 254, 255], 1)
-        cond2 = self.ocr_handler.match_point_color(image, 64,649,[255, 254, 255], 1)
-        cond3 = self.ocr_handler.match_point_color(image, 452,676,[251, 249, 254], 1)
-        if cond1 and cond2 and cond3:
+        points_colors = [
+            (33, 638, [255, 254, 255], 1),
+            (64, 649, [255, 254, 255], 1),
+            (452, 676, [251, 249, 254], 1),
+        ]
+        results = [self.ocr_handler.match_point_color(image, x, y, color, rng) for x, y, color, rng in points_colors]
+        if all(results):
             logger.info("检测到在小地图中")
             return True
         else:
@@ -184,7 +191,6 @@ class WorldMode:
             return
         logger.info("点击旅馆门口")
         self.device_manager.click(*door_pos)
-        
 
     def go_fengmo(self):
         """

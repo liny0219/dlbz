@@ -3,11 +3,11 @@ from loguru import logger
 from common import world
 from common import app
 from common.app import AppManager
-from common.world import WorldMode
+from common.battle import Battle
+from common.world import World
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
 from common.config import config
-import yaml
 
 
 class FengmoMode:
@@ -24,7 +24,8 @@ class FengmoMode:
         self.device_manager = device_manager
         self.ocr_handler = ocr_handler
         self.app_manager = AppManager(device_manager)
-        self.world_mode = WorldMode(device_manager, ocr_handler, self.app_manager)
+        self.battle = Battle(device_manager, ocr_handler, self.app_manager)
+        self.world = World(device_manager, ocr_handler, self.app_manager)
         # 统一通过config访问所有配置
         self.fengmo_config = config.fengmo
         city_name = self.fengmo_config.get("city", "newdelsta")
@@ -36,7 +37,12 @@ class FengmoMode:
         self.city_config = cities[city_name]
 
     def run(self) -> None:
-        self.app_manager.check_app_alive()
-        time.sleep(2)
-        # self.world_mode.rest_in_inn()
-        self.world_mode.go_fengmo()
+        # self.app_manager.check_app_alive()
+        # time.sleep(2)
+        # self.world.rest_in_inn()
+        # self.world.go_fengmo()
+        while True:
+            if self.battle.in_battle():
+                logger.info("在战斗中")
+            time.sleep(1)
+        
