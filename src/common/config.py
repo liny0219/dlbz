@@ -35,14 +35,18 @@ class FengmoConfig(BaseModel):
 
 class CityConfig(TypedDict):
     inn_pos: List[int]
+    reset_pos: List[int]
     entrance_pos: List[int]
+    backup_points: List[List[int]]
     check_points: List[List[int]]
 
 class FengmoCityConfig(BaseModel):
     cities: Dict[str, CityConfig] = {
         "newdelsta": {
             "inn_pos": [645, 573],
+            "reset_pos": [548,343],
             "entrance_pos": [337, 596],
+            "backup_points": [],
             "check_points": [
                 [533,617,0],
                 [420,615,1],

@@ -1,7 +1,9 @@
 cities:
   newdelsta:
-    inn_pos: [645, 573]
-    entrance_pos: [337, 596]
+    inn_pos: [645, 573] # 旅馆点
+    entrance_pos: [337, 596] # 入口点
+    reset_pos: [548,343] # 重置点,当被遮挡时,遇到无法匹配到图标的时候,点击重置点
+    backup_points: []
     check_points: [
       [533,617,0],
       [420,615,1],
