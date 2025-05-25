@@ -154,6 +154,8 @@ class FengmoMode:
                         if len(check_point) > 2 and check_point[2] == 1:
                             next_point = True
                             break
+                        if len(check_point) > 3 and check_point[3] == 0:
+                            reset_map = False
                         if reset_map:
                             break
                     except Exception as e:
@@ -379,12 +381,14 @@ class FengmoMode:
         in_fengmo = sleep_until(self.world.in_world)
         if in_fengmo is None:
             raise Exception("[wait_found_point_treasure]等待逢魔地图失败")
-        point_pos = sleep_until(self.world.find_fengmo_point_treasure,timeout=self.find_treasure_wait_time,interval=0.1)
+        point_pos = sleep_until(lambda:self.world.find_fengmo_point_treasure(threshold=0.8,debug=True),
+                                timeout=self.find_treasure_wait_time,interval=0.1)
         if point_pos is not None:
             self.device_manager.click(*point_pos)
         else:
             logger.info("[wait_found_point_treasure]等待宝箱点失败")
             for point in self.backup_points:
+                logger.info(f"[wait_found_point_treasure]点击备份点: {point}")
                 self.device_manager.click(point[0],point[1])
         return self.wait_found_item()
         

@@ -140,7 +140,7 @@ class World:
             logger.info("没有逢魔点")
             return None
         
-    def find_fengmo_point_treasure(self, image: Optional[Image.Image] = None) -> Optional[tuple[int, int]]:
+    def find_fengmo_point_treasure(self, image: Optional[Image.Image] = None,threshold:float = 0.85,debug:bool = False) -> Optional[tuple[int, int]]:
         """
         判断当前是否已发现的宝箱点。
         支持多模板批量匹配，只要任意模板有颜色匹配点即返回。
@@ -172,11 +172,12 @@ class World:
         tolerance = 10  # 匹配范围
 
         for template_path in template_files:
-            candidates = self.ocr_handler.match_image_multi(image, template_path, threshold=0.75)
+            candidates = self.ocr_handler.match_image_multi(image, template_path, threshold=threshold)
             if not candidates:
                 continue
             points = [(x, y) for x, y, _ in candidates]
             matched_points:tuple[int,int]|None = None
+            list_matched_points = []
             for x, y in points:
                 found = False
                 # 只在(x, y)为中心，tolerance为半径的正方形区域内查找
@@ -187,17 +188,19 @@ class World:
                             pix = pixels[nx, ny]
                             if color_sim(pix, target_color) >= 0.95:
                                 matched_points = (int(x), int(y))
+                                list_matched_points.append(matched_points)
                                 found = True
                                 break
                     if found:
                         break
             if matched_points and len(matched_points) > 0:
-                # logger.info(f"模板 {template_path} 检测到已发现的宝箱点: {matched_points}")
-                # for x, y in matched_points:
-                #     filename = f"debug/treasure.png"
-                #     rect = (x, y, x + 20, y + 20)
-                #     self.ocr_handler.save_debug_rect(image, rect, filename, outline="red", width=2)
-                #     break
+                logger.info(f"模板 {template_path} 检测到已发现的宝箱点: {list_matched_points}")
+                if debug:
+                    for x, y in list_matched_points:
+                        filename = f"debug/treasure.png"
+                        rect = (x, y, x + 20, y + 20)
+                    self.ocr_handler.save_debug_rect(image, rect, filename, outline="red", width=2)
+                    break
                 return matched_points
 
         logger.info("所有模板均未检测到已发现的宝箱点")
