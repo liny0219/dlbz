@@ -163,9 +163,11 @@ class Battle:
         done_auto = False
         while True: 
             if self.ocr_handler.match_click_text(["委托战斗开始"],region=(30,580,1240,700)):
+                logger.info("点击委托战斗开始")
                 return True
             if not done_auto and self.ocr_handler.match_click_text(["委托"],region=(30,580,1240,700)):
                 done_auto = True
+                logger.info("点击委托")
                 continue
             time.sleep(interval)
             times += 1

@@ -110,30 +110,19 @@ class World:
         if image is None:
             image = self.device_manager.get_screenshot()
         find = self.ocr_handler.match_image(image, "assets/fengmo_point.png", debug=True)
+        forbidden_range = (936,36,1208,195)
+        # 如果find在禁止范围内,则返回None
         if find:
-            logger.info("检测到逢魔点")
-            return find
+            if forbidden_range[0] <= find[0] <= forbidden_range[2] and forbidden_range[1] <= find[1] <= forbidden_range[3]:
+                logger.info("检测到逢魔点,但在禁止范围内")
+                return None
+            else:
+                logger.info("检测到逢魔点")
+                return find
         else:
             logger.info("没有逢魔点")
             return None
         
-    def find_fengmo_point_multi(self, image: Optional[Image.Image] = None) -> Optional[list[tuple[int, int]]]:
-        """
-        判断当前是否有多个逢魔点(逢魔入口也是这个,判断感叹号)。
-        """
-        if image is None:
-            image = self.device_manager.get_screenshot()
-        find = self.ocr_handler.match_image_multi(image, "assets/fengmo_point.png")
-        find_result = []
-        for x, y, score in find:
-            find_result.append((int(x), int(y)))
-        if find_result:
-            logger.info("检测到多个逢魔点")
-            return find_result
-        else:
-            logger.info("没有逢魔点")
-            return None
-    
     def find_fengmo_point_treasure(self, image: Optional[Image.Image] = None) -> Optional[tuple[int, int]]:
         """
         判断当前是否已发现的宝箱点。
