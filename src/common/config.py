@@ -1,3 +1,4 @@
+from calendar import c
 import os
 import sys
 import yaml
@@ -26,6 +27,11 @@ class LoggingConfig(BaseModel):
     level: str = "INFO"
     format: str = "{time} {level} {message}"
 
+class FengmoConfig(BaseModel):
+    depth: int = 1
+    rest_in_inn: bool = True
+    city: str = "newdelsta"
+
 class Config:
     def __init__(self, config_dir=None):
         if config_dir is None:
@@ -36,7 +42,7 @@ class Config:
         self.logging = LoggingConfig(**self._load_yaml_with_log(os.path.join(config_dir, "logging.yaml"), name="logging.yaml", fallback=os.path.join(config_dir, "settings.yaml"), key="logging"))
         self.command_interval = self._load_yaml_with_log(os.path.join(config_dir, "settings.yaml"), name="settings.yaml").get("command_interval", 1.0)
         # 兼容fengmo等其他配置
-        self.fengmo = self._load_yaml_with_log(os.path.join(config_dir, "fengmo.yaml"), name="fengmo.yaml")
+        self.fengmo = FengmoConfig(**self._load_yaml_with_log(os.path.join(config_dir, "fengmo.yaml"), name="fengmo.yaml"))
         self.fengmo_cities = self._load_yaml_with_log(os.path.join(config_dir, "fengmo_cities.yaml"), name="fengmo_cities.yaml")
 
     def _load_yaml_with_log(self, path, name=None, fallback=None, key=None):

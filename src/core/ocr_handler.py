@@ -19,6 +19,7 @@ class OCRHandler:
             lang=config.ocr.lang,
             show_log=False
         )
+        self.ocr_digit = PaddleOCR(rec_char_type='digit',use_angle_cls=config.ocr.use_angle_cls,lang='en')
         self.threshold = config.ocr.threshold
         self.device_manager = device_manager
         logger.info("OCR handler initialized")
@@ -124,6 +125,8 @@ class OCRHandler:
 
             detected_texts = []
             for line in result:
+                if line is None:
+                    continue
                 for item in line:
                     text = item[1][0]
                     confidence = item[1][1]
@@ -157,11 +160,13 @@ class OCRHandler:
             logger.error(f"match_click_text 执行异常: {e}")
             return False
 
-    def recognize_text(self, image:Union[Image.Image, np.ndarray, str, None] = None, region: Optional[Tuple[int, int, int, int]] = None):
+    def recognize_text(self, image:Union[Image.Image, np.ndarray, str, None] = None, region: Optional[Tuple[int, int, int, int]] = None, rec_char_type: str = 'all', scale: int = 2):
         """
         识别图片中的文字，可指定识别区域。
         :param image: 支持 PIL.Image、OpenCV numpy.ndarray、图片路径
         :param region: (x1, y1, x2, y2) 可选，指定识别区域坐标，默认全图
+        :param rec_char_type: 'all' 或 'digit'
+        :param scale: region有值时放大倍数，默认2
         :return: 识别结果列表
         """
         try:
@@ -181,23 +186,34 @@ class OCRHandler:
                 # 裁剪
                 if isinstance(image, Image.Image):
                     image = image.crop(region)
+                    # 放大
+                    if scale > 1:
+                        w, h = image.size
+                        image = image.resize((w * scale, h * scale), Image.LANCZOS)
                 elif isinstance(image, np.ndarray):
                     x1, y1, x2, y2 = region
                     image = image[y1:y2, x1:x2]
+                    # 放大
+                    if scale > 1:
+                        image = cv2.resize(image, ((x2-x1)*scale, (y2-y1)*scale), interpolation=cv2.INTER_LANCZOS4)
                 else:
                     logger.warning("region参数仅支持PIL.Image或np.ndarray类型图片裁剪")
             # 如果是 PIL.Image，先转成 OpenCV 格式（BGR）
             if isinstance(image, Image.Image):
                 image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-
-            result = self.ocr.ocr(image, cls=True)
+            if rec_char_type == 'digit':
+                result = self.ocr_digit.ocr(image, cls=True)
+            else:
+                result = self.ocr.ocr(image, cls=True)
             
             if result is None or not result:
                 logger.warning("OCR无结果")
                 return []
             
             processed_results = []
-            for line in result:
+            for line in result:          
+                if line is None:
+                    continue
                 for item in line:
                     confidence = item[1][1]
                     if confidence >= self.threshold:

@@ -183,7 +183,7 @@ class World:
         return None
     
     def read_fengmo_depth(self):
-        text_list = self.ocr_handler.recognize_text(region=(580, 320, 700, 400) )
+        text_list = self.ocr_handler.recognize_text(region=(615, 343, 663,380), rec_char_type='digit',scale=5)
         if len(text_list) == 0:
             return
         # 可以转为数字的直接返回
@@ -193,6 +193,14 @@ class World:
             except:
                 pass
         return None
+    
+    def do_fengmo_depth(self,op:str):
+        if op == "add":
+            self.device_manager.click(724,360)
+        elif op == "sub":
+            self.device_manager.click(555,360)
+        else:
+            raise ValueError(f"无效的操作: {op}")
 
     def open_minimap(self):
         """
@@ -271,7 +279,7 @@ class World:
         logger.info("点击旅馆门口")
         self.device_manager.click(*door_pos)
 
-    def go_fengmo(self):
+    def go_fengmo(self,depth:int):
         """
         前往逢魔
         """
@@ -292,12 +300,31 @@ class World:
             return
         self.click_tirm(2)
         # 再次确认寻找逢魔入口
-        fengmo_pos = self.app_manager.sleep_until(self.find_fengmo_point)
-        if not fengmo_pos:
+        pos_list = self.app_manager.sleep_until(self.find_fengmo_point)
+        if pos_list is None or len(pos_list) == 0:
             return
-        # 点击逢魔入口
-        self.device_manager.click(*fengmo_pos)
-        # 选择深度
-        self.app_manager.sleep_until(lambda: self.ocr_handler.match_texts(["选择深度"]))
+        # 点击逢魔入口 pos_list type is list[tuple[int, int, float
+        fengmo_pos = pos_list[0]
+        self.device_manager.click(int(fengmo_pos[0]), int(fengmo_pos[1]))
+        self.select_fengmo_mode(depth)
         # 涉入
         self.app_manager.sleep_until(lambda: self.ocr_handler.match_click_text(["涉入"],region=(760,465,835,499)))
+
+    def select_fengmo_mode(self,depth:int):
+        """
+        选择逢魔模式
+        """
+        self.app_manager.sleep_until(lambda: self.ocr_handler.match_texts(["选择深度"]))
+        current_depth = self.read_fengmo_depth()
+        while current_depth != depth:
+            time.sleep(0.1)
+            current_depth = self.read_fengmo_depth()
+            if current_depth==depth:
+                break
+            if current_depth is None:
+                continue
+            if current_depth < depth:
+                self.do_fengmo_depth("add")
+            else:
+                self.do_fengmo_depth("sub")
+    

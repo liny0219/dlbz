@@ -9,6 +9,7 @@ from common.world import World
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
 from common.config import config
+from PIL import Image
 
 
 class FengmoMode:
@@ -29,21 +30,19 @@ class FengmoMode:
         self.world = World(device_manager, ocr_handler, self.app_manager)
         # 统一通过config访问所有配置
         self.fengmo_config = config.fengmo
-        city_name = self.fengmo_config.get("city", "newdelsta")
-        cities = config.fengmo_cities.get("cities", {})
-        if not isinstance(cities, dict):
-            raise ValueError("配置文件格式错误，cities不是dict")
-        if city_name not in cities:
-            raise ValueError(f"未找到城市配置: {city_name}")
-        self.city_config = cities[city_name]
+        self.city_name = self.fengmo_config.city
+        self.cities = config.fengmo_cities.get("cities", {})
+        if self.city_name not in self.cities:
+            raise ValueError(f"未找到城市配置: {self.city_name}")
+        self.city_config = self.cities[self.city_name]
+        self.depth = self.fengmo_config.depth
+        self.rest_in_inn = self.fengmo_config.rest_in_inn
 
+        
     def run(self) -> None:
-        # self.app_manager.check_app_alive()
-        # time.sleep(2)
-        # self.world.rest_in_inn()
-        # self.world.go_fengmo()
         while True:
-            depth = self.world.read_fengmo_depth()
-            logger.info(f"当前逢魔深度: {depth}")
+            self.app_manager.check_app_alive()
+            self.world.rest_in_inn()
+            self.world.go_fengmo(self.depth)
             time.sleep(1)
         
