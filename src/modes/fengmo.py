@@ -57,91 +57,130 @@ class FengmoMode:
         self.entrance_pos = self.city_config.get("entrance_pos", [])
         self.check_points = self.city_config.get("check_points", [])
         self.find_point_wait_time = 3
-        self.find_treasure_wait_time = 3
+        self.find_treasure_wait_time = 8
         self.find_minimap_wait_time = 3
 
     def run(self) -> None:
-        step:Step = Step.FIGHT_BOSS
         while True:
             self.app_manager.check_app_alive()
             if self.rest_in_inn:
                 self.world.rest_in_inn(self.inn_pos)
             self.world.go_fengmo(self.depth,self.entrance_pos)
-
+            step:Step = Step.COLLECT_JUNK
+            done_treasure = False
+            done_monster = False
+            done_cure = False
             if step == Step.COLLECT_JUNK:
-                step = self.do_collect_junk(step)
+                step,done_treasure,done_monster,done_cure = self.do_collect_junk()
             if step == Step.FIND_BOX:
-                step = self.do_find_box(step)
+                step = self.do_find_box(done_treasure,done_monster,done_cure)
             if step == Step.FIGHT_BOSS:
                 self.do_fight_boss()
 
-    def do_collect_junk(self,step:Step):
+    def do_collect_junk(self):
         """
         一阶段捡垃圾
         """
+        step = Step.COLLECT_JUNK
+        done_treasure = False
+        done_monster = False
+        done_cure = False
         for check_point in self.check_points:
             while True:
-                in_fengmo_map = sleep_until(self.world.in_world)
-                if in_fengmo_map is None:
-                    raise Exception("[do_collect_junk]等待逢魔地图失败")
-                self.world.open_minimap()
+                result = sleep_until(
+                    lambda: ("in_world") if self.world.in_world() else ("found_boss") if self.check_found_boss() else None
+                )
+                if result is None:
+                    raise Exception("[do_find_box]等待逢魔地图或Boss失败")
+                if result == "found_boss":
+                    step = Step.FIGHT_BOSS
+                    return step,done_treasure,done_monster,done_cure
+                if result == "in_world":
+                    self.world.open_minimap()
                 in_mini_map = sleep_until(self.world.in_minimap)
                 if in_mini_map is None:
                     raise Exception("[do_collect_junk]等待小地图失败")
-                self.device_manager.click(*check_point)
+                self.device_manager.click(check_point[0],check_point[1])
                 in_fengmo_map = sleep_until(self.world.in_world)
                 if in_fengmo_map is None:
                     raise Exception("[do_collect_junk]等待逢魔地图失败")
-                point_pos = sleep_until(self.world.find_fengmo_point, self.find_point_wait_time)
-                if point_pos is None:
-                    # 没有找到点，进入下个check_point
-                    break
-                self.device_manager.click(*point_pos)
-                try:
-                    result = self.wait_found_result()
-                    if result:
-                        step = result
+                next_point = False
+                # 多个逢魔点连续点击
+                while True:
+                    # 判断是否存在多个逢魔点
+                    point_pos = sleep_until(self.world.find_fengmo_point, self.find_point_wait_time)
+                    if not point_pos:
+                        # 没有找到点，进入下个check_point
+                        next_point = True
                         break
-                except Exception as e:
-                    raise Exception(f"[do_collect_junk]等待结果失败: {e}")
-        return step
+                    self.device_manager.click(*point_pos)
+                    try:
+                        result,state = self.wait_found_result()
+                        if state == "done_monster":
+                            done_monster = True
+                        if state == "done_cure":
+                            done_cure = True
+                        if result != Step.COLLECT_JUNK:
+                            step = result
+                            break
+                        # 如果check_point[2]为1，则不连续找点,进入下个check_point,避免跟入口点混淆以及一些特殊点无法点击
+                        if check_point[2] == 1:
+                            next_point = True
+                            break 
+                    except Exception as e:
+                        raise Exception(f"[do_collect_junk]等待结果失败: {e}")
+                if step != Step.COLLECT_JUNK:
+                    return step,done_treasure,done_monster,done_cure
+                if next_point:
+                    break
+        return Step.COLLECT_JUNK,done_treasure,done_monster,done_cure
 
-    def do_find_box(self,step:Step):
+    def do_find_box(self,done_treasure:bool,done_monster:bool,done_cure:bool):
+        step = Step.FIND_BOX
         """
         二阶段找宝箱
         """
         while True:
-            in_fengmo_map = sleep_until(self.world.in_world)
-            if in_fengmo_map is None:
-                raise Exception("[do_find_box]等待逢魔地图失败")
-            self.world.open_minimap()
+            result = sleep_until(
+                lambda: ("in_world") if self.world.in_world() else ("found_boss") if self.check_found_boss() else None
+            )
+            if result is None:
+                raise Exception("[do_find_box]等待逢魔地图或Boss失败")
+            if result == "found_boss":
+                step = Step.FIGHT_BOSS
+                return step
+            if result == "in_world":
+                self.world.open_minimap()
             in_mini_map = sleep_until(self.world.in_minimap)
             if in_mini_map is None:
                 raise Exception("[do_find_box]等待小地图失败")
             # 找宝箱
-            find_map_treasure = sleep_until(self.world.find_map_treasure, self.find_minimap_wait_time)
-            if find_map_treasure:
-                self.device_manager.click(*find_map_treasure)
-                self.wait_found_point_treasure()
-                continue
+            if not done_treasure:
+                find_map_treasure = sleep_until(self.world.find_map_treasure, self.find_minimap_wait_time)
+                if find_map_treasure:
+                    self.device_manager.click(*find_map_treasure)
+                    self.wait_found_point_treasure()
+                    continue
             # 找怪物
-            find_map_monster = sleep_until(self.world.find_map_monster, self.find_minimap_wait_time)
-            if find_map_monster:
-                self.device_manager.click(*find_map_monster)
-                self.wait_found_point_monster()
-                self.do_battle()
-                continue
+            if not done_monster:
+                find_map_monster = sleep_until(self.world.find_map_monster, self.find_minimap_wait_time)
+                if find_map_monster:
+                    done_treasure = True
+                    self.device_manager.click(*find_map_monster)
+                    self.wait_found_point_monster()
+                    self.do_battle()
+                    done_monster = True
+                    continue
             # 找治疗点
-            find_map_cure = sleep_until(self.world.find_map_cure, self.find_minimap_wait_time)
-            if find_map_cure:
-                self.device_manager.click(*find_map_cure)
-                self.wait_found_cure()
-                continue
-            if self.check_found_boss():
-                step = Step.FIGHT_BOSS
-                break
-            # 所有遍历完成,退出
-        return step
+            if not done_cure:
+                find_map_cure = sleep_until(self.world.find_map_cure, self.find_minimap_wait_time)
+                if find_map_cure:
+                    done_treasure = True
+                    done_monster = True
+                    self.device_manager.click(*find_map_cure)
+                    self.wait_found_cure()
+                    done_cure = True
+                    continue
     
     def do_fight_boss(self):
         """
@@ -175,17 +214,16 @@ class FengmoMode:
         is_auto_battle = False
         while True:
             time.sleep(1)
-            if self.ocr_handler.match_click_text(["确定"],region=(516,571,769,644)):
-                break
             if self.battle.in_battle():
                 if is_auto_battle:
                     continue
+                if self.battle.auto_battle():
+                    is_auto_battle = True
                 else:
-                    if self.battle.auto_battle():
-                        is_auto_battle = True
-                    else:
-                        raise Exception("[wait_found_point_boss]自动战斗失败")
-            else:
+                    raise Exception("[wait_found_point_boss]自动战斗失败")
+            if self.ocr_handler.match_texts(["战斗结算"]):
+                self.world.click_tirm()
+            if self.ocr_handler.match_click_text(["确定"],region=(516,571,769,644)):
                 break
 
     def wait_found_point_boss(self):
@@ -203,7 +241,19 @@ class FengmoMode:
         confirm_pos = sleep_until(lambda:self.ocr_handler.match_click_text(["是"],region=(257,168,1023,552)))
         if confirm_pos is None:
             raise Exception("[wait_found_point_boss]等待确认点失败")
-
+        
+        # 检查是否出现Boss
+  
+    def check_found_boss(self):
+        """
+        检查是否出现Boss
+        """
+        region = (292,175,983,540)
+        if self.ocr_handler.match_texts(["逢魔之主"],region=region):
+            self.ocr_handler.match_click_text(["确定"],region=region)
+            return True
+        else:
+            return False
 
     def wait_found_point_monster(self):
         """
@@ -216,35 +266,6 @@ class FengmoMode:
         if point_pos is None:
             raise Exception("[wait_found_point_monster]等待逢魔点失败")
         self.device_manager.click(*point_pos)
-
-        # 检查等待战斗逻辑,先完成委托战斗,自定义战斗TODO
-        is_auto_battle = False
-        while True:
-            time.sleep(1)
-            if self.ocr_handler.match_click_text(["确定"],region=(516,571,769,644)):
-                break
-            if self.battle.in_battle():
-                if is_auto_battle:
-                    continue
-                else:
-                    if self.battle.auto_battle():
-                        is_auto_battle = True
-                    else:
-                        raise Exception("[wait_found_point_boss]自动战斗失败")
-            else:
-                break
-
-    # 检查是否出现Boss
-    def check_found_boss(self):
-        """
-        检查是否出现Boss
-        """
-        region = (292,175,983,540)
-        if self.ocr_handler.match_texts(["逢魔之主"],region=region):
-            self.ocr_handler.match_click_text(["确定"],region=region)
-            return True
-        else:
-            return False
     
     def wait_found_cure(self):
         """
@@ -257,8 +278,7 @@ class FengmoMode:
         if point_pos is None:
             raise Exception("[wait_found_cure]等待治疗点失败")
         self.device_manager.click(*point_pos)
-        self.ocr_handler.match_click_text(["确定"],region=(381,223,897,489))
-        time.sleep(1)
+        sleep_until(lambda:self.ocr_handler.match_click_text(["确定"],region=(381,223,897,489)))
         self.world.click_tirm()
     
     def wait_found_point_treasure(self):
@@ -268,15 +288,11 @@ class FengmoMode:
         in_fengmo = sleep_until(self.world.in_world)
         if in_fengmo is None:
             raise Exception("[wait_found_point_treasure]等待逢魔地图失败")
-        point_pos = sleep_until(self.world.find_fengmo_point_treasure, self.find_point_wait_time)
+        point_pos = sleep_until(self.world.find_fengmo_point_treasure, self.find_treasure_wait_time)
         if point_pos is None:
             raise Exception("[wait_found_point_treasure]等待宝箱点失败")
         self.device_manager.click(*point_pos)
-        if self.wait_found_point_text("完全恢复",(381,223,897,489)):
-            self.device_manager.click(643, 433)
-            return True
-        else:
-            return False
+        return self.wait_found_item()
         
     def wait_found_item(self):
         """
@@ -303,26 +319,21 @@ class FengmoMode:
             time.sleep(interval)
         raise Exception(f"[wait_found_point_text]等待{text}失败")
     
-    def wait_found_result(self, interval=1.0, max_retry=30):
+    def wait_found_result(self, interval=1.0, max_retry=30) -> tuple[Step,str]:
         """
         逢魔专用：等待识别到"获得道具"或"已发现所有的逢魔之影"，自动处理战斗等待，返回三种状态。
         :param interval: 识别间隔秒数
         :param max_retry: 最大重试次数，防止死循环
-        :return: "error" | "normal" | "step"
         """
         region = (381, 223, 897, 489)
         retry = 0
-        is_battle = False
+        state = ""
         while retry < max_retry:
             # 检查是否在战斗中
             if self.battle.in_battle():
-                is_battle = True
-                time.sleep(interval)
-                continue
-            # 战斗刚结束，重置标志
-            if is_battle:
-                is_battle = False
-                return
+                self.do_battle()
+                state = "done_monster"
+                return Step.COLLECT_JUNK,state
             # 非战斗中，识别文本
             results = self.ocr_handler.recognize_text(region=region)
             if not results:
@@ -331,10 +342,19 @@ class FengmoMode:
                 continue
             for r in results:
                 if "获得道具" in r['text']:
-                    self.device_manager.click(643, 433)
-                    return
+                    self.device_manager.click(640, 430)
+                    return Step.COLLECT_JUNK,state
                 if "已发现所有的逢魔之影" in r['text']:
-                    return Step.FIND_BOX
+                    self.device_manager.click(640,480)
+                    if sleep_until(self.check_found_boss,timeout=3):
+                        return Step.FIGHT_BOSS,state
+                    return Step.FIND_BOX,state
+                if "完全恢复了" in r['text']:
+                    self.device_manager.click(640,480)
+                    time.sleep(1)
+                    state = "done_cure"
+                    self.world.click_tirm()
+                    return Step.COLLECT_JUNK,state
             retry += 1
             time.sleep(interval)
         raise Exception("[wait_found_result]识别到错误结果")
