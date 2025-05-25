@@ -5,6 +5,7 @@ import yaml
 from pydantic import BaseModel
 import logging
 from utils.get_asset_path import get_asset_path
+from typing import Dict, List, TypedDict
 
 # 兼容旧接口，返回config目录绝对路径
 def get_config_dir():
@@ -32,6 +33,32 @@ class FengmoConfig(BaseModel):
     rest_in_inn: bool = True
     city: str = "newdelsta"
 
+class CityConfig(TypedDict):
+    inn_pos: List[int]
+    entrance_pos: List[int]
+    check_points: List[List[int]]
+
+class FengmoCityConfig(BaseModel):
+    cities: Dict[str, CityConfig] = {
+        "newdelsta": {
+            "inn_pos": [645, 573],
+            "entrance_pos": [337, 596],
+            "check_points": [
+                [421,611],
+                [532,617],
+                [568,443],
+                [555,253],
+                [676,257],
+                [679,321],
+                [791,321],
+                [803,503],
+                [707,520],
+                [748,621],
+                [672,620],
+            ]
+        }
+    }
+
 class Config:
     def __init__(self, config_dir=None):
         if config_dir is None:
@@ -43,7 +70,7 @@ class Config:
         self.command_interval = self._load_yaml_with_log(os.path.join(config_dir, "settings.yaml"), name="settings.yaml").get("command_interval", 1.0)
         # 兼容fengmo等其他配置
         self.fengmo = FengmoConfig(**self._load_yaml_with_log(os.path.join(config_dir, "fengmo.yaml"), name="fengmo.yaml"))
-        self.fengmo_cities = self._load_yaml_with_log(os.path.join(config_dir, "fengmo_cities.yaml"), name="fengmo_cities.yaml")
+        self.fengmo_cities = FengmoCityConfig(**self._load_yaml_with_log(os.path.join(config_dir, "fengmo_cities.yaml"), name="fengmo_cities.yaml")).cities
 
     def _load_yaml_with_log(self, path, name=None, fallback=None, key=None):
         print(f"[Config] 加载配置文件: {name or path}")
