@@ -1,8 +1,6 @@
 from loguru import logger
-import yaml
 from typing import Optional
 from core.device_manager import DeviceManager
-import time
 from utils.singleton import singleton
 from common.config import config
 
@@ -76,27 +74,4 @@ class AppManager:
             logger.info("App未运行，尝试自动启动...")
             self.start_app()
             return self.is_app_running()
-        return True
-
-    def sleep(self, multiplier: float = 1.0) -> None:
-        interval = config.command_interval
-        logger.info(f"指令间隔sleep {interval*multiplier}秒 {multiplier}倍")
-        time.sleep(interval*multiplier)
-        logger.info(f"指令间隔sleep {interval}秒")
-
-    def sleep_until(self, condition_func, timeout: float = 30.0, interval: Optional[float] = None):
-        if interval is None:
-            interval = config.command_interval
-        if interval is None:
-            interval = 1.0
-        logger.info(f"开始轮询等待条件，最大超时{timeout}秒，每次间隔{interval}秒")
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            result = condition_func()
-            if result:
-                logger.info("条件已满足，跳出等待")
-                return result
-            logger.info("条件未满足，sleep...")
-            time.sleep(float(interval))
-        logger.warning("等待超时，条件未满足")
-        return None 
+        return True 

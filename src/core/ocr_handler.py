@@ -60,6 +60,8 @@ class OCRHandler:
             detected_texts = set()
             all_texts = []
             for line in result:
+                if line is None:
+                    continue
                 for item in line:
                     text = item[1][0]
                     confidence = item[1][1]

@@ -3,7 +3,6 @@ from core.ocr_handler import OCRHandler
 from core.game_controller import GameController
 from utils.logger import setup_logger
 from modes.fengmo import FengmoMode
-import time
 import traceback
 
 def main():

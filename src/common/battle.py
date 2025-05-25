@@ -152,3 +152,40 @@ class Battle:
         # 批量判断
         results = [self.ocr_handler.match_point_color(image, x, y, color, rng) for x, y, color, rng in points_colors]
         return all(results) and self.in_battle(image)
+    
+    def auto_battle(self, interval:int = 1,max_times:int = 5) -> bool:
+        """
+        自动战斗
+        """
+        if not self.in_battle_round():
+            return False
+        times = 0
+        while True: 
+            if self.ocr_handler.match_click_text(["委托战斗开始"],region=(30,580,1240,700)):
+                return True
+            if self.ocr_handler.match_click_text(["委托"],region=(30,580,1240,700)):
+                continue
+            time.sleep(interval)
+            times += 1
+            if times >= max_times:
+                return False
+
+    def exit_battle(self, interval:int = 1,max_times:int = 5) -> bool:
+        """
+        退出战斗
+        """
+        if not self.in_battle_round():
+            return False
+        times = 0
+        while True: 
+            if self.ocr_handler.match_click_text(["是"],region=(293,172,987,548)):
+                continue
+            if self.ocr_handler.match_click_text(["放弃"],region=(30,580,1240,700)):
+                continue
+            in_battle = self.in_battle()
+            if not self.ocr_handler.match_texts(["攻击"],region=(293,172,987,548)) and not in_battle:
+                return True
+            time.sleep(interval)
+            times += 1
+            if times >= max_times:
+                return False

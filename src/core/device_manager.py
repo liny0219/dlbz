@@ -5,7 +5,7 @@ from PIL import Image
 import cv2
 import numpy as np
 import os
-from typing import Optional, Tuple
+from typing import Optional
 from common.config import config
 
 class DeviceManager:
