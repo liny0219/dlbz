@@ -103,13 +103,30 @@ class World:
             logger.info("不在旅馆门口")
             return None
     
-    def find_fengmo_point(self, image: Optional[Image.Image] = None) -> Optional[tuple[int, int]] | None:
+    def find_fengmo_point(self, image: Optional[Image.Image] = None, type: str = "right") -> Optional[tuple[int, int]] | None:
         """
         判断当前是否有逢魔点(逢魔入口也是这个,判断感叹号)。
         """
         if image is None:
             image = self.device_manager.get_screenshot()
-        find = self.ocr_handler.match_image(image, "assets/fengmo_point.png", debug=True)
+        find_list = self.ocr_handler.match_image_multi(image, "assets/fengmo_point.png", debug=True)
+        find = None
+        if find_list is not None and len(find_list) > 0:
+            # 转换为int
+            points = [(int(x), int(y)) for x, y, _ in find_list]
+            # 根据type==left/right/up/down，获取find数组中x,y的
+            # 获取x最大的点
+            if type == "right": 
+                find = max(points, key=lambda x: x[0])
+            # 获取x最小的点
+            elif type == "left":
+                find = min(points, key=lambda x: x[0])
+            # 获取y最大的点
+            elif type == "down":
+                find = max(points, key=lambda x: x[1])
+            # 获取y最小的点
+            elif type == "up":
+                find = min(points, key=lambda x: x[1])
         forbidden_range = (936,36,1208,195)
         # 如果find在禁止范围内,则返回None
         if find:

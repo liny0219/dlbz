@@ -484,6 +484,7 @@ class OCRHandler:
         threshold: float = 0.95,
         region: Optional[Tuple[int, int, int, int]] = None,
         gray: bool = False,
+        debug: bool = False,
     ) -> list[tuple[int, int, float]]:
         """
         多模板匹配，返回所有相关系数大于等于阈值的点坐标及分数，并将所有匹配区域画框保存到debug目录。
@@ -549,8 +550,9 @@ class OCRHandler:
                 # 画矩形框
                 cv2.rectangle(debug_img, (abs_x, abs_y), (abs_x + tw, abs_y + th), (0, 0, 255), 2)
             # 保存debug图片
-            os.makedirs("debug", exist_ok=True)
-            cv2.imwrite("debug/match_image_multi_result.png", debug_img)
+            if debug:
+                os.makedirs("debug", exist_ok=True)
+                cv2.imwrite("debug/match_image_multi_result.png", debug_img)
             return matches
         except Exception as e:
             logger.error(f"match_image_multi 执行异常: {e}")
