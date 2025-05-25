@@ -138,6 +138,7 @@ class FengmoMode:
                 if in_fengmo_map is None:
                     raise Exception("[_collect_junk_phase]等待逢魔地图失败")
                 next_point = False
+                reset_map = True
                 while True:
                     point_pos = sleep_until(self.world.find_fengmo_point, self.find_point_wait_time)
                     if not point_pos:
@@ -152,6 +153,8 @@ class FengmoMode:
                             return
                         if len(check_point) > 2 and check_point[2] == 1:
                             next_point = True
+                            break
+                        if reset_map:
                             break
                     except Exception as e:
                         raise Exception(f"[_collect_junk_phase]等待结果失败: {e}")

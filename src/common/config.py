@@ -1,9 +1,7 @@
 from calendar import c
 import os
-import sys
 import yaml
 from pydantic import BaseModel
-import logging
 from utils.get_asset_path import get_asset_path
 from typing import Dict, List, TypedDict
 
@@ -46,7 +44,9 @@ class FengmoCityConfig(BaseModel):
             "inn_pos": [645, 573],
             "reset_pos": [548,343],
             "entrance_pos": [337, 596],
-            "backup_points": [],
+            "backup_points": [
+                [813,425]
+            ],
             "check_points": [
                 [533,617,0],
                 [420,615,1],
