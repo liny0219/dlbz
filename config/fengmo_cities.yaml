@@ -40,7 +40,7 @@ cities:
           "reset_map": true,
           "next_point": true,
           "found": [
-            [62,211]
+            [75,377]
           ]
         },
         { 
@@ -59,7 +59,7 @@ cities:
           "reset_map": true,
           "next_point": false,
           "found": [
-            [799,484]
+            [932,393]
           ]
         },
         {
