@@ -69,10 +69,10 @@ class World:
         ]
         results = [self.ocr_handler.match_point_color(image, x, y, color, rng) for x, y, color, rng in points_colors]
         if all(results):
-            logger.info("检测到在小地图中")
+            logger.debug("检测到在小地图中")
             return True
         else:
-            logger.info("不在小地图中")
+            logger.debug("不在小地图中")
             return False
         
     def in_inn(self, image: Optional[Image.Image] = None) -> Optional[Tuple[int, int]] | None:

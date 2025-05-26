@@ -116,7 +116,7 @@ class DeviceManager:
         """
         try:
             if self.device:
-                logger.info(f"点击坐标 ({x}, {y})")
+                logger.debug(f"点击坐标 ({x}, {y})")
                 self.device.click(x, y)
             else:
                 logger.error("设备未连接，无法点击")

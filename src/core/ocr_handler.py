@@ -22,7 +22,7 @@ class OCRHandler:
         self.ocr_digit = PaddleOCR(rec_char_type='digit',use_angle_cls=config.ocr.use_angle_cls,lang='en')
         self.threshold = config.ocr.threshold
         self.device_manager = device_manager
-        logger.info("OCR handler initialized")
+        logger.debug("OCR handler initialized")
 
     def match_texts(
         self,
@@ -68,12 +68,12 @@ class OCRHandler:
                     all_texts.append((text, confidence))
                     if confidence >= threshold:
                         detected_texts.add(text)
-            logger.info(f"OCR识别文本及置信度: {[f'{t}:{c:.2f}' for t,c in all_texts]}")
+            logger.debug(f"OCR识别文本及置信度: {[f'{t}:{c:.2f}' for t,c in all_texts]}")
             for kw in keywords:
                 if not any(kw in t for t in detected_texts):
-                    logger.info(f"未检测到关键词: {kw}")
+                    logger.debug(f"未检测到关键词: {kw}")
                     return False
-            logger.info(f"全部关键词匹配: {keywords}")
+            logger.debug(f"全部关键词匹配: {keywords}")
             return True
         except Exception as e:
             logger.error(f"OCR匹配失败: {str(e)}")
@@ -139,7 +139,7 @@ class OCRHandler:
             # 检查所有关键词是否都匹配
             for kw in keywords:
                 if not any(kw in t for t, _, _ in detected_texts):
-                    logger.info(f"未检测到关键词: {kw}")
+                    logger.debug(f"未检测到关键词: {kw}")
                     return False
 
             # 点击第一个匹配到的文本中心
@@ -151,12 +151,12 @@ class OCRHandler:
                     y = int(sum([p[1] for p in box]) / 4) + offset_y
                     if hasattr(self, "device_manager"):
                         self.device_manager.click(x, y)
-                        logger.info(f"点击文本 '{text}' 的中心点 ({x},{y})，置信度{confidence:.2f} (已加region偏移)")
+                        logger.debug(f"点击文本 '{text}' 的中心点 ({x},{y})，置信度{confidence:.2f} (已加region偏移)")
                         return True
                     else:
                         logger.warning("OCRHandler未绑定device_manager，无法点击")
                         return False
-            logger.info("所有关键词匹配，但未找到可点击的文本区域")
+            logger.debug("所有关键词匹配，但未找到可点击的文本区域")
             return False
         except Exception as e:
             logger.error(f"match_click_text 执行异常: {e}")
@@ -184,7 +184,7 @@ class OCRHandler:
                     draw.rectangle(region, outline="red", width=2)
                     filename = f"debug/ocr_region.png"
                     img_copy.save(filename)
-                    logger.info(f"已保存OCR裁剪区域调试图: {filename}")
+                    logger.debug(f"已保存OCR裁剪区域调试图: {filename}")
                 # 裁剪
                 if isinstance(image, Image.Image):
                     image = image.crop(region)
@@ -220,7 +220,7 @@ class OCRHandler:
                 for item in line:
                     confidence = item[1][1]
                     if confidence >= self.threshold:
-                        logger.info(f"OCR识别文本: {item[1][0]}，置信度: {confidence:.2f}") 
+                        logger.debug(f"OCR识别文本: {item[1][0]}，置信度: {confidence:.2f}") 
                         processed_results.append({
                             'text': item[1][0],
                             'box': item[0],
@@ -269,7 +269,7 @@ class OCRHandler:
                 region_tuple = tuple(map(int, region_str.split("_")))
                 if len(region_tuple) == 4:
                     region = region_tuple
-                    logger.info(f"自动提取region坐标: {region}")
+                    logger.debug(f"自动提取region坐标: {region}")
             # 读取模板始终用get_asset_path
             template = cv2.imread(get_asset_path(template_path))
             if template is None:
@@ -296,7 +296,7 @@ class OCRHandler:
             # 5. 模板匹配
             res = cv2.matchTemplate(img_proc, template_proc, cv2.TM_CCOEFF_NORMED)
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-            # logger.info(f"模板匹配最大相关系数: {max_val:.3f}")
+            # logger.debug(f"模板匹配最大相关系数: {max_val:.3f}")
 
             # 6. debug保存图片，画出匹配区域
             if debug:
@@ -308,16 +308,16 @@ class OCRHandler:
                 # 画矩形框
                 cv2.rectangle(debug_img, (match_x, match_y), (match_x + tw, match_y + th), (0, 0, 255), 2)
                 cv2.imwrite("debug/match_image_result.png", debug_img)
-                logger.info(f"匹配区域已保存到debug/match_image_result.png")
+                logger.debug(f"匹配区域已保存到debug/match_image_result.png")
 
             # 7. 匹配结果坐标
             if max_val >= threshold:
                 match_x = max_loc[0] + (region[0] if region else 0)
                 match_y = max_loc[1] + (region[1] if region else 0)
-                # logger.info(f"模板匹配成功，坐标: ({match_x}, {match_y})")
+                # logger.debug(f"模板匹配成功，坐标: ({match_x}, {match_y})")
                 return (match_x, match_y)
             else:
-                logger.info("模板未匹配成功")
+                logger.debug("模板未匹配成功")
                 return None
         except Exception as e:
             logger.error(f"模板匹配失败: {str(e)}")
@@ -432,7 +432,7 @@ class OCRHandler:
                 similarity = color_sim(pix, target_bgr, bias)
                 checked_pixels += 1
                 if similarity >= sim:
-                    # logger.info(f"FindColor: 匹配成功 idx={idx}, 坐标=({x1 + x},{y1 + y}), 像素={bgr_to_hex(pix)}, 目标={bgr_to_hex(target_bgr)}, 相似度={similarity:.3f}")
+                    # logger.debug(f"FindColor: 匹配成功 idx={idx}, 坐标=({x1 + x},{y1 + y}), 像素={bgr_to_hex(pix)}, 目标={bgr_to_hex(target_bgr)}, 相似度={similarity:.3f}")
                     return idx, x1 + x, y1 + y
         return -1, None, None
 
@@ -515,7 +515,7 @@ class OCRHandler:
                 region_tuple = tuple(map(int, region_str.split("_")))
                 if len(region_tuple) == 4:
                     region = region_tuple
-                    logger.info(f"自动提取region坐标: {region}")
+                    logger.debug(f"自动提取region坐标: {region}")
             template = cv2.imread(get_asset_path(template_path))
             if template is None:
                 logger.error(f"模板图片读取失败: {template_path}")
