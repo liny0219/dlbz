@@ -3,21 +3,108 @@ cities:
     inn_pos: [645, 573] # 旅馆点
     entrance_pos: [337, 596] # 入口点
     reset_pos: [548,343] # 重置点,当小地图被遮挡时,遇到无法匹配到图标的时候,点击重置点
-    backup_points: [ # 备份点,当逢魔点被遮挡时,遇到无法匹配到图标的时候,点击备份点
-      [825,425],
-      [759,671]
-    ]
-    check_points: [
-      [533,617,0,0],
-      [420,615,1,0],
-      [576,443,0,1],
-      [557,259,0,1],
-      [677,257,0,1],
-      # [675,327,0],
-      [751,327,0,1],
-      [815,324,0,1],
-      [804,504,0,1],
-      [720,500,0,1],
-      [753,621,0,1],
-      [647,619,0,1],
-    ]
+    check_points:
+      [
+        {
+          "id": 1,
+          "pos": [533,617],
+          "reset_map": true,
+          "next_point": false,
+          "found": [
+            [561,239],
+            [260,388]
+          ]
+        },
+        {
+          "id": 2,
+          "pos": [420,615],
+          "reset_map": false,
+          "next_point": true,
+          "found": [
+            [1164,349],
+            [316,387]
+          ]
+        },
+        {
+          "id": 3,
+          "pos": [576,443],
+          "reset_map": true,
+          "next_point": true,
+          "found": [
+            [737,409]
+          ]
+        },
+        {
+          "id": 4,
+          "pos": [557,259],
+          "reset_map": true,
+          "next_point": true,
+          "found": [
+            [62,211]
+          ]
+        },
+        { 
+          "id": 5,
+          "pos": [675,289],
+          "reset_map": False,
+          "next_point": False,
+          "found": [
+            [724,321],
+            [503,553]
+          ]
+        },
+        {
+          "id": 6,
+          "pos": [751,327],
+          "reset_map": true,
+          "next_point": false,
+          "found": [
+            [799,484]
+          ]
+        },
+        {
+          "id": 7,
+          "pos": [815,324],
+          "reset_map": true,
+          "next_point": true,
+          "found": [
+            [635,397]
+          ]
+        },
+        {
+          "id": 8,
+          "pos": [804,504],
+          "reset_map": true,
+          "next_point": true,
+          "found": [
+            [868,385]
+          ]
+        },
+        {
+          "id": 9,
+          "pos": [720,500],
+          "reset_map": true,
+          "next_point": true,
+          "found": [
+            [639,357]
+          ]
+        },
+        {
+          "id": 10,
+          "pos": [753,621],
+          "reset_map": true,
+          "next_point": true,
+          "found": [
+            [623,385]
+          ]
+        },
+        {
+          "id": 11,
+          "pos": [647,619],
+          "reset_map": true,
+          "next_point": true,
+          "found": [
+            [403,425]
+          ]
+        }
+      ]

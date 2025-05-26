@@ -191,7 +191,8 @@ class OCRHandler:
                     # 放大
                     if scale > 1:
                         w, h = image.size
-                        image = image.resize((w * scale, h * scale), Image.LANCZOS)
+                        from PIL import Image as PILImage
+                        image = image.resize((w * scale, h * scale), PILImage.Resampling.LANCZOS)
                 elif isinstance(image, np.ndarray):
                     x1, y1, x2, y2 = region
                     image = image[y1:y2, x1:x2]

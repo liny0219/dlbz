@@ -62,7 +62,7 @@ def screenshot_and_show(adb_addr, save_path):
     :param adb_addr: 设备ADB地址
     :param save_path: 保存路径
     """
-    dm = DeviceManager(adb_address=adb_addr)
+    dm = DeviceManager()
     if not dm.connect_device():
         print(f"[ERROR] Failed to connect to device: {adb_addr}")
         return

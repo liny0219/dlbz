@@ -45,10 +45,10 @@ class Battle:
         # 批量判断
         results = [self.ocr_handler.match_point_color(image, x, y, color, rng) for x, y, color, rng in points_colors]
         if all(results):
-            logger.info("检测到在战斗中")
+            logger.debug("检测到在战斗中")
             return True
         else:
-            logger.info("不在战斗中")
+            logger.debug("不在战斗中")
             return False
 
     def in_battle_round(self, image: Optional[Image.Image] = None) -> bool:
@@ -73,10 +73,10 @@ class Battle:
         # 批量判断
         results = [self.ocr_handler.match_point_color(image, x, y, color, rng) for x, y, color, rng in points_colors]
         if all(results) and self.in_battle(image):
-            logger.info("检测到在战斗回合中")
+            logger.debug("检测到在战斗回合中")
             return True
         else:
-            logger.info("不在战斗回合中")
+            logger.debug("不在战斗回合中")
             return False
 
     def dead(self, image: Optional[Image.Image] = None, role_id: int = 1) -> bool:

@@ -31,39 +31,21 @@ class FengmoConfig(BaseModel):
     rest_in_inn: bool = True
     city: str = "newdelsta"
 
+class CheckPoint(BaseModel):
+    id: int
+    pos: List[int]
+    reset_map: bool
+    next_point: bool
+    found: List[List[int]]
+
 class CityConfig(TypedDict):
     inn_pos: List[int]
     reset_pos: List[int]
     entrance_pos: List[int]
-    backup_points: List[List[int]]
-    check_points: List[List[int]]
+    check_points: List[CheckPoint]
 
 class FengmoCityConfig(BaseModel):
-    cities: Dict[str, CityConfig] = {
-        "newdelsta": {
-            "inn_pos": [645, 573],
-            "reset_pos": [548,343],
-            "entrance_pos": [337, 596],
-            "backup_points": [
-                [825,425],
-                [759,671]
-            ],
-            "check_points": [
-                [533,617,0,0],
-                [420,615,1,0],
-                [576,443,0,1],
-                [557,259,0,1],
-                [677,257,0,1],
-                # [675,327,0],
-                [751,327,0,1],
-                [815,324,0,1],
-                [804,504,0,1],
-                [720,500,0,1],
-                [753,621,0,1],
-                [647,619,0,1],
-            ]
-        }
-    }
+    cities: Dict[str, CityConfig]
 
 class Config:
     def __init__(self, config_dir=None):

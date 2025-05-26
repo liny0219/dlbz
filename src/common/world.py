@@ -43,10 +43,10 @@ class World:
         ]
         results = [self.ocr_handler.match_point_color(image, x, y, color, rng) for x, y, color, rng in points_colors]
         if all(results):
-            logger.info("检测到在世界中")
+            logger.debug("检测到在世界中")
             return True
         else:
-            logger.info("不在世界中")
+            logger.debug("不在世界中")
             return False
 
     def in_minimap(self, image: Optional[Image.Image] = None) -> bool:
@@ -83,10 +83,10 @@ class World:
             image = self.device_manager.get_screenshot()
         find = self.ocr_handler.match_image(image, "assets/inn_bed.png")
         if find:
-            logger.info("检测到在旅馆中")
+            logger.debug("检测到在旅馆中")
             return find
         else:
-            logger.info("不在旅馆中")
+            logger.debug("不在旅馆中")
             return None
     
     def find_inn_door(self, image: Optional[Image.Image] = None) -> Optional[Tuple[int, int]] | None:
@@ -97,10 +97,10 @@ class World:
             image = self.device_manager.get_screenshot()
         find = self.ocr_handler.match_image(image, "assets/inn_door.png")
         if find:
-            logger.info("检测到在旅馆门口")
+            logger.debug("检测到在旅馆门口")
             return find
         else:
-            logger.info("不在旅馆门口")
+            logger.debug("不在旅馆门口")
             return None
     
     def find_fengmo_point(self, image: Optional[Image.Image] = None, type: str = "right") -> Optional[tuple[int, int]] | None:
@@ -131,81 +131,15 @@ class World:
         # 如果find在禁止范围内,则返回None
         if find:
             if forbidden_range[0] <= find[0] <= forbidden_range[2] and forbidden_range[1] <= find[1] <= forbidden_range[3]:
-                logger.info("检测到逢魔点,但在禁止范围内")
+                logger.debug("检测到逢魔点,但在禁止范围内")
                 return None
             else:
-                logger.info("检测到逢魔点")
+                logger.debug("检测到逢魔点")
                 return find
         else:
-            logger.info("没有逢魔点")
+            logger.debug("没有逢魔点")
             return None
         
-    def find_fengmo_point_treasure(self, image: Optional[Image.Image] = None,threshold:float = 0.85,debug:bool = False) -> Optional[tuple[int, int]]:
-        """
-        判断当前是否已发现的宝箱点。
-        支持多模板批量匹配，只要任意模板有颜色匹配点即返回。
-        :param image: 可选，外部传入截图
-        :return: 匹配的点坐标列表，若无则返回None
-        """
-        if image is None:
-            image = self.device_manager.get_screenshot()
-        if image is None:
-            logger.warning("无法获取截图，无法判断是否已发现的宝箱点")
-            return None
-
-        # 自动发现所有相关模板文件
-        template_files = sorted(glob.glob("assets/fengmo_point_treasure_*.png"))
-
-        # 只做一次RGB转换和像素访问对象
-        rgb_img = image.convert('RGB')
-        pixels = rgb_img.load()
-        if pixels is None:
-            logger.warning("像素访问对象为None，图片可能无效")
-            return None
-        width, height = rgb_img.size
-
-        def color_sim(c1, c2):
-            dist = sum((c1[i] - c2[i]) ** 2 for i in range(3)) ** 0.5
-            return 1 - dist / (3 * 255)
-
-        target_color = (220, 220, 220)
-        tolerance = 10  # 匹配范围
-
-        for template_path in template_files:
-            candidates = self.ocr_handler.match_image_multi(image, template_path, threshold=threshold)
-            if not candidates:
-                continue
-            points = [(x, y) for x, y, _ in candidates]
-            matched_points:tuple[int,int]|None = None
-            list_matched_points = []
-            for x, y in points:
-                found = False
-                # 只在(x, y)为中心，tolerance为半径的正方形区域内查找
-                for dx in range(-tolerance, tolerance + 1):
-                    for dy in range(-tolerance, tolerance + 1):
-                        nx, ny = x + dx, y + dy
-                        if 0 <= nx < width and 0 <= ny < height:
-                            pix = pixels[nx, ny]
-                            if color_sim(pix, target_color) >= 0.95:
-                                matched_points = (int(x), int(y))
-                                list_matched_points.append(matched_points)
-                                found = True
-                                break
-                    if found:
-                        break
-            if matched_points and len(matched_points) > 0:
-                logger.info(f"模板 {template_path} 检测到已发现的宝箱点: {list_matched_points}")
-                if debug:
-                    for x, y in list_matched_points:
-                        filename = f"debug/treasure.png"
-                        rect = (x, y, x + 20, y + 20)
-                    self.ocr_handler.save_debug_rect(image, rect, filename, outline="red", width=2)
-                    break
-                return matched_points
-
-        logger.info("所有模板均未检测到已发现的宝箱点")
-        return None
-    
     def find_fengmo_point_cure(self, image: Optional[Image.Image] = None) -> Optional[tuple[int, int]]:
         """
         判断当前是否已发现的治疗点。
@@ -214,10 +148,10 @@ class World:
             image = self.device_manager.get_screenshot()
         find = self.ocr_handler.match_image(image, "assets/fengmo_point_cure.png")
         if find:
-            logger.info("检测到治疗点")
+            logger.debug("检测到治疗点")
             return find
         else:
-            logger.info("没有治疗点")
+            logger.debug("没有治疗点")
             return None
     
     def read_fengmo_depth(self):
@@ -257,7 +191,7 @@ class World:
         点击跳过按钮，count次
         """
         for _ in range(count):
-            logger.info("点击跳过按钮")
+            logger.debug("点击跳过按钮")
             self.device_manager.click(1100,680)
             time.sleep(interval)
         
@@ -276,7 +210,7 @@ class World:
         """
         in_world = sleep_until(self.in_world)
         if not in_world:
-            logger.info("不在城镇中")
+            logger.debug("不在城镇中")
             return
         self.open_minimap()
         in_minimap = sleep_until(self.in_minimap)
@@ -286,29 +220,29 @@ class World:
         in_inn = sleep_until(self.in_inn)
         if not in_inn:
             return
-        logger.info("点击旅馆老板")
+        logger.debug("点击旅馆老板")
         self.device_manager.click(*in_inn)
-        logger.info("等待欢迎光临")
+        logger.debug("等待欢迎光临")
         sleep_until(lambda: self.ocr_handler.match_click_text(["欢迎光临"]))
-        logger.info("点击跳过")
+        logger.debug("点击跳过")
         self.click_tirm(3)
-        logger.info("点击是")
+        logger.debug("点击是")
         sleep_until(lambda: self.ocr_handler.match_click_text(["是"]))
-        logger.info("等待完全恢复")
+        logger.debug("等待完全恢复")
         sleep_until(lambda: self.ocr_handler.match_click_text(["精力完全恢复了"]))
-        logger.info("等待返回城镇")
+        logger.debug("等待返回城镇")
         sleep_until(self.in_world)
-        logger.info("打开小地图")
+        logger.debug("打开小地图")
         self.open_minimap()
-        logger.info("等待小地图")
+        logger.debug("等待小地图")
         in_minimap = sleep_until(self.in_minimap)
         if not in_minimap:
             return
-        logger.info("查找旅馆门口")
+        logger.debug("查找旅馆门口")
         door_pos = self.find_inn_door()
         if not door_pos:
             return
-        logger.info("点击旅馆门口")
+        logger.debug("点击旅馆门口")
         self.device_manager.click(*door_pos)
 
     def go_fengmo(self,depth:int,entrance_pos:list[int]):
@@ -317,7 +251,7 @@ class World:
         """
         in_world = sleep_until(self.in_world)
         if not in_world:
-            logger.info("不在城镇中")
+            logger.debug("不在城镇中")
             return
         self.open_minimap()
         in_minimap = sleep_until(self.in_minimap)
@@ -363,10 +297,10 @@ class World:
             image = self.device_manager.get_screenshot()
         find = self.ocr_handler.match_image(image, "assets/map_treasure.png")
         if find:
-            logger.info("发现的地图宝箱点")
+            logger.debug("发现的地图宝箱点")
             return find
         else:
-            logger.info("未发现地图宝箱点")
+            logger.debug("未发现地图宝箱点")
             return None
         
     def find_map_cure(self, image: Optional[Image.Image] = None) -> Optional[tuple[int, int]]:
@@ -377,10 +311,10 @@ class World:
             image = self.device_manager.get_screenshot()
         find = self.ocr_handler.match_image(image, "assets/map_cure.png")
         if find:
-            logger.info("发现的地图治疗点")
+            logger.debug("发现的地图治疗点")
             return find
         else:
-            logger.info("未发现地图治疗点")
+            logger.debug("未发现地图治疗点")
             return None
         
     def find_map_monster(self, image: Optional[Image.Image] = None) -> Optional[tuple[int, int]]:
@@ -391,10 +325,10 @@ class World:
             image = self.device_manager.get_screenshot()
         find = self.ocr_handler.match_image(image, "assets/map_monster.png")
         if find:
-            logger.info("发现的地图怪物点")
+            logger.debug("发现的地图怪物点")
             return find
         else:
-            logger.info("未发现地图怪物点")
+            logger.debug("未发现地图怪物点")
             return None
         
     def find_map_boss(self, image: Optional[Image.Image] = None) -> Optional[tuple[int, int]]:
@@ -405,8 +339,8 @@ class World:
             image = self.device_manager.get_screenshot()
         find = self.ocr_handler.match_image(image, "assets/map_boss.png")
         if find:
-            logger.info("发现的地图Boss点")
+            logger.debug("发现的地图Boss点")
             return find
         else:
-            logger.info("未发现地图Boss点")
+            logger.debug("未发现地图Boss点")
             return None
