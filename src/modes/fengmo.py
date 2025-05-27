@@ -329,18 +329,22 @@ class FengmoMode:
             return "found_boss"
         region = (292, 175, 983, 540)
         results = self.ocr_handler.recognize_text(region=region)
-        self.ocr_handler.match_click_text(["确定"],region=region)
+        find_text = None
         for r in results:
             if "获得道具" in r['text']:
-                return "found_treasure"
+                find_text = "found_treasure"
             if "完全恢复了" in r['text']:
-                return "found_cure"
+                find_text = "found_cure"
             if "已发现所有的逢魔之影" in r['text']:
-                return "found_points"
+                find_text = "found_points"
             if "完全恢复了" in r['text']:
-                return "found_cure"
+                find_text = "found_cure"
             if "逢魔之主" in r['text']:
-                return "found_boss"
+                find_text = "found_boss"
+        if find_text:
+            logger.info(f"[check_info]找到文本: {find_text}")
+            self.ocr_handler.match_click_text(["确定"],region=region)
+            return find_text
         return None
 
     def wait_found_point_boss(self):
