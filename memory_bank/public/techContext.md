@@ -1,1 +1,9 @@
- 
+- 主要语言：Python 3.8+
+- 依赖库：uiautomator2、paddleocr、loguru、PyInstaller、tkinter、opencv-python、PyYAML、Pillow等
+- 依赖管理：requirements.txt 自动生成，确保环境一致性
+- 打包：PyInstaller，spec文件中手动添加loguru等hiddenimports
+- 设备连接：基于adb与uiautomator2
+- OCR：PaddleOCR
+- 日志：loguru，主进程与子进程日志分离
+- 配置：YAML文件，支持多玩法参数
+- 兼容性：Windows 10+，需adb环境 

@@ -1,5 +1,5 @@
 import time
-from loguru import logger
+from utils import logger
 from common.app import AppManager
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler

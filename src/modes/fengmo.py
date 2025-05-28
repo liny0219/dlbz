@@ -1,11 +1,10 @@
 from enum import Enum
 from dataclasses import dataclass
 import os
-from tabnanny import check
 from PIL import Image
 import time
 from typing import Optional
-from loguru import logger
+from utils import logger
 from common.app import AppManager
 from common.battle import Battle
 from common.world import World

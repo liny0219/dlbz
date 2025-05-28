@@ -1,5 +1,5 @@
 import time
-from loguru import logger
+from utils import logger
 
 def sleep(interval: float = 1.0, multiplier: float = 1.0) -> None:
     """

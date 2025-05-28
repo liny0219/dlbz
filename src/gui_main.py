@@ -7,7 +7,7 @@ import logging
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
 from modes.fengmo import FengmoMode
-from utils.logger import setup_logger
+from utils import logger
 from common.config import get_config_dir
 import traceback
 
@@ -33,9 +33,9 @@ class FengmoGUI(tk.Tk):
         self.geometry("800x600")
         self.minsize(700, 400)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
-        self.logger = setup_logger()
+        self.logger = logger
         self.fengmo_process = None
-        self.log_recv = None
+        self.log_queue = None
         self.log_level_var = tk.StringVar(value="INFO")
         self._build_menu()
         self._build_main_frame()
@@ -173,26 +173,29 @@ class FengmoGUI(tk.Tk):
         self.status_label.config(text="状态: 正在初始化...")
         self.append_log("玩法进程启动中...")
         self.update_report_data("")
-        self.log_recv, log_send = multiprocessing.Pipe(duplex=False)
+        self.log_queue = multiprocessing.Queue()
         log_level = self.log_level_var.get()
-        self.fengmo_process = multiprocessing.Process(target=run_fengmo_main, args=(log_send, log_level))
+        self.fengmo_process = multiprocessing.Process(target=run_fengmo_main, args=(self.log_queue, log_level))
         self.fengmo_process.start()
         self.status_label.config(text="状态: 玩法运行中... (点击停止可终止)")
-        self.after(100, self.poll_log_pipe)
+        self.after(100, self.poll_log_queue)
 
-    def poll_log_pipe(self):
+    def poll_log_queue(self):
         try:
-            if self.log_recv:
-                while self.log_recv.poll():
-                    msg = self.log_recv.recv()
-                    if msg.startswith("REPORT_DATA__"):
-                        self.update_report_data(msg[len("REPORT_DATA__"):])
-                    else:
-                        self.append_log(msg)
+            if self.log_queue:
+                while True:
+                    try:
+                        msg = self.log_queue.get_nowait()
+                        if msg.startswith("REPORT_DATA__"):
+                            self.update_report_data(msg[len("REPORT_DATA__"):])
+                        else:
+                            self.append_log(msg)
+                    except Exception:
+                        break
             if self.fengmo_process and self.fengmo_process.is_alive():
-                self.after(100, self.poll_log_pipe)
-        except (OSError, EOFError, BrokenPipeError):
-            self.append_log("日志管道已关闭。")
+                self.after(100, self.poll_log_queue)
+        except Exception:
+            self.append_log("日志队列已关闭。")
             return
 
     def on_stop(self):
@@ -260,43 +263,34 @@ class FengmoGUI(tk.Tk):
         os._exit(0)
 
 # 子进程日志Handler
-class PipeLogHandler(logging.Handler):
-    def __init__(self, conn):
+class QueueLogHandler(logging.Handler):
+    def __init__(self, queue):
         super().__init__()
-        self.conn = conn
+        self.queue = queue
     def emit(self, record):
         try:
             msg = self.format(record)
-            self.conn.send(msg)
+            self.queue.put(msg)
         except Exception:
             pass
 
-def run_fengmo_main(log_conn, log_level):
+def run_fengmo_main(log_queue, log_level):
     try:
-        from loguru import logger
         import logging
-        class PipeSink:
-            def __init__(self, conn):
-                self.conn = conn
-                self.pipe_broken = False
-            def write(self, message):
-                if self.pipe_broken:
-                    return
-                try:
-                    if message.strip():
-                        self.conn.send(message.rstrip())
-                except (BrokenPipeError, EOFError, OSError):
-                    self.pipe_broken = True
-                except Exception:
-                    self.pipe_broken = True
-        pipe_sink = PipeSink(log_conn)
-        logger.remove()
-        logger.add(pipe_sink, level=log_level)
-        class InterceptHandler(logging.Handler):
-            def emit(self, record):
-                logger_opt = logger.opt(depth=6, exception=record.exc_info)
-                logger_opt.log(record.levelname, record.getMessage())
-        logging.basicConfig(handlers=[InterceptHandler()], level=log_level)
+        logger = logging.getLogger("dldbz")  # 保证主进程和子进程logger name一致
+        # 兼容字符串和数字
+        if isinstance(log_level, str):
+            log_level_value = getattr(logging, log_level.upper(), logging.INFO)
+        else:
+            log_level_value = log_level
+        logger.setLevel(log_level_value)
+        if logger.hasHandlers():
+            logger.handlers.clear()
+        handler = QueueLogHandler(log_queue)
+        handler.setLevel(logging.NOTSET)  # 确保不过滤任何日志
+        formatter = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
         logger.info(f"[子进程] 日志级别: {log_level}")
         logger.info("玩法子进程已启动，等待业务执行...")
         logger.info("Initializing device manager...")
@@ -320,15 +314,15 @@ def run_fengmo_main(log_conn, log_level):
                 f"当前失败平均用时: {self.avg_fail_time}分钟",
             ]
             report_str = '\n'.join(lines)
-            log_conn.send("REPORT_DATA__" + report_str)
+            log_queue.put("REPORT_DATA__" + report_str)
             logger.info("[report_data]" + report_str.replace("\n", " | "))
         from modes.fengmo import StateData
         StateData.report_data = report_data_patch
         fengmo_mode.run()
     except Exception as e:
         try:
-            if log_conn:
-                log_conn.send(f"[子进程异常] {e}")
+            if log_queue:
+                log_queue.put(f"[子进程异常] {e}")
         except Exception:
             pass
         print(f"[子进程异常] {e}")

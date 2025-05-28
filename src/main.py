@@ -1,14 +1,13 @@
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
 from core.game_controller import GameController
-from utils.logger import setup_logger
+from utils import logger
 from modes.fengmo import FengmoMode
 import traceback
 
 def main():
     # 设置日志
-    logger = setup_logger()
-    
+    # logger = setup_logger()  # 已全局初始化
     try:
         # 初始化设备管理器
         logger.info("Initializing device manager...")

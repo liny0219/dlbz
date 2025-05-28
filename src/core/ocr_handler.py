@@ -1,6 +1,6 @@
 import time
 from paddleocr import PaddleOCR
-from loguru import logger
+from utils import logger
 import yaml
 import cv2
 import numpy as np

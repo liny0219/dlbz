@@ -1,6 +1,6 @@
-from loguru import logger
 from typing import Optional
 from core.device_manager import DeviceManager
+from utils import logger
 from utils.singleton import singleton
 from common.config import config
 

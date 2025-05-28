@@ -1,4 +1,4 @@
-from loguru import logger
+from utils import logger
 import numpy as np
 import time
 from typing import Any

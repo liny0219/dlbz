@@ -1,5 +1,5 @@
 import uiautomator2 as u2
-from loguru import logger
+from utils import logger
 import time
 from PIL import Image
 import cv2
