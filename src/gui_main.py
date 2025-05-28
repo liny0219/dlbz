@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 import yaml
 import os
-import sys
 import multiprocessing
 import logging
 from core.device_manager import DeviceManager
@@ -24,20 +23,6 @@ CONFIG_FILES = [
 ]
 LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
-class LogRedirector:
-    """
-    日志重定向到tkinter文本框
-    """
-    def __init__(self, text_widget):
-        self.text_widget = text_widget
-    def write(self, msg):
-        self.text_widget.configure(state='normal')
-        self.text_widget.insert(tk.END, msg)
-        self.text_widget.see(tk.END)
-        self.text_widget.configure(state='disabled')
-    def flush(self):
-        pass
-
 class FengmoGUI(tk.Tk):
     """
     主窗口，包含主界面和设置界面，玩法主流程用子进程启动/终止，支持日志级别动态调整
@@ -56,9 +41,6 @@ class FengmoGUI(tk.Tk):
         self._build_main_frame()
         self._build_settings_frame()
         self.show_main()
-        # 日志重定向（主进程本身日志）
-        sys.stdout = LogRedirector(self.log_text)
-        sys.stderr = LogRedirector(self.log_text)
 
     def append_log(self, msg):
         self.log_text.configure(state='normal')
@@ -124,13 +106,52 @@ class FengmoGUI(tk.Tk):
                     except Exception as e:
                         data = {}
                 row = 0
-                for k, v in data.items():
-                    ttk.Label(frame, text=k).grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                    var = tk.StringVar(value=str(v))
-                    entry = ttk.Entry(frame, textvariable=var, width=40)
-                    entry.grid(row=row, column=1, padx=5, pady=3)
-                    vars_dict[k] = var
+                # 针对逢魔玩法特殊处理
+                if fname == "fengmo.yaml":
+                    label_width = 10  # 标签宽度
+                    input_width = 20  # 输入控件宽度
+                    # rest_in_inn
+                    ttk.Label(frame, text="旅馆休息", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+                    rest_var = tk.StringVar(value="是" if data.get("rest_in_inn", True) else "否")
+                    rest_combo = ttk.Combobox(frame, textvariable=rest_var, values=["是", "否"], state="readonly", width=input_width)
+                    rest_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+                    vars_dict["rest_in_inn"] = rest_var
                     row += 1
+                    # city
+                    from common.config import config
+                    city_keys = list(config.fengmo_cities.keys())
+                    city_display = city_keys  # 如需中英文映射可在此处理
+                    ttk.Label(frame, text="城市", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+                    city_var = tk.StringVar(value=data.get("city", city_keys[0]))
+                    city_combo = ttk.Combobox(frame, textvariable=city_var, values=city_display, state="readonly", width=input_width)
+                    city_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+                    vars_dict["city"] = city_var
+                    row += 1
+                    # depth
+                    ttk.Label(frame, text="深度", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+                    depth_var = tk.StringVar(value=str(data.get("depth", 1)))
+                    depth_spin = tk.Spinbox(frame, from_=1, to=10, textvariable=depth_var, width=input_width)
+                    depth_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+                    vars_dict["depth"] = depth_var
+                    row += 1
+                    # 其余字段
+                    for k, v in data.items():
+                        if k in ("rest_in_inn", "city", "depth"):
+                            continue
+                        ttk.Label(frame, text=k, width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+                        var = tk.StringVar(value=str(v))
+                        entry = ttk.Entry(frame, textvariable=var, width=input_width)
+                        entry.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+                        vars_dict[k] = var
+                        row += 1
+                else:
+                    for k, v in data.items():
+                        ttk.Label(frame, text=k).grid(row=row, column=0, sticky='w', padx=5, pady=3)
+                        var = tk.StringVar(value=str(v))
+                        entry = ttk.Entry(frame, textvariable=var, width=40)
+                        entry.grid(row=row, column=1, padx=5, pady=3)
+                        vars_dict[k] = var
+                        row += 1
             self.config_vars[fname] = vars_dict
         save_btn = ttk.Button(self.settings_frame, text="保存所有设置", command=self.save_settings)
         save_btn.pack(pady=10)
@@ -196,16 +217,28 @@ class FengmoGUI(tk.Tk):
             data = {}
             for k, var in vars_dict.items():
                 v = var.get()
-                if v.lower() in ("true", "false"):
-                    v = v.lower() == "true"
-                else:
-                    try:
-                        if "." in v:
-                            v = float(v)
-                        else:
+                # 针对逢魔玩法特殊处理
+                if fname == "fengmo.yaml":
+                    if k == "rest_in_inn":
+                        v = True if v == "是" else False
+                    elif k == "depth":
+                        try:
                             v = int(v)
-                    except Exception:
-                        pass
+                        except Exception:
+                            v = 1
+                    elif k == "city":
+                        v = str(v)
+                else:
+                    if v.lower() in ("true", "false"):
+                        v = v.lower() == "true"
+                    else:
+                        try:
+                            if "." in v:
+                                v = float(v)
+                            else:
+                                v = int(v)
+                        except Exception:
+                            pass
                 data[k] = v
             try:
                 with open(fpath, 'w', encoding='utf-8') as f:
@@ -243,14 +276,22 @@ def run_fengmo_main(log_conn, log_level):
         from loguru import logger
         import logging
         class PipeSink:
+            def __init__(self, conn):
+                self.conn = conn
+                self.pipe_broken = False
             def write(self, message):
+                if self.pipe_broken:
+                    return
                 try:
-                    log_conn.send(message.rstrip())
+                    if message.strip():
+                        self.conn.send(message.rstrip())
+                except (BrokenPipeError, EOFError, OSError):
+                    self.pipe_broken = True
                 except Exception:
-                    pass
+                    self.pipe_broken = True
+        pipe_sink = PipeSink(log_conn)
         logger.remove()
-        logger.add(sys.stdout, level=log_level)
-        logger.add(PipeSink(), level=log_level)  # loguru日志同步到Pipe
+        logger.add(pipe_sink, level=log_level)
         class InterceptHandler(logging.Handler):
             def emit(self, record):
                 logger_opt = logger.opt(depth=6, exception=record.exc_info)
@@ -285,8 +326,11 @@ def run_fengmo_main(log_conn, log_level):
         StateData.report_data = report_data_patch
         fengmo_mode.run()
     except Exception as e:
-        if log_conn:
-            log_conn.send(f"[子进程异常] {e}")
+        try:
+            if log_conn:
+                log_conn.send(f"[子进程异常] {e}")
+        except Exception:
+            pass
         print(f"[子进程异常] {e}")
         traceback.print_exc()
 

@@ -1,2 +1,2 @@
-level: "INFO"
-format: "{time} {level} {message}" 
+format: '{time} {level} {message}'
+level: INFO
