@@ -7,6 +7,7 @@ import numpy as np
 import os
 from typing import Optional
 from common.config import config
+import traceback
 
 class DeviceManager:
     def __init__(self):
@@ -38,7 +39,7 @@ class DeviceManager:
                     logger.info(f"Successfully connected to device: {self.device.info}")
                     return True
                 except Exception as e:
-                    logger.warning(f"Connection attempt {i+1} failed: {str(e)}")
+                    logger.warning(f"Connection attempt {i+1} failed: {str(e)}\n{traceback.format_exc()}")
                     if i < retry_count - 1:
                         time.sleep(2)
                     continue
@@ -47,7 +48,7 @@ class DeviceManager:
             return False
             
         except Exception as e:
-            logger.error(f"Error connecting to device: {str(e)}")
+            logger.error(f"Error connecting to device: {str(e)}\n{traceback.format_exc()}")
             return False
     
     def get_screenshot(self) -> Optional[Image.Image]:
@@ -72,7 +73,7 @@ class DeviceManager:
                         return None
             return None
         except Exception as e:
-            logger.error(f"Failed to take screenshot: {str(e)}")
+            logger.error(f"Failed to take screenshot: {str(e)}\n{traceback.format_exc()}")
             return None 
 
     def get_screenshot_region(self, x1: int, y1: int, x2: int, y2: int) -> Optional[Image.Image]:
@@ -92,7 +93,7 @@ class DeviceManager:
             region = img.crop((x1, y1, x2, y2))
             return region
         except Exception as e:
-            logger.error(f"Failed to crop screenshot region: {str(e)}")
+            logger.error(f"Failed to crop screenshot region: {str(e)}\n{traceback.format_exc()}")
             return None
 
     def save_image(self, img: Image.Image, save_path: str) -> None:
@@ -106,7 +107,7 @@ class DeviceManager:
             img.save(save_path)
             logger.info(f"Image saved to {save_path}")
         except Exception as e:
-            logger.error(f"Failed to save image: {str(e)}")
+            logger.error(f"Failed to save image: {str(e)}\n{traceback.format_exc()}")
 
     def click(self, x: int, y: int) -> None:
         """
@@ -121,4 +122,4 @@ class DeviceManager:
             else:
                 logger.error("设备未连接，无法点击")
         except Exception as e:
-            logger.error(f"点击坐标 ({x}, {y}) 失败: {str(e)}") 
+            logger.error(f"点击坐标 ({x}, {y}) 失败: {str(e)}\n{traceback.format_exc()}") 

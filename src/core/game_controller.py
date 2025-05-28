@@ -2,6 +2,7 @@ from utils import logger
 import numpy as np
 import time
 from typing import Any
+import traceback
 
 class GameController:
     def __init__(self, device_manager: Any, ocr_handler: Any) -> None:
@@ -16,5 +17,5 @@ class GameController:
             logger.info(f"Swiped from ({fx}, {fy}) to ({tx}, {ty})")
             return True
         except Exception as e:
-            logger.error(f"Swipe operation failed: {str(e)}")
+            logger.error(f"Swipe operation failed: {str(e)}\n{traceback.format_exc()}")
             return False 

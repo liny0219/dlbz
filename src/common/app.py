@@ -3,6 +3,7 @@ from core.device_manager import DeviceManager
 from utils import logger
 from utils.singleton import singleton
 from common.config import config
+import traceback
 
 @singleton
 class AppManager:
@@ -30,7 +31,7 @@ class AppManager:
             logger.info(f"App当前包名: {current_app.get('package')}, 目标包名: {self.app_package}, 运行状态: {running}")
             return running
         except Exception as e:
-            logger.error(f"检查App运行状态失败: {e}")
+            logger.error(f"检查App运行状态失败: {e}\n{traceback.format_exc()}")
             return False
 
     def start_app(self) -> None:
@@ -47,7 +48,7 @@ class AppManager:
             self.device_manager.device.app_start(self.app_package)
             logger.info(f"启动App: {self.app_package}")
         except Exception as e:
-            logger.error(f"启动App失败: {e}")
+            logger.error(f"启动App失败: {e}\n{traceback.format_exc()}")
 
     def close_app(self) -> None:
         """
@@ -63,7 +64,7 @@ class AppManager:
             self.device_manager.device.app_stop(self.app_package)
             logger.info(f"关闭App: {self.app_package}")
         except Exception as e:
-            logger.error(f"关闭App失败: {e}")
+            logger.error(f"关闭App失败: {e}\n{traceback.format_exc()}")
 
     def check_app_alive(self) -> bool:
         """

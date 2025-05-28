@@ -12,6 +12,7 @@ from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
 from common.config import config, CheckPoint
 from utils.sleep_utils import sleep_until
+import traceback
 
 class Step(Enum):
     """
@@ -67,7 +68,7 @@ class StateData:
                 self.total_fail_time = round((self.total_fail_time + self.turn_time), 2)
             self.avg_finished_time = round((self.total_finished_time / self.total_finished_count), 2)
         except Exception as e:
-            logger.info(f"{e.__traceback__}")
+            logger.info(f"{e.__traceback__}\n{traceback.format_exc()}")
 
     
     def report_data(self):
@@ -202,7 +203,7 @@ class FengmoMode:
                             if check_point.reset_map:
                                 break
                         except Exception as e:
-                            raise Exception(f"[_collect_junk_phase]等待结果失败: {e}")
+                            raise Exception(f"[_collect_junk_phase]等待结果失败: {e}\n{traceback.format_exc()}")
 
     def _find_box_phase(self) -> None:
         """

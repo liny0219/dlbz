@@ -10,6 +10,7 @@ import os
 from core.device_manager import DeviceManager
 from common.config import config
 from utils.get_asset_path import get_asset_path
+import traceback
 
 class OCRHandler:
     def __init__(self, device_manager: DeviceManager) -> None:
@@ -76,7 +77,7 @@ class OCRHandler:
             logger.debug(f"全部关键词匹配: {keywords}")
             return True
         except Exception as e:
-            logger.error(f"OCR匹配失败: {str(e)}")
+            logger.error(f"OCR匹配失败: {str(e)}\n{traceback.format_exc()}")
             return False
 
     def match_click_text(
@@ -159,7 +160,7 @@ class OCRHandler:
             logger.debug("所有关键词匹配，但未找到可点击的文本区域")
             return False
         except Exception as e:
-            logger.error(f"match_click_text 执行异常: {e}")
+            logger.error(f"match_click_text 执行异常: {e}\n{traceback.format_exc()}")
             return False
 
     def recognize_text(self, image:Union[Image.Image, np.ndarray, str, None] = None, region: Optional[Tuple[int, int, int, int]] = None, rec_char_type: str = 'all', scale: int = 2):
@@ -229,7 +230,7 @@ class OCRHandler:
             return processed_results
             
         except Exception as e:
-            logger.error(f"OCR recognition failed: {str(e)}")
+            logger.error(f"OCR recognition failed: {str(e)}\n{traceback.format_exc()}")
             return []
 
     def match_image(
@@ -320,7 +321,7 @@ class OCRHandler:
                 logger.debug("模板未匹配成功")
                 return None
         except Exception as e:
-            logger.error(f"模板匹配失败: {str(e)}")
+            logger.error(f"模板匹配失败: {str(e)}\n{traceback.format_exc()}")
             return None
 
     @staticmethod
@@ -556,7 +557,7 @@ class OCRHandler:
                 cv2.imwrite("debug/match_image_multi_result.png", debug_img)
             return matches
         except Exception as e:
-            logger.error(f"match_image_multi 执行异常: {e}")
+            logger.error(f"match_image_multi 执行异常: {e}\n{traceback.format_exc()}")
             return [] 
 
     @staticmethod

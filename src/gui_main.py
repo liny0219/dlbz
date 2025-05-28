@@ -4,12 +4,13 @@ import yaml
 import os
 import multiprocessing
 import logging
-from core.device_manager import DeviceManager
-from core.ocr_handler import OCRHandler
-from modes.fengmo import FengmoMode
 from utils import logger
 from common.config import get_config_dir
 import traceback
+import sys
+from core.device_manager import DeviceManager
+from core.ocr_handler import OCRHandler
+from modes.fengmo import FengmoMode
 
 version = "v0.9"
 
@@ -29,7 +30,7 @@ class FengmoGUI(tk.Tk):
     """
     def __init__(self):
         super().__init__()
-        self.title(f"旅人休息站.免费脚本 {version}")
+        self.title(f"旅人休息站.免费脚本 {version} 分辨率 1280x720 (dpi 240)")
         self.geometry("800x600")
         self.minsize(700, 400)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -248,7 +249,7 @@ class FengmoGUI(tk.Tk):
                     yaml.dump(data, f, allow_unicode=True)
                 self.logger.info(f"已保存: {fname}")
             except Exception as e:
-                self.logger.error(f"保存 {fname} 失败: {e}")
+                self.logger.error(f"保存 {fname} 失败: {e}\n{traceback.format_exc()}")
         messagebox.showinfo("提示", "所有设置已保存！")
         self.append_log("所有设置已保存！")
 
@@ -274,23 +275,31 @@ class QueueLogHandler(logging.Handler):
         except Exception:
             pass
 
+def fix_stdio_if_none():
+    import sys
+    if sys.stdout is None:
+        import io
+        sys.stdout = io.StringIO()
+    if sys.stderr is None:
+        import io
+        sys.stderr = io.StringIO()
+
 def run_fengmo_main(log_queue, log_level):
+    import logging
+    fix_stdio_if_none()
+    # 先移除所有 root logger handler，防止默认 handler 的 stream 为 None
+    root_logger = logging.getLogger()
+    for h in root_logger.handlers[:]:
+        root_logger.removeHandler(h)
+    # 配置自定义 handler
+    handler = QueueLogHandler(log_queue)
+    handler.setLevel(logging.NOTSET)
+    formatter = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
+    handler.setFormatter(formatter)
+    root_logger.setLevel(getattr(logging, str(log_level).upper(), logging.INFO))
+    root_logger.addHandler(handler)
     try:
-        import logging
-        logger = logging.getLogger("dldbz")  # 保证主进程和子进程logger name一致
-        # 兼容字符串和数字
-        if isinstance(log_level, str):
-            log_level_value = getattr(logging, log_level.upper(), logging.INFO)
-        else:
-            log_level_value = log_level
-        logger.setLevel(log_level_value)
-        if logger.hasHandlers():
-            logger.handlers.clear()
-        handler = QueueLogHandler(log_queue)
-        handler.setLevel(logging.NOTSET)  # 确保不过滤任何日志
-        formatter = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+        logger = logging.getLogger("dldbz")
         logger.info(f"[子进程] 日志级别: {log_level}")
         logger.info("玩法子进程已启动，等待业务执行...")
         logger.info("Initializing device manager...")
@@ -321,13 +330,16 @@ def run_fengmo_main(log_queue, log_level):
         StateData.report_data = report_data_patch
         fengmo_mode.run()
     except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
         try:
             if log_queue:
-                log_queue.put(f"[子进程异常] {e}")
-        except Exception:
-            pass
+                log_queue.put(f"[子进程异常] {e}\n{tb}")
+        except Exception as ee:
+            print(f"日志队列异常: {ee}\n{traceback.format_exc()}")
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()  # Windows兼容
+    fix_stdio_if_none()
     app = FengmoGUI()
     app.mainloop()
