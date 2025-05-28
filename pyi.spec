@@ -35,7 +35,7 @@ try:
 except Exception as e:
     print(f"Warning: Could not collect paddle DLLs: {e}")
 
-main_script = 'src/main.py'
+main_script = 'src/gui_main.py'
 
 a = Analysis([main_script],
              pathex=['.'],
@@ -66,5 +66,5 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
           # icon='assets/icon_exe.ico', # 如有图标可取消注释
-          console=True,
+          console=False,
           runtime_tmpdir=None)

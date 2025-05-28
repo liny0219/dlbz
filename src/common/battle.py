@@ -160,19 +160,21 @@ class Battle:
         if not self.in_battle_round():
             return False
         times = 0
-        done_auto = False
+        done_click_auto = False
         while True: 
-            if self.ocr_handler.match_click_text(["委托战斗开始"],region=(30,580,1240,700)):
-                logger.info("点击委托战斗开始")
-                return True
-            if not done_auto and self.ocr_handler.match_click_text(["委托"],region=(30,580,1240,700)):
-                done_auto = True
-                logger.info("点击委托")
-                continue
             time.sleep(interval)
             times += 1
             if times >= max_times:
                 return False
+            if self.ocr_handler.match_click_text(["委托战斗开始"],region=(30,580,1240,700)):
+                time.sleep(1)
+                done_click_auto = True
+                logger.info("点击委托战斗开始")
+                return True
+            if not done_click_auto and self.ocr_handler.match_click_text(["委托"],region=(30,580,1240,700)):
+                logger.info("点击委托")
+                continue
+
 
     def exit_battle(self, interval:int = 1,max_times:int = 5) -> bool:
         """

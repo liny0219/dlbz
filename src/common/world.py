@@ -103,7 +103,7 @@ class World:
             logger.debug("不在旅馆门口")
             return None
     
-    def find_fengmo_point(self, image: Optional[Image.Image] = None, type: str = "right",offset=110) -> Optional[tuple[int, int]] | None:
+    def find_fengmo_point(self, image: Optional[Image.Image] = None, type: str = "right",offset=60) -> Optional[tuple[int, int]] | None:
         """
         判断当前是否有逢魔点(逢魔入口也是这个,判断感叹号)。
         """
