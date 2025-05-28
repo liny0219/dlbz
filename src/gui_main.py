@@ -297,7 +297,8 @@ def run_fengmo_main(log_queue, log_level):
         device_manager = DeviceManager()
         if not device_manager.connect_device():
             logger.error("Failed to connect device")
-            print("设备连接失败")
+            if log_queue:
+                log_queue.put("设备连接失败")
             return
         logger.info("Initializing OCR handler...")
         ocr_handler = OCRHandler(device_manager)
@@ -325,8 +326,6 @@ def run_fengmo_main(log_queue, log_level):
                 log_queue.put(f"[子进程异常] {e}")
         except Exception:
             pass
-        print(f"[子进程异常] {e}")
-        traceback.print_exc()
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()  # Windows兼容

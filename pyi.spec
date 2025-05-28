@@ -15,6 +15,7 @@ packages = [
     'uiautomator2',
     'paddleocr',
     'Cython',
+    'shapely',
 ]
 
 for package in packages:

@@ -108,9 +108,9 @@ class FengmoMode:
         self.entrance_pos = self.city_config.get("entrance_pos", [])
         self.check_points = self.city_config.get("check_points", [])
         self.reset_pos = self.city_config.get("reset_pos", [])
-        self.find_point_wait_time = 2
-        self.find_treasure_wait_time = 2
-        self.find_minimap_wait_time = 2
+        self.find_point_wait_time = 3
+        self.find_treasure_wait_time = 3
+        self.find_minimap_wait_time = 3
         self.check_info_timeout = 1
         self.state_data = StateData()
 
@@ -359,6 +359,8 @@ class FengmoMode:
                 while True:
                     point_pos = sleep_until(self.world.find_fengmo_point_cure, self.find_point_wait_time)
                     if point_pos:
+                        # 坐标点Y轴偏移
+                        point_pos = (point_pos[0],point_pos[1]+60)
                         self.device_manager.click(*point_pos)
                     result = sleep_until(self.check_info,timeout=self.check_info_timeout)
                     if result == "found_cure":
@@ -367,6 +369,7 @@ class FengmoMode:
                     if result == "in_battle":
                         break
                     if result == 'found_boss':
+                        self.state_data.step = Step.FIGHT_BOSS
                         return
     def _fight_boss_phase(self):
         """
@@ -504,16 +507,17 @@ class FengmoMode:
         """
         检查信息
         """
-        if filter.get("in_world",True) and self.world.in_world():
+        screenshot = self.device_manager.get_screenshot()
+        if filter.get("in_world",True) and self.world.in_world(screenshot):
             return "in_world"
-        if filter.get("in_battle",True) and self.battle.in_battle():
+        if filter.get("in_battle",True) and self.battle.in_battle(screenshot):
             return "in_battle"
-        if filter.get("found_boss",True) and self.check_found_boss():
+        if filter.get("found_boss",True) and self.check_found_boss(screenshot):
             return "found_boss"
-        if filter.get("in_minimap",True) and self.world.in_minimap():
+        if filter.get("in_minimap",True) and self.world.in_minimap(screenshot):
             return "in_minimap"
         region = (292, 175, 983, 540)
-        results = self.ocr_handler.recognize_text(region=region)
+        results = self.ocr_handler.recognize_text(region=region,image=screenshot)
         find_text = None
         for r in results:
             if "获得道具" in r['text']:
@@ -528,18 +532,18 @@ class FengmoMode:
                 find_text = "found_boss"
         if find_text:
             logger.info(f"[check_info]找到文本: {find_text}")
-            self.ocr_handler.match_click_text(["确定"],region=region)
+            self.ocr_handler.match_click_text(["确定"],region=region,image=screenshot)
             return find_text
         return None
 
-    def check_found_boss(self):
+    def check_found_boss(self,screenshot:Image.Image|None = None):
         """
         检查是否出现Boss
         :return: True-发现Boss，False-未发现
         """
         region = (292,175,983,540)
-        if self.ocr_handler.match_texts(["逢魔之主"],region=region):
-            self.ocr_handler.match_click_text(["确定"],region=region)
+        if self.ocr_handler.match_texts(["逢魔之主"],region=region,image = screenshot):
+            self.ocr_handler.match_click_text(["确定"],region=region,image = screenshot)
             return True
         else:
             return False
