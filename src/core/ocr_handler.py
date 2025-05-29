@@ -263,14 +263,6 @@ class OCRHandler:
                 image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
             orig_image = image.copy()  # 保存原始图片
 
-            # 2. 读取模板
-            base, ext = os.path.splitext(template_path)
-            if "__" in base:
-                region_str = base.split("__")[-1]
-                region_tuple = tuple(map(int, region_str.split("_")))
-                if len(region_tuple) == 4:
-                    region = region_tuple
-                    logger.debug(f"自动提取region坐标: {region}")
             # 读取模板始终用get_asset_path
             template = cv2.imread(get_asset_path(template_path))
             if template is None:
@@ -509,14 +501,6 @@ class OCRHandler:
                 image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
             orig_image = image.copy()
 
-            # 2. 读取模板
-            base, ext = os.path.splitext(template_path)
-            if "__" in base:
-                region_str = base.split("__")[-1]
-                region_tuple = tuple(map(int, region_str.split("_")))
-                if len(region_tuple) == 4:
-                    region = region_tuple
-                    logger.debug(f"自动提取region坐标: {region}")
             template = cv2.imread(get_asset_path(template_path))
             if template is None:
                 logger.error(f"模板图片读取失败: {template_path}")

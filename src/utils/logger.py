@@ -1,5 +1,6 @@
 import logging
 import sys
+import os
 from common.config import config
 
 def setup_logger():
@@ -28,6 +29,8 @@ def setup_logger():
     formatter = logging.Formatter(log_format)
     # 控制台输出
     if sys.stdout is None:
+        # 日志目录不存在则自动创建
+        os.makedirs("logs", exist_ok=True)
         handler = logging.FileHandler("logs/main.log", encoding="utf-8")
     else:
         handler = logging.StreamHandler(sys.stdout)
