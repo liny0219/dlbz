@@ -11,6 +11,7 @@ from core.device_manager import DeviceManager
 from common.config import config
 from utils.get_asset_path import get_asset_path
 import traceback
+import threading
 
 class OCRHandler:
     def __init__(self, device_manager: DeviceManager) -> None:
@@ -23,6 +24,7 @@ class OCRHandler:
         self.ocr_digit = PaddleOCR(rec_char_type='digit',use_angle_cls=config.ocr.use_angle_cls,lang='en')
         self.threshold = config.ocr.threshold
         self.device_manager = device_manager
+        self.ocr_lock = threading.Lock()  # 新增：OCR推理锁
         logger.debug("OCR handler initialized")
 
     def match_texts(
@@ -54,7 +56,8 @@ class OCRHandler:
                     logger.warning("region参数仅支持PIL.Image或np.ndarray类型图片裁剪")
             if isinstance(image, Image.Image):
                 image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-            result = self.ocr.ocr(image, cls=True)
+            with self.ocr_lock:
+                result = self.ocr.ocr(image, cls=True)
             if not result:
                 logger.warning("OCR无结果")
                 return False
@@ -120,8 +123,8 @@ class OCRHandler:
                     logger.warning("region参数仅支持PIL.Image或np.ndarray类型图片裁剪")
             if isinstance(image, Image.Image):
                 image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-            # OCR识别
-            result = self.ocr.ocr(image, cls=True)
+            with self.ocr_lock:
+                result = self.ocr.ocr(image, cls=True)
             if not result:
                 logger.warning("OCR无结果")
                 return False
@@ -178,14 +181,14 @@ class OCRHandler:
             # 区域裁剪前，若指定region，保存画红框的调试图片
             if region is not None:
                 # 只支持PIL.Image调试保存
-                if isinstance(image, Image.Image):
-                    os.makedirs("debug", exist_ok=True)
-                    img_copy = image.copy()
-                    draw = ImageDraw.Draw(img_copy)
-                    draw.rectangle(region, outline="red", width=2)
-                    filename = f"debug/ocr_region.png"
-                    img_copy.save(filename)
-                    logger.debug(f"已保存OCR裁剪区域调试图: {filename}")
+                # if isinstance(image, Image.Image):
+                #     os.makedirs("debug", exist_ok=True)
+                #     img_copy = image.copy()
+                #     draw = ImageDraw.Draw(img_copy)
+                #     draw.rectangle(region, outline="red", width=2)
+                #     filename = f"debug/ocr_region.png"
+                #     img_copy.save(filename)
+                #     logger.debug(f"已保存OCR裁剪区域调试图: {filename}")
                 # 裁剪
                 if isinstance(image, Image.Image):
                     image = image.crop(region)
@@ -205,10 +208,11 @@ class OCRHandler:
             # 如果是 PIL.Image，先转成 OpenCV 格式（BGR）
             if isinstance(image, Image.Image):
                 image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-            if rec_char_type == 'digit':
-                result = self.ocr_digit.ocr(image, cls=True)
-            else:
-                result = self.ocr.ocr(image, cls=True)
+            with self.ocr_lock:
+                if rec_char_type == 'digit':
+                    result = self.ocr_digit.ocr(image, cls=True)
+                else:
+                    result = self.ocr.ocr(image, cls=True)
             
             if result is None or not result:
                 logger.warning("OCR无结果")

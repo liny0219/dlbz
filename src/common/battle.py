@@ -153,28 +153,28 @@ class Battle:
         results = [self.ocr_handler.match_point_color(image, x, y, color, rng) for x, y, color, rng in points_colors]
         return all(results) and self.in_battle(image)
     
-    def auto_battle(self, interval:int = 1,max_times:int = 30) -> bool:
+    def auto_battle(self, interval:float = 0.2,max_times:int = 30) -> bool:
         """
         自动战斗
         """
-        if not self.in_battle_round():
+        screenshot = self.device_manager.get_screenshot()
+        if not self.in_battle_round(screenshot):
             return False
         times = 0
         done_click_auto = False
         while True: 
-            time.sleep(interval)
-            times += 1
-            if times >= max_times:
-                return False
-            if self.ocr_handler.match_click_text(["委托战斗开始"],region=(30,580,1240,700)):
-                time.sleep(1)
+            if self.ocr_handler.match_click_text(["委托战斗开始"],region=(30,580,1240,700),image=screenshot):
+                time.sleep(0.5)
                 done_click_auto = True
                 logger.info("点击委托战斗开始")
                 return True
-            if not done_click_auto and self.ocr_handler.match_click_text(["委托"],region=(30,580,1240,700)):
+            if not done_click_auto and self.ocr_handler.match_click_text(["委托"],region=(30,580,1240,700),image=screenshot):
                 logger.info("点击委托")
-                continue
-
+                time.sleep(interval)
+            screenshot = self.device_manager.get_screenshot()
+            times += 1
+            if times >= max_times:
+                return False
 
     def exit_battle(self, interval:int = 1,max_times:int = 5) -> bool:
         """

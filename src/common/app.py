@@ -28,7 +28,7 @@ class AppManager:
                 return False
             current_app = self.device_manager.device.app_current()
             running = current_app.get("package") == self.app_package
-            logger.info(f"App当前包名: {current_app.get('package')}, 目标包名: {self.app_package}, 运行状态: {running}")
+            logger.debug(f"App当前包名: {current_app.get('package')}, 目标包名: {self.app_package}, 运行状态: {running}")
             return running
         except Exception as e:
             logger.error(f"检查App运行状态失败: {e}\n{traceback.format_exc()}")
@@ -68,11 +68,10 @@ class AppManager:
 
     def check_app_alive(self) -> bool:
         """
-        检查App是否运行，未运行则自动启动
-        :return: bool 启动后是否运行
+        检查App是否运行
+        :return: bool 是否运行
         """
         if not self.is_app_running():
-            logger.info("App未运行，尝试自动启动...")
-            self.start_app()
-            return self.is_app_running()
+            logger.info("检查到App未运行.")
+            return False
         return True 

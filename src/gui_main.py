@@ -42,6 +42,10 @@ class FengmoGUI(tk.Tk):
         self._build_main_frame()
         self._build_settings_frame()
         self.show_main()
+        # 绑定日志级别下拉框事件
+        self.loglevel_combo.bind("<<ComboboxSelected>>", self.on_log_level_change)
+        # 启动时同步一次日志级别
+        self.on_log_level_change()
 
     def append_log(self, msg):
         self.log_text.configure(state='normal')
@@ -165,6 +169,11 @@ class FengmoGUI(tk.Tk):
         self.main_frame.pack_forget()
         self.settings_frame.pack(fill=tk.BOTH, expand=True)
 
+    def on_log_level_change(self, event=None):
+        """日志级别下拉框变更时，动态设置主进程logger级别"""
+        level = self.log_level_var.get().upper()
+        self.logger.setLevel(getattr(logging, level, logging.INFO))
+
     def on_start(self):
         if self.fengmo_process and self.fengmo_process.is_alive():
             messagebox.showinfo("提示", "玩法已在运行中！")
@@ -175,7 +184,7 @@ class FengmoGUI(tk.Tk):
         self.append_log("玩法进程启动中...")
         self.update_report_data("")
         self.log_queue = multiprocessing.Queue()
-        log_level = self.log_level_var.get()
+        log_level = self.log_level_var.get()  # 获取最新日志级别
         self.fengmo_process = multiprocessing.Process(target=run_fengmo_main, args=(self.log_queue, log_level))
         self.fengmo_process.start()
         self.status_label.config(text="状态: 玩法运行中... (点击停止可终止)")
@@ -286,6 +295,7 @@ def fix_stdio_if_none():
 
 def run_fengmo_main(log_queue, log_level):
     import logging
+    from common.config import config
     fix_stdio_if_none()
     # 先移除所有 root logger handler，防止默认 handler 的 stream 为 None
     root_logger = logging.getLogger()
@@ -294,12 +304,21 @@ def run_fengmo_main(log_queue, log_level):
     # 配置自定义 handler
     handler = QueueLogHandler(log_queue)
     handler.setLevel(logging.NOTSET)
-    formatter = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
+
+    # 读取配置文件的日志格式，并转换，传入datefmt参数
+    log_format, datefmt = config.get_logging_format_and_datefmt(config.logging.format, getattr(config.logging, 'datefmt', None))
+    formatter = config.get_no_millisec_formatter(log_format, datefmt)
     handler.setFormatter(formatter)
-    root_logger.setLevel(getattr(logging, str(log_level).upper(), logging.INFO))
+    # 日志级别
+    level = getattr(logging, str(log_level).upper(), logging.INFO)
+    root_logger.setLevel(level)
     root_logger.addHandler(handler)
+    # 关键：同步dldbz logger的level和handler
+    logger = logging.getLogger("dldbz")
+    logger.setLevel(level)
+    logger.handlers.clear()
+    logger.propagate = True
     try:
-        logger = logging.getLogger("dldbz")
         logger.info(f"[子进程] 日志级别: {log_level}")
         logger.info("玩法子进程已启动，等待业务执行...")
         logger.info("Initializing device manager...")

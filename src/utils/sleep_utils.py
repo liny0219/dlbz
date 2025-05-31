@@ -9,7 +9,7 @@ def sleep(interval: float = 1.0, multiplier: float = 1.0) -> None:
     time.sleep(interval*multiplier)
     logger.debug(f"指令间隔sleep {interval}秒")
 
-def sleep_until(condition_func, timeout: float = 30.0, interval: float = 1.0):
+def sleep_until(condition_func, timeout: float = 30.0, interval: float = 0.2):
     """
     通用sleep_until函数，轮询等待条件。
     """

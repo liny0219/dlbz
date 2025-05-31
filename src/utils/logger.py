@@ -8,25 +8,14 @@ def setup_logger():
     配置标准logging日志输出到控制台
     自动兼容loguru风格的日志格式
     """
-    log_format = config.logging.format
-    # 自动兼容loguru风格格式
-    if '{' in log_format and '}' in log_format:
-        # 常见loguru风格占位符替换为logging风格
-        log_format = (log_format
-            .replace('{time}', '%(asctime)s')
-            .replace('{level}', '%(levelname)s')
-            .replace('{message}', '%(message)s')
-            .replace('{name}', '%(name)s')
-            .replace('{process}', '%(process)d')
-            .replace('{thread}', '%(thread)d')
-        )
+    log_format, datefmt = config.get_logging_format_and_datefmt(config.logging.format, getattr(config.logging, 'datefmt', None))
     log_level = config.logging.level
     logger = logging.getLogger("dldbz")
     logger.setLevel(log_level)
     # 移除所有旧的handler
     if logger.hasHandlers():
         logger.handlers.clear()
-    formatter = logging.Formatter(log_format)
+    formatter = config.get_no_millisec_formatter(log_format, datefmt)
     # 控制台输出
     if sys.stdout is None:
         # 日志目录不存在则自动创建
@@ -36,6 +25,10 @@ def setup_logger():
         handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+    # 屏蔽第三方库debug日志
+    logging.getLogger("uiautomator2").setLevel(logging.WARNING)
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
     return logger
 
 # 兼容loguru风格用法，直接暴露logger实例

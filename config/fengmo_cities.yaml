@@ -3,26 +3,41 @@ cities:
     inn_pos: [645, 573] # 旅馆点
     entrance_pos: [337, 596] # 入口点
     reset_pos: [548,343] # 重置点,当小地图被遮挡时,遇到无法匹配到图标的时候,点击重置点
-    check_points:
+    monsters:
       [
         {
+          name: boss,
+          points:[
+            {
+              "x": 1164,
+              "y": 349,
+              "color": "#FF0000",
+              "range": 10
+            }
+          ],
+          battle_config: "fengmo_battle_config.yaml"
+        }
+      ]
+    check_points:
+      [       
+        {
           "id": 1,
-          "pos": [533,617],
+          "pos": [420,615],
           "reset_map": true,
           "next_point": false,
-          "found": [
-            [561,239],
-            [260,388]
+          "item_pos": [
+            [1164,349],
+            [316,387]
           ]
         },
         {
           "id": 2,
-          "pos": [420,615],
-          "reset_map": false,
-          "next_point": true,
-          "found": [
-            [1164,349],
-            [316,387]
+          "pos": [533,617],
+          "reset_map": true,
+          "next_point": false,
+          "item_pos": [
+            [561,239],
+            [260,388]
           ]
         },
         {
@@ -30,8 +45,8 @@ cities:
           "pos": [576,443],
           "reset_map": true,
           "next_point": true,
-          "found": [
-            [737,409]
+          "item_pos": [
+            [732,349]
           ]
         },
         {
@@ -39,7 +54,7 @@ cities:
           "pos": [557,259],
           "reset_map": true,
           "next_point": true,
-          "found": [
+          "item_pos": [
             [75,377]
           ]
         },
@@ -48,62 +63,53 @@ cities:
           "pos": [675,289],
           "reset_map": False,
           "next_point": False,
-          "found": [
+          "item_pos": [
             [724,321],
-            [503,553]
+            [507,539]
           ]
         },
         {
           "id": 6,
-          "pos": [751,327],
-          "reset_map": true,
-          "next_point": false,
-          "found": [
-            [932,393]
-          ]
-        },
-        {
-          "id": 7,
           "pos": [815,324],
           "reset_map": true,
           "next_point": true,
-          "found": [
+          "item_pos": [
             [635,397]
           ]
         },
         {
-          "id": 8,
+          "id": 7,
           "pos": [804,504],
           "reset_map": true,
           "next_point": true,
-          "found": [
+          "item_pos": [
             [868,385]
           ]
         },
         {
-          "id": 9,
+          "id": 8,
           "pos": [720,500],
           "reset_map": true,
           "next_point": true,
-          "found": [
+          "item_pos": [
             [639,357]
           ]
         },
         {
-          "id": 10,
+          "id": 9,
           "pos": [753,621],
           "reset_map": true,
           "next_point": true,
-          "found": [
+          "item_pos": [
             [623,385]
           ]
         },
         {
-          "id": 11,
+          "id": 10,
           "pos": [647,619],
           "reset_map": true,
           "next_point": true,
-          "found": [
+          "item_pos": [
             [403,425]
           ]
         }

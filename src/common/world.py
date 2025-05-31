@@ -1,9 +1,10 @@
 import time
+from common.battle import Battle
 from utils import logger
 from common.app import AppManager
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 from PIL import Image
 from utils.singleton import singleton
 import glob
@@ -15,7 +16,7 @@ class World:
     世界地图玩法模块
     负责实现世界地图相关的自动化逻辑
     """
-    def __init__(self, device_manager: DeviceManager, ocr_handler: OCRHandler,app_manager:AppManager) -> None:
+    def __init__(self, device_manager: DeviceManager, ocr_handler: OCRHandler,battle:Battle, app_manager:AppManager) -> None:
         """
         :param device_manager: DeviceManager 实例
         :param ocr_handler: OCRHandler 实例
@@ -23,6 +24,7 @@ class World:
         self.app_manager = app_manager
         self.device_manager = device_manager
         self.ocr_handler = ocr_handler
+        self.battle = battle
 
     def in_world(self, image: Optional[Image.Image] = None) -> bool:
         """
@@ -38,8 +40,8 @@ class World:
             logger.warning("无法获取截图，无法判断是否在世界中")
             return False
         points_colors = [
-            (73, 632, "E8EBF0", 1),
-            (68, 575, "F6F5F6", 1),
+            (73, 632, "E8EBF0", 10),
+            (68, 575, "F6F5F6", 10),
         ]
         results = [self.ocr_handler.match_point_color(image, x, y, color, rng) for x, y, color, rng in points_colors]
         if all(results):
@@ -103,7 +105,7 @@ class World:
             logger.debug("不在旅馆门口")
             return None
     
-    def find_fengmo_point(self, image: Optional[Image.Image] = None, type: str = "right",offset=60) -> Optional[tuple[int, int]] | None:
+    def find_fengmo_point(self, image: Optional[Image.Image] = None, type: str = "right",offset=60) -> Optional[tuple[int, int, int]] | None:
         """
         判断当前是否有逢魔点(逢魔入口也是这个,判断感叹号)。
         """
@@ -135,7 +137,7 @@ class World:
                 return None
             else:
                 logger.debug("检测到逢魔点")
-                return (find[0],find[1]+offset)
+                return (find[0],find[1]+offset,len(find_list))
         else:
             logger.debug("没有逢魔点")
             return None
@@ -174,19 +176,7 @@ class World:
         else:
             raise ValueError(f"无效的操作: {op}")
 
-    def open_minimap(self):
-        """
-        打开小地图
-        """
-        self.device_manager.click(1060,100)
-
-    def go_newdelsta_inn(self):
-        """
-        前往新德尔斯塔旅馆
-        """
-        self.device_manager.click(645,573)
-
-    def click_tirm(self,count: int = 1,interval: float = 0.1) -> None:
+    def click_tirm(self,count: int = 1,interval: float = 0.2) -> None:
         """
         点击跳过按钮，count次
         """
@@ -212,7 +202,7 @@ class World:
         if not in_world:
             logger.debug("不在城镇中")
             return
-        self.open_minimap()
+        self.click_minimap()
         in_minimap = sleep_until(self.in_minimap)
         if not in_minimap:
             return
@@ -233,7 +223,7 @@ class World:
         logger.debug("等待返回城镇")
         sleep_until(self.in_world)
         logger.debug("打开小地图")
-        self.open_minimap()
+        self.click_minimap()
         logger.debug("等待小地图")
         in_minimap = sleep_until(self.in_minimap)
         if not in_minimap:
@@ -249,56 +239,55 @@ class World:
         """
         前往逢魔
         """
-        in_world = sleep_until(self.in_world)
-        if not in_world:
-            logger.debug("不在城镇中")
-            return
-        self.open_minimap()
-        in_minimap = sleep_until(self.in_minimap)
-        if not in_minimap:
-            return
-        # 点击地图逢魔入口
-        self.device_manager.click(entrance_pos[0],entrance_pos[1])
-        in_world = sleep_until(self.in_world)
-        if not in_world:
-            return
+        logger.info(f"[go_fengmo]前往逢魔入口: {entrance_pos}")
+        logger.info(f"[go_fengmo]打开小地图")
+        self.go_mini_map((entrance_pos[0],entrance_pos[1]))
         # 寻找逢魔入口
         fengmo_pos = sleep_until(self.find_fengmo_point)
         if fengmo_pos is None:
             return
-        self.device_manager.click(*fengmo_pos)
+        logger.info(f"[go_fengmo]点击逢魔入口: {fengmo_pos}")
+        self.device_manager.click(*fengmo_pos[:2])
+        logger.info(f"[go_fengmo]选择逢魔模式: {depth}")
         self.select_fengmo_mode(depth)
         # 涉入
+        logger.info(f"[go_fengmo]涉入")
         sleep_until(lambda: self.ocr_handler.match_click_text(["涉入"],region=(760,465,835,499)))
 
     def select_fengmo_mode(self,depth:int):
         """
         选择逢魔模式
         """
+        logger.info(f"[select_fengmo_mode]等待选择深度")
         sleep_until(lambda: self.ocr_handler.match_texts(["选择深度"]))
+        logger.info(f"[select_fengmo_mode]读取当前深度")
         current_depth = self.read_fengmo_depth()
         while current_depth != depth:
             time.sleep(0.1)
             current_depth = self.read_fengmo_depth()
-            if current_depth==depth:
+            if current_depth == depth:
+                logger.info(f"[select_fengmo_mode]当前深度: {current_depth} 目标深度: {depth}")
                 break
             if current_depth is None:
+                logger.info(f"[select_fengmo_mode]读取深度失败")
                 continue
             if current_depth < depth:
+                logger.info(f"[select_fengmo_mode]当前深度: {current_depth} 目标深度: {depth} 增加深度")
                 self.do_fengmo_depth("add")
             else:
+                logger.info(f"[select_fengmo_mode]当前深度: {current_depth} 目标深度: {depth} 减少深度")
                 self.do_fengmo_depth("sub")
     
-    def find_map_treasure(self, image: Optional[Image.Image] = None) -> Optional[tuple[int, int]]:
+    def find_map_treasure(self, image: Optional[Image.Image] = None) -> Optional[list[tuple[int, int]]]:
         """
         判断当前是否已发现的地图宝箱点。
         """
         if image is None:
             image = self.device_manager.get_screenshot()
-        find = self.ocr_handler.match_image(image, "assets/map_treasure.png")
+        find = self.ocr_handler.match_image_multi(image, "assets/map_treasure.png")
         if find:
             logger.debug("发现的地图宝箱点")
-            return find
+            return [(int(x), int(y)) for x, y, _ in find]
         else:
             logger.debug("未发现地图宝箱点")
             return None
@@ -344,3 +333,94 @@ class World:
         else:
             logger.debug("未发现地图Boss点")
             return None
+        
+    def go_mini_map(self,pos:tuple[int,int],battle_action:Callable[[],bool]|None=None):
+        """
+        前往小地图
+        """
+        logger.info(f"[go_mini_map]检查是否在城镇,是否在战斗中,执行战斗回调")
+        self.in_world_or_battle(battle_action)
+        logger.info(f"[go_mini_map]打开小地图")
+        self.click_minimap()
+        in_minimap = sleep_until(self.in_minimap)
+        if not in_minimap:
+            return
+        logger.info(f"[go_mini_map]点击小地图: {pos}")
+        self.device_manager.click(*pos)
+        return self.in_world_or_battle(battle_action)
+            
+    def in_world_or_battle(self,battle_action:Callable[[],bool]|None=None):
+        def check_in_world_or_battle():
+            screenshot = self.device_manager.get_screenshot()
+            if self.in_world(screenshot):
+                return "in_world"
+            elif self.battle.in_battle(screenshot):
+                return "in_battle"
+            else:
+                return None
+        battle_done_done = False
+        while True:
+            check_in_world = sleep_until(check_in_world_or_battle)
+            if check_in_world == "in_world":
+                logger.info("在城镇中")
+                return True
+            elif check_in_world == "in_battle":
+                logger.debug("战斗场景中")
+                if not battle_action:
+                    return False
+                if battle_done_done:
+                    continue
+                if battle_action and not battle_done_done:
+                    logger.info("执行战斗场景")
+                    battle_action() # 战斗场景
+                    battle_done_done = True
+                continue
+            else:
+                logger.debug("异常")
+                return False
+
+    def open_stay_minimap(self,battle_action:Callable[[],bool]|None=None):
+        """
+        打开小地图
+        """
+        battle_done_done = False
+        while True:
+            screenshot = self.device_manager.get_screenshot()
+            if self.in_world(screenshot):
+                self.click_minimap()
+            if self.battle.in_battle(screenshot):
+                if not battle_done_done and battle_action:
+                    logger.info("执行战斗场景")
+                    battle_action() # 战斗场景
+                    battle_done_done = True
+            if self.in_minimap(screenshot):
+                break
+            time.sleep(0.2)
+        return True
+
+    def click_minimap(self):
+        """
+        点击小地图
+        """
+        time.sleep(0.2)
+        self.device_manager.click(1060,100)
+        time.sleep(0.2)
+
+    def find_closest_point(self, target: tuple[int, int], points: list[tuple[int, int]]) -> Optional[tuple[int, int]]:
+        """
+        在points中查找与target最近的点
+        :param target: 目标点 (x, y)
+        :param points: 点坐标列表 [(x, y), ...]
+        :return: 距离最近的点 (x, y) 或 None
+        """
+        if not points or target is None:
+            return None
+        cx, cy = target
+        min_dist = float('inf')
+        closest = None
+        for pt in points:
+            dist = ((pt[0] - cx) ** 2 + (pt[1] - cy) ** 2) ** 0.5
+            if dist < min_dist:
+                min_dist = dist
+                closest = pt
+        return closest

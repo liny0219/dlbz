@@ -3,7 +3,8 @@ import os
 import yaml
 from pydantic import BaseModel
 from utils.get_asset_path import get_asset_path
-from typing import Dict, List, TypedDict
+from typing import Dict, List, TypedDict, Optional
+import logging
 
 # 兼容旧接口，返回config目录绝对路径
 def get_config_dir():
@@ -36,16 +37,37 @@ class CheckPoint(BaseModel):
     pos: List[int]
     reset_map: bool
     next_point: bool
-    found: List[List[int]]
+    item_pos: List[List[int]]
+
+class Point(BaseModel):
+    x: int
+    y: int
+    color: str
+    range: int
+
+class Monster(BaseModel):
+    name: str
+    points: List[Point]
+    battle_config: str
 
 class CityConfig(TypedDict):
     inn_pos: List[int]
     reset_pos: List[int]
     entrance_pos: List[int]
     check_points: List[CheckPoint]
-
+    monsters: List[Monster]
 class FengmoCityConfig(BaseModel):
     cities: Dict[str, CityConfig]
+
+class NoMillisecFormatter(logging.Formatter):
+    def formatTime(self, record, datefmt=None):
+        from datetime import datetime
+        ct = self.converter(record.created)
+        if datefmt:
+            s = datetime.fromtimestamp(record.created).strftime(datefmt)
+        else:
+            s = datetime.fromtimestamp(record.created).strftime("%Y-%m-%d %H:%M:%S")
+        return s
 
 class Config:
     def __init__(self, config_dir=None):
@@ -92,5 +114,46 @@ class Config:
         else:
             print(f"[Config] 文件不存在！")
             return {}
+
+    @staticmethod
+    def get_logging_format_and_datefmt(log_format: str, datefmt: Optional[str] = None):
+        """
+        兼容loguru风格日志format，自动转换为logging风格，并提取datefmt。
+        优先使用配置文件中的datefmt字段。
+        返回(logging_format, datefmt)
+        """
+        import re
+        # 优先用外部传入的datefmt
+        if datefmt:
+            # 只做format转换，不再从format中提取datefmt
+            log_format = log_format.replace('{time}', '%(asctime)s')
+            log_format = (log_format
+                .replace('{level}', '%(levelname)s')
+                .replace('{message}', '%(message)s')
+                .replace('{name}', '%(name)s')
+                .replace('{process}', '%(process)d')
+                .replace('{thread}', '%(thread)d')
+            )
+            return log_format, datefmt
+        # 兼容loguru风格{time:...}
+        datefmt_auto = None
+        match = re.search(r'\{time:(.*?)\}', log_format)
+        if match:
+            datefmt_auto = match.group(1)
+            log_format = log_format.replace(match.group(0), '%(asctime)s')
+        else:
+            log_format = log_format.replace('{time}', '%(asctime)s')
+        log_format = (log_format
+            .replace('{level}', '%(levelname)s')
+            .replace('{message}', '%(message)s')
+            .replace('{name}', '%(name)s')
+            .replace('{process}', '%(process)d')
+            .replace('{thread}', '%(thread)d')
+        )
+        return log_format, datefmt_auto
+
+    @staticmethod
+    def get_no_millisec_formatter(log_format: str, datefmt: Optional[str] = None):
+        return NoMillisecFormatter(log_format, datefmt=datefmt) if datefmt else NoMillisecFormatter(log_format)
 
 config = Config() 
