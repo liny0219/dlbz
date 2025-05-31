@@ -1,13 +1,14 @@
 import time
 from common.battle import Battle
+from common.config import Monster
+from core.battle_command_executor import BattleCommandExecutor
 from utils import logger
 from common.app import AppManager
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
-from typing import Callable, Optional, Tuple
+from typing import Optional, Tuple
 from PIL import Image
 from utils.singleton import singleton
-import glob
 from utils.sleep_utils import sleep_until
 
 @singleton
@@ -25,6 +26,11 @@ class World:
         self.device_manager = device_manager
         self.ocr_handler = ocr_handler
         self.battle = battle
+        self.battle_executor = BattleCommandExecutor(battle)
+        self.monsters = []
+    
+    def set_monsters(self,monsters:list[Monster]):
+        self.monsters = monsters
 
     def in_world(self, image: Optional[Image.Image] = None) -> bool:
         """
@@ -235,13 +241,22 @@ class World:
         logger.debug("点击旅馆门口")
         self.device_manager.click(*door_pos)
 
-    def go_fengmo(self,depth:int,entrance_pos:list[int]):
+    def go_fengmo(self,depth:int,entrance_pos:list[int],wait_time:float=0.2):
         """
         前往逢魔
         """
         logger.info(f"[go_fengmo]前往逢魔入口: {entrance_pos}")
+        logger.info(f"[go_fengmo]检查是否在城镇")
+        self.in_world_or_battle()
         logger.info(f"[go_fengmo]打开小地图")
-        self.go_mini_map((entrance_pos[0],entrance_pos[1]))
+        self.click_minimap()
+        in_minimap = sleep_until(self.in_minimap)
+        if not in_minimap:
+            return
+        logger.info(f"[go_fengmo]点击小地图: {entrance_pos}")
+        self.device_manager.click(*entrance_pos)
+        self.in_world_or_battle()
+        time.sleep(wait_time)
         # 寻找逢魔入口
         fengmo_pos = sleep_until(self.find_fengmo_point)
         if fengmo_pos is None:
@@ -334,22 +349,7 @@ class World:
             logger.debug("未发现地图Boss点")
             return None
         
-    def go_mini_map(self,pos:tuple[int,int],battle_action:Callable[[],bool]|None=None):
-        """
-        前往小地图
-        """
-        logger.info(f"[go_mini_map]检查是否在城镇,是否在战斗中,执行战斗回调")
-        self.in_world_or_battle(battle_action)
-        logger.info(f"[go_mini_map]打开小地图")
-        self.click_minimap()
-        in_minimap = sleep_until(self.in_minimap)
-        if not in_minimap:
-            return
-        logger.info(f"[go_mini_map]点击小地图: {pos}")
-        self.device_manager.click(*pos)
-        return self.in_world_or_battle(battle_action)
-            
-    def in_world_or_battle(self,battle_action:Callable[[],bool]|None=None):
+    def in_world_or_battle(self, check_battle:bool=True):
         def check_in_world_or_battle():
             screenshot = self.device_manager.get_screenshot()
             if self.in_world(screenshot):
@@ -366,20 +366,28 @@ class World:
                 return True
             elif check_in_world == "in_battle":
                 logger.debug("战斗场景中")
-                if not battle_action:
+                if not check_battle:
                     return False
                 if battle_done_done:
                     continue
-                if battle_action and not battle_done_done:
+                if check_battle and not battle_done_done:
                     logger.info("执行战斗场景")
-                    battle_action() # 战斗场景
+                    monster = self.find_enemy(self.monsters)
+                    if monster is None:
+                        self.battle.auto_battle()
+                    if monster:
+                        loadConfig = self.battle_executor.load_commands_from_file(monster.battle_config)
+                        if loadConfig:
+                            self.battle_executor.execute_all()
+                        else:
+                            self.battle.auto_battle()
                     battle_done_done = True
                 continue
             else:
                 logger.debug("异常")
                 return False
 
-    def open_stay_minimap(self,battle_action:Callable[[],bool]|None=None):
+    def open_stay_minimap(self,check_battle:bool=True):
         """
         打开小地图
         """
@@ -389,9 +397,17 @@ class World:
             if self.in_world(screenshot):
                 self.click_minimap()
             if self.battle.in_battle(screenshot):
-                if not battle_done_done and battle_action:
+                if not battle_done_done and check_battle:
                     logger.info("执行战斗场景")
-                    battle_action() # 战斗场景
+                    monster = self.find_enemy(self.monsters)
+                    if monster is None:
+                        self.battle.auto_battle()
+                    if monster:
+                       loadConfig = self.battle_executor.load_commands_from_file(monster.battle_config)
+                       if loadConfig:
+                           self.battle_executor.execute_all()
+                       else:
+                           self.battle.auto_battle()
                     battle_done_done = True
             if self.in_minimap(screenshot):
                 break
@@ -424,3 +440,29 @@ class World:
                 min_dist = dist
                 closest = pt
         return closest
+
+
+    # 识别敌人
+    def find_enemy(self, monsters:list[Monster],max_count:int=3) -> Monster | None:
+        """
+        识别敌人
+        """
+        count = 0
+        while True:
+            screenshot = self.device_manager.get_screenshot()
+            if screenshot is None:
+                return None
+            if monsters is None or len(monsters) == 0:
+                logger.info("没有配置要识别的敌人")
+                return None
+            for monster in monsters:
+                if monster.points is None:
+                    logger.info(f"敌人{monster.name}没有配置点")
+                    continue
+                if self.ocr_handler.match_point_color_mult(screenshot, monster.points,ambiguity=0.8):
+                    logger.info(f"识别到敌人: {monster.name}")
+                    return monster
+            count += 1
+            if count >= max_count:
+                return None
+

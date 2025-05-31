@@ -31,6 +31,8 @@ class FengmoConfig(BaseModel):
     depth: int = 1
     rest_in_inn: bool = True
     city: str = "newdelsta"
+    find_point_wait_time: int = 2
+    wait_start_time: float = 0.8
 
 class CheckPoint(BaseModel):
     id: int
@@ -39,15 +41,9 @@ class CheckPoint(BaseModel):
     next_point: bool
     item_pos: List[List[int]]
 
-class Point(BaseModel):
-    x: int
-    y: int
-    color: str
-    range: int
-
 class Monster(BaseModel):
     name: str
-    points: List[Point]
+    points: List[tuple[int, int, str, int]]
     battle_config: str
 
 class CityConfig(TypedDict):

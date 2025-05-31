@@ -6,16 +6,28 @@ cities:
     monsters:
       [
         {
-          name: boss,
+          name: 逢魔精英怪,
           points:[
-            {
-              "x": 1164,
-              "y": 349,
-              "color": "#FF0000",
-              "range": 10
-            }
+              [439, 368, "#1E021B", 10],
+              [411, 415, "#2F0219", 10],
+              [296, 444, "#BB8A6A", 10],
+              [280, 456, '#4F1416', 10], 
+              [313, 347, '#2C001B', 10],
+              [447, 346, '#220014', 10], 
           ],
-          battle_config: "fengmo_battle_config.yaml"
+          battle_config: "1.txt"
+        },
+        {
+          name: 逢魔Boss,
+          points:[
+              [489, 177, '#CBA5B2', 10],
+              [396, 336, '#6B000E', 10],
+              [205, 344, '#260009', 10],
+              [228, 437, '#3C0113', 10],
+              [327, 370, '#B3866F', 10],
+              [467, 143, '#19010F', 10],
+          ],
+          battle_config: "2.txt"
         }
       ]
     check_points:
@@ -110,7 +122,7 @@ cities:
           "reset_map": true,
           "next_point": true,
           "item_pos": [
-            [403,425]
+            [203,425]
           ]
         }
       ]

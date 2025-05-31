@@ -14,6 +14,7 @@ class DeviceManager:
         self.device = None
         self.config = config.device
         self.adb_address = self.config.adb_address
+        self.screenshot_cache = None
     
     def connect_device(self, device_id: Optional[str] = None) -> bool:
         """
@@ -50,6 +51,13 @@ class DeviceManager:
         except Exception as e:
             logger.error(f"Error connecting to device: {str(e)}\n{traceback.format_exc()}")
             return False
+        
+    def get_current_screenshot(self) -> Optional[Image.Image]:
+        """
+        获取当前屏幕截图，返回PIL.Image对象
+        :return: PIL.Image 或 None
+        """
+        return self.screenshot_cache
     
     def get_screenshot(self) -> Optional[Image.Image]:
         """
@@ -65,8 +73,10 @@ class DeviceManager:
                     if isinstance(img, np.ndarray):
                         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                         pil_img = Image.fromarray(img_rgb)
+                        self.screenshot_cache = pil_img
                         return pil_img
                     elif isinstance(img, Image.Image):
+                        self.screenshot_cache = img
                         return img
                     else:
                         logger.error("Unknown screenshot image type")

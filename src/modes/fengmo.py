@@ -11,7 +11,7 @@ from common.battle import Battle
 from common.world import World
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
-from common.config import config, CheckPoint
+from common.config import Monster, config, CheckPoint
 from utils.sleep_utils import sleep_until
 import traceback
 
@@ -113,8 +113,8 @@ class FengmoMode:
         self.entrance_pos = self.city_config.get("entrance_pos", [])
         self.check_points = self.city_config.get("check_points", [])
         self.reset_pos = self.city_config.get("reset_pos", [])
-        self.find_point_wait_time = 2
-        self.check_info_timeout = 1
+        self.find_point_wait_time = getattr(self.fengmo_config, 'find_point_wait_time', 2)
+        self.start_wait_time = getattr(self.fengmo_config, 'start_wait_time', 0.8)
         self.state_data = StateData()
 
     def run(self) -> None:
@@ -137,12 +137,15 @@ class FengmoMode:
         app_thread.start()
         check_info_shared = {
             'state_data': self.state_data,
+            "device_manager": self.device_manager,
             'logger': logger,              # 可选
             'check_interval': 0.2,           # 可选
         }
         check_info_thread = ManagedThread(self.check_info, check_info_shared)
         check_info_thread.start()
-
+        monsters = self.city_config.get("monsters", [])
+        if monsters:
+            self.world.set_monsters(monsters)
         while True:
             self.state_data.turn_start()
             self.state_data.report_data()
@@ -175,18 +178,29 @@ class FengmoMode:
                 reset_map = False
                 next_tag = False
                 while True:
+                    self.wait_start_time()
                     #  当前查找逢魔点
                     logger.info(f"[collect_junk_phase]当前查找逢魔点: {check_point}")
                     if next_point:
                         break
-                    if not reset_map and next_tag:
-                        logger.info(f"[collect_junk_phase]检查in_world_or_battle")
-                        self.world.in_world_or_battle(battle_action=lambda:self.battle.auto_battle())
-                    else:
-                        logger.info(f"[collect_junk_phase]检查go_mini_map")
-                        self.world.go_mini_map((check_point.pos[0],check_point.pos[1]), battle_action=lambda:self.battle.auto_battle())
+                    logger.info(f"[collect_junk_phase]检查是否在城镇,是否在战斗中,执行战斗回调")
+                    self.world.in_world_or_battle()
                     if self.check_state(Step.COLLECT_JUNK,check_point):
                         return
+                    self.wait_start_time()
+                    if (not reset_map and not next_tag) or (reset_map and next_tag):
+                        logger.info(f"[collect_junk_phase]打开小地图")
+                        self.world.click_minimap()
+                        in_minimap = sleep_until(self.world.in_minimap)
+                        if not in_minimap:
+                            return
+                        logger.info(f"[collect_junk_phase]点击小地图: {check_point}")
+                        self.device_manager.click(*check_point.pos)
+                        self.wait_start_time()
+                        self.world.in_world_or_battle()
+                        if self.check_state(Step.COLLECT_JUNK,check_point):
+                            return
+                        self.wait_start_time()
                     point_pos = sleep_until(self.world.find_fengmo_point, self.find_point_wait_time)
                     logger.info(f"[collect_junk_phase]查找逢魔点: {point_pos} 点位: {check_point}")
                     if not point_pos:
@@ -194,7 +208,6 @@ class FengmoMode:
                         break
                     logger.info(f"[collect_junk_phase]点击逢魔点: {point_pos} 点位: {check_point}")
                     self.device_manager.click(*point_pos[:2])
-                    time.sleep(1)
                     reset_map = check_point.reset_map
                     next_point = check_point.next_point
                     next_tag = True
@@ -211,7 +224,7 @@ class FengmoMode:
             if self.check_state(Step.FIND_BOX,self.state_data.current_point):
                 return
             logger.info(f"[find_box_phase]等待返回世界,并打开小地图,同时检测战斗状态")
-            self.world.open_stay_minimap(battle_action=lambda:self.battle.auto_battle())
+            self.world.open_stay_minimap()
             logger.info(f"[find_box_phase]查找小地图标签")
             closest_point = self.find_map_tag()
             # 如果为空,则当前点遮挡了地图
@@ -223,16 +236,17 @@ class FengmoMode:
             check_point = self.state_data.current_point
             logger.info(f"[find_box_phase]点击小地图找到的最近点位: {check_point.pos}")
             self.device_manager.click(*check_point.pos)
-            time.sleep(1)
+            self.wait_start_time()
             logger.info(f"[find_box_phase]轮询配置的点位: {check_point.item_pos}")
             for point in check_point.item_pos:  
                 logger.info(f"[find_box_phase]in_world_or_battle")
-                self.world.in_world_or_battle(battle_action=lambda:self.battle.auto_battle())
+                self.world.in_world_or_battle()
+                self.wait_start_time()
                 if self.check_state(Step.FIND_BOX,self.state_data.current_point):
                     return
                 logger.info(f"[find_box_phase]点击配置的点位: {point}")
                 self.device_manager.click(point[0],point[1])
-                time.sleep(1)
+                self.wait_start_time()
 
 
     def _fight_boss_phase(self):
@@ -242,7 +256,7 @@ class FengmoMode:
         边界处理：如Boss点未找到、地图未进入等，抛出异常。
         """
         logger.info(f"[fight_boss_phase]打开小地图")
-        self.world.open_stay_minimap(battle_action=lambda:self.battle.auto_battle())
+        self.world.open_stay_minimap()
         logger.info(f"[fight_boss_phase]查找Boss点")
         find_map_boss = sleep_until(self.world.find_map_boss)
         if find_map_boss:
@@ -255,41 +269,38 @@ class FengmoMode:
         check_point = self.state_data.current_point
         logger.info(f"[fight_boss_phase]点击小地图最近Boss的点: {check_point.pos}")
         self.device_manager.click(*check_point.pos)
-        time.sleep(1)
+        self.wait_start_time()
         logger.info(f"[fight_boss_phase]in_world_or_battle")
-        self.world.in_world_or_battle(battle_action=lambda:self.battle.auto_battle())
+        self.world.in_world_or_battle()
+        self.wait_start_time()
         point_pos = sleep_until(self.world.find_fengmo_point, self.find_point_wait_time)
         logger.info(f"[fight_boss_phase]查找Boss逢魔点: {point_pos}")
         if point_pos is None:
             raise Exception("[_fight_boss_phase]查找Boss逢魔点失败")
         logger.info(f"[fight_boss_phase]点击Boss逢魔点: {point_pos}")
         self.device_manager.click(*point_pos[:2])
-        time.sleep(1)
-        self.world.in_world_or_battle(self.do_battle)
+        self.wait_start_time()
+        self.world.in_world_or_battle()
         self.state_data.step = Step.FINISH
          
 
     def find_map_tag(self):
         screenshot = self.device_manager.get_screenshot()
         find_points = []
-
         # 记录 treasure 返回内容和类型
         treasure = self.world.find_map_treasure(screenshot)
-        logger.info(f"[find_map_tag] find_map_treasure 返回: {treasure}, 类型: {type(treasure)}, 元素类型: {[type(x) for x in treasure] if treasure else 'None'}")
         if treasure:
             find_points.extend(treasure)
-
         # 记录 monster 返回内容和类型
         monster = self.world.find_map_monster(screenshot)
-        logger.info(f"[find_map_tag] find_map_monster 返回: {monster}, 类型: {type(monster)}, 元素类型: {[type(x) for x in monster] if monster else 'None'}")
         if monster:
             find_points.extend([monster])
-
         # 记录 cure 返回内容和类型
         cure = self.world.find_map_cure(screenshot)
-        logger.info(f"[find_map_tag] find_map_cure 返回: {cure}, 类型: {type(cure)}, 元素类型: {[type(x) for x in cure] if cure else 'None'}")
         if cure:
             find_points.extend([cure])
+        if self.state_data.current_point is None:
+            return None
         current_point = self.state_data.current_point.pos
         closest_point_find_points = self.world.find_closest_point((current_point[0],current_point[1]), find_points)
         if closest_point_find_points:
@@ -302,10 +313,11 @@ class FengmoMode:
         state_data = shared['state_data']
         check_interval = shared.get('check_interval', 0.2)  # 检查间隔秒数
         logger = shared.get('logger', None)
-        ocr_handler = OCRHandler(self.device_manager)
+        device_manager = shared.get('device_manager', None)
+        ocr_handler = OCRHandler(device_manager)
         while not stop_event.is_set():
             time.sleep(check_interval) 
-            screenshot = self.device_manager.get_screenshot()
+            screenshot = device_manager.get_current_screenshot()
             region = (0, 0, 1280, 720)
             results = ocr_handler.recognize_text(region=region,image=screenshot)
             find_text = None
@@ -340,36 +352,9 @@ class FengmoMode:
             logger.info(f"[check_state]当前状态: {self.state_data.step}")
             return True
         return False
-
-    def do_battle(self):
-        """
-        战斗流程：
-        1. 检查是否进入战斗
-        2. 自动战斗（如支持）
-        3. 检查结算与确认，自动点击
-        边界处理：自动战斗失败抛异常。
-        """
-        is_auto_battle = False
-        battle_end = False
-        while True:
-            if self.battle.in_battle():
-                if is_auto_battle:
-                    continue
-                if self.battle.auto_battle():
-                    logger.info(f"auto_battle")
-                    is_auto_battle = True
-            else:
-                if battle_end:
-                    break
-            if self.ocr_handler.match_texts(["战斗结算"]):
-                battle_end = True
-                self.world.click_tirm(2)
-                break
-            if self.ocr_handler.match_click_text(["确定"],region=(516,571,769,644)):
-                break
-            if self.ocr_handler.match_texts(["战斗中"]):
-                is_auto_battle = True
-        return True
+    
+    def wait_start_time(self):
+        time.sleep(self.start_wait_time)
 
     def exit_battle(self):
         """

@@ -7,10 +7,11 @@ import logging
 from utils import logger
 from common.config import get_config_dir
 import traceback
-import sys
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
 from modes.fengmo import FengmoMode
+from utils.mark_coord import mark_coord
+from utils.logger import setup_logger
 
 version = "v0.9"
 
@@ -24,6 +25,7 @@ CONFIG_FILES = [
 ]
 LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
+
 class FengmoGUI(tk.Tk):
     """
     主窗口，包含主界面和设置界面，玩法主流程用子进程启动/终止，支持日志级别动态调整
@@ -34,10 +36,14 @@ class FengmoGUI(tk.Tk):
         self.geometry("800x600")
         self.minsize(700, 400)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
-        self.logger = logger
+        # 通过setup_logger注册GUI日志Handler
+        self.logger = setup_logger(self.append_log)
         self.fengmo_process = None
         self.log_queue = None
         self.log_level_var = tk.StringVar(value="INFO")
+        # 设备管理器只初始化一次
+        self.device_manager = DeviceManager()
+        self.device_manager.connect_device()
         self._build_menu()
         self._build_main_frame()
         self._build_settings_frame()
@@ -72,11 +78,13 @@ class FengmoGUI(tk.Tk):
         self.start_btn.grid(row=0, column=0, padx=10, pady=10, sticky="w")
         self.stop_btn = ttk.Button(self.main_frame, text="停止玩法", command=self.on_stop, state=tk.DISABLED)
         self.stop_btn.grid(row=0, column=1, padx=10, pady=10, sticky="w")
+        self.coord_btn = ttk.Button(self.main_frame, text="标记坐标", command=self.on_mark_coord)
+        self.coord_btn.grid(row=0, column=2, padx=10, pady=10, sticky="w")
         self.status_label = ttk.Label(self.main_frame, text="状态: 等待启动")
-        self.status_label.grid(row=0, column=2, padx=10, pady=10, sticky="w")
-        ttk.Label(self.main_frame, text="日志级别:").grid(row=0, column=3, padx=5, sticky="e")
+        self.status_label.grid(row=0, column=3, padx=10, pady=10, sticky="w")
+        ttk.Label(self.main_frame, text="日志级别:").grid(row=0, column=4, padx=5, sticky="e")
         self.loglevel_combo = ttk.Combobox(self.main_frame, textvariable=self.log_level_var, values=LOG_LEVELS, width=10, state="readonly")
-        self.loglevel_combo.grid(row=0, column=4, padx=5, sticky="e")
+        self.loglevel_combo.grid(row=0, column=5, padx=5, sticky="e")
         # 玩法统计区块
         self.report_frame = ttk.LabelFrame(self.main_frame, text="玩法统计", padding=(5, 5))
         self.report_frame.grid(row=1, column=0, columnspan=5, padx=10, pady=5, sticky="nsew")
@@ -139,9 +147,23 @@ class FengmoGUI(tk.Tk):
                     depth_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
                     vars_dict["depth"] = depth_var
                     row += 1
+                    # 逢魔点等待时间
+                    ttk.Label(frame, text="逢魔点等待时间", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+                    wait_var = tk.StringVar(value=str(data.get("find_point_wait_time", 3)))
+                    wait_spin = tk.Spinbox(frame, from_=2, to=5, textvariable=wait_var, width=input_width)
+                    wait_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+                    vars_dict["find_point_wait_time"] = wait_var
+                    row += 1
+                    # 起步等待时间
+                    ttk.Label(frame, text="起步等待时间", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+                    start_wait_var = tk.StringVar(value=str(data.get("start_wait_time", 0.5)))
+                    start_wait_spin = tk.Spinbox(frame, from_=0.5, to=1.5, increment=0.1, textvariable=start_wait_var, width=input_width)
+                    start_wait_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+                    vars_dict["start_wait_time"] = start_wait_var
+                    row += 1
                     # 其余字段
                     for k, v in data.items():
-                        if k in ("rest_in_inn", "city", "depth"):
+                        if k in ("rest_in_inn", "city", "depth", "find_point_wait_time", "start_wait_time"):
                             continue
                         ttk.Label(frame, text=k, width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
                         var = tk.StringVar(value=str(v))
@@ -170,9 +192,11 @@ class FengmoGUI(tk.Tk):
         self.settings_frame.pack(fill=tk.BOTH, expand=True)
 
     def on_log_level_change(self, event=None):
-        """日志级别下拉框变更时，动态设置主进程logger级别"""
+        """日志级别下拉框变更时，动态设置主进程logger级别，并同步所有Handler"""
         level = self.log_level_var.get().upper()
         self.logger.setLevel(getattr(logging, level, logging.INFO))
+        for h in self.logger.handlers:
+            h.setLevel(getattr(logging, level, logging.INFO))
 
     def on_start(self):
         if self.fengmo_process and self.fengmo_process.is_alive():
@@ -263,6 +287,8 @@ class FengmoGUI(tk.Tk):
         self.append_log("所有设置已保存！")
 
     def on_close(self):
+        # 移除GUI Handler，防止内存泄漏
+        self.logger.handlers = [h for h in self.logger.handlers if h.__class__.__name__ != 'GuiLogHandler']
         if self.fengmo_process and self.fengmo_process.is_alive():
             if not messagebox.askokcancel("退出", "玩法正在运行，确定要强制退出吗？"):
                 return
@@ -271,6 +297,15 @@ class FengmoGUI(tk.Tk):
             self.append_log("玩法进程已终止")
         self.destroy()
         os._exit(0)
+
+    def on_mark_coord(self):
+        """
+        调用 utils.mark_coord 工具函数，弹窗取点，控制台输出坐标
+        """
+        try:
+            mark_coord()
+        except Exception as e:
+            self.append_log(f"调用标记坐标工具失败: {e}")
 
 # 子进程日志Handler
 class QueueLogHandler(logging.Handler):
@@ -281,6 +316,21 @@ class QueueLogHandler(logging.Handler):
         try:
             msg = self.format(record)
             self.queue.put(msg)
+        except Exception:
+            pass
+
+class GuiLogHandler(logging.Handler):
+    """
+    自定义日志Handler，将日志推送到GUI日志区
+    """
+    def __init__(self, append_log_func):
+        super().__init__()
+        self.append_log_func = append_log_func
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            # 直接推送到GUI日志区
+            self.append_log_func(msg)
         except Exception:
             pass
 

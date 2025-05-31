@@ -1,3 +1,5 @@
 city: newdelsta
 depth: 1
 rest_in_inn: false
+find_point_wait_time: 2
+wait_start_time: 0.8

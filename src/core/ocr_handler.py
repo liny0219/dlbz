@@ -372,8 +372,15 @@ class OCRHandler:
             return color_list
 
         def hex_to_bgr(hexstr):
-            # "BBGGRR" -> (B, G, R)
-            return tuple(int(hexstr[i:i+2], 16) for i in (0, 2, 4))
+            hexstr = str(hexstr).lstrip('#')
+            if len(hexstr) != 6:
+                logger.error(f"Invalid color hex: {hexstr}")
+                return None
+            try:
+                return tuple(int(hexstr[i:i+2], 16) for i in (0, 2, 4))
+            except Exception as e:
+                logger.error(f"hex_to_bgr error: {hexstr}, {e}")
+                return None
 
         def bgr_to_hex(bgr):
             # (B, G, R) -> "BBGGRR"
@@ -469,11 +476,103 @@ class OCRHandler:
                         return True
             return False
         else:
-            # 走原有16进制字符串逻辑，确保color为str
+            # 先确保color为str并去除#前缀
             if not isinstance(color, str):
                 color = '{:02X}{:02X}{:02X}'.format(*color)
+            color = str(color).lstrip('#')
+            def hex_to_bgr(hexstr):
+                hexstr = str(hexstr).lstrip('#')
+                if len(hexstr) != 6:
+                    logger.error(f"Invalid color hex: {hexstr}")
+                    return None
+                try:
+                    return tuple(int(hexstr[i:i+2], 16) for i in (0, 2, 4))
+                except Exception as e:
+                    logger.error(f"hex_to_bgr error: {hexstr}, {e}")
+                    return None
+            target_bgr = hex_to_bgr(color)
+            if target_bgr is None:
+                return False
             idx, intX, intY = self.FindColor(image, x1, y1, x2, y2, color, ambiguity, dir)
             return intX is not None and intY is not None and intX > -1 and intY > -1
+
+    def match_point_color_mult(self, image: Image.Image, points: list[tuple[int, int, str, int]], 
+                                ambiguity: float = 0.95, dir: int = 0) -> bool:
+        """
+        高性能多点颜色匹配：所有点都需匹配成功才返回True
+        :param image: PIL.Image，原始图片
+        :param points: [(x, y, color, range_), ...]，待检测的点坐标列表
+        :param ambiguity: 相似度
+        :param dir: 查找方向
+        :return: bool，所有点都匹配才返回True
+        """
+        # 5. 支持多点并行（默认多线程并行，避免多进程pickle问题）
+        import concurrent.futures
+        try:
+            # 预处理：将所有点的区域crop出来，避免重复读取
+            regions = []  # [(region_img, x, y, color, range_)]
+            for x, y, color, range_ in points:
+                x1 = x - range_
+                y1 = y - range_
+                x2 = x + range_
+                y2 = y + range_
+                region = image.crop((x1, y1, x2, y2)).convert('RGB')
+                regions.append((region, x, y, color, range_))
+
+            # 定义单点匹配函数（多线程可用闭包）
+            def check_point(region_img, color, ambiguity):
+                width, height = region_img.size
+                pixels = region_img.load()
+                if pixels is None:
+                    return False
+                if isinstance(color, (list, tuple)) and len(color) == 3:
+                    def color_sim(c1, c2):
+                        dist = sum((c1[i] - c2[i]) ** 2 for i in range(3)) ** 0.5
+                        return 1 - dist / (3 * 255)
+                    for dx in range(width):
+                        for dy in range(height):
+                            pix = pixels[dx, dy][:3]
+                            if color_sim(pix, color) >= ambiguity:
+                                return True
+                    return False
+                else:
+                    # 先确保color为str并去除#前缀
+                    if not isinstance(color, str):
+                        color = '{:02X}{:02X}{:02X}'.format(*color)
+                    color = str(color).lstrip('#')
+                    def hex_to_bgr(hexstr):
+                        hexstr = str(hexstr).lstrip('#')
+                        if len(hexstr) != 6:
+                            logger.error(f"Invalid color hex: {hexstr}")
+                            return None
+                        try:
+                            return tuple(int(hexstr[i:i+2], 16) for i in (0, 2, 4))
+                        except Exception as e:
+                            logger.error(f"hex_to_bgr error: {hexstr}, {e}")
+                            return None
+                    target_bgr = hex_to_bgr(color)
+                    if target_bgr is None:
+                        return False
+                    def color_sim(c1, c2):
+                        dist = sum((c1[i] - c2[i]) ** 2 for i in range(3)) ** 0.5
+                        return 1 - dist / (3 * 255)
+                    for dx in range(width):
+                        for dy in range(height):
+                            pix = pixels[dx, dy][:3]
+                            if color_sim(pix, target_bgr) >= ambiguity:
+                                return True
+                    return False
+
+            # 多线程并行检查所有点
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = [executor.submit(check_point, region_img, color, ambiguity) for region_img, x, y, color, range_ in regions]
+                for future in concurrent.futures.as_completed(futures):
+                    if not future.result():
+                        return False
+            return True
+        except Exception as e:
+            logger.error(f"match_point_color_mult 执行异常: {e}\n{traceback.format_exc()}")
+            return False
 
     def match_image_multi(
         self,
@@ -565,19 +664,3 @@ class OCRHandler:
         draw.rectangle(rect, outline=outline, width=width)
         img_copy.save(save_path) 
 
-    def match_point_color_mult(self, image: Image.Image, points: list[tuple[int, int]], color, range_: int, ambiguity: float = 0.95, dir: int = 0) -> list[tuple[int, int]]:
-        """
-        支持多点颜色匹配，返回所有匹配的点坐标。
-        :param image: PIL.Image，原始图片
-        :param points: [(x, y), ...]，待检测的点坐标列表
-        :param color: 颜色字符串（"BBGGRR"）或RGB列表/元组([B,G,R])
-        :param range_: 匹配范围
-        :param ambiguity: 相似度
-        :param dir: 查找方向
-        :return: 匹配成功的点坐标列表
-        """
-        matched_points = []
-        for x, y in points:
-            if self.match_point_color(image, x, y, color, range_, ambiguity, dir):
-                matched_points.append((x, y))
-        return matched_points 
