@@ -122,8 +122,6 @@ class BattleCommandExecutor:
             self.battle.cmd_switch_all(**params)
         elif cmd_type in ("SP", "XSP"):
             self.battle.cmd_sp_skill(**params)
-        elif cmd_type == "Reset":
-            self.battle.cmd_reset(**params)
         elif cmd_type == "Wait":
             self.battle.cmd_wait(**params)
         elif cmd_type == "Skip":

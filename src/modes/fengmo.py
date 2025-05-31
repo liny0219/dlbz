@@ -190,7 +190,7 @@ class FengmoMode:
                     self.wait_start_time()
                     if (not reset_map and not next_tag) or (reset_map and next_tag):
                         logger.info(f"[collect_junk_phase]打开小地图")
-                        self.world.click_minimap()
+                        self.world.open_minimap()
                         in_minimap = sleep_until(self.world.in_minimap)
                         if not in_minimap:
                             return
@@ -221,10 +221,15 @@ class FengmoMode:
         """
         while True:
             logger.info(f"[find_box_phase]当前查找逢魔点: {self.state_data.current_point}")
+            logger.info(f"[find_box_phase]是否等待在小镇中")
+            self.world.in_world_or_battle()
             if self.check_state(Step.FIND_BOX,self.state_data.current_point):
                 return
-            logger.info(f"[find_box_phase]等待返回世界,并打开小地图,同时检测战斗状态")
-            self.world.open_stay_minimap()
+            self.wait_start_time()
+            self.world.open_minimap()
+            in_minimap = sleep_until(self.world.in_minimap)
+            if not in_minimap:
+                raise Exception("[find_box_phase]打开小地图失败")
             logger.info(f"[find_box_phase]查找小地图标签")
             closest_point = self.find_map_tag()
             # 如果为空,则当前点遮挡了地图
@@ -256,7 +261,12 @@ class FengmoMode:
         边界处理：如Boss点未找到、地图未进入等，抛出异常。
         """
         logger.info(f"[fight_boss_phase]打开小地图")
-        self.world.open_stay_minimap()
+        self.world.in_world_or_battle()
+        self.wait_start_time()
+        self.world.open_minimap()
+        in_minimap = sleep_until(self.world.in_minimap)
+        if not in_minimap:
+            raise Exception("[fight_boss_phase]打开小地图失败")
         logger.info(f"[fight_boss_phase]查找Boss点")
         find_map_boss = sleep_until(self.world.find_map_boss)
         if find_map_boss:

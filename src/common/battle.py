@@ -162,19 +162,20 @@ class Battle:
             return False
         times = 0
         done_click_auto = False
+        region = (30,580,1240,700)
         while True: 
-            if self.ocr_handler.match_click_text(["委托战斗开始"],region=(30,580,1240,700),image=screenshot):
-                time.sleep(0.5)
-                done_click_auto = True
-                logger.info("点击委托战斗开始")
-                return True
-            if not done_click_auto and self.ocr_handler.match_click_text(["委托"],region=(30,580,1240,700),image=screenshot):
-                logger.info("点击委托")
-                time.sleep(interval)
-            screenshot = self.device_manager.get_screenshot()
             times += 1
             if times >= max_times:
                 return False
+            if self.ocr_handler.match_click_text(["委托战斗开始"],region=region,image=screenshot):
+                logger.info("点击委托战斗开始")
+                return True
+            if not done_click_auto and self.ocr_handler.match_click_text(["委托"],region=region,image=screenshot):
+                done_click_auto = True
+                logger.info("点击委托")
+            screenshot = self.device_manager.get_screenshot()
+            time.sleep(interval)
+
 
     def exit_battle(self, interval:int = 1,max_times:int = 5) -> bool:
         """
@@ -218,7 +219,7 @@ class Battle:
         设置全能量
         """
         logger.info("[Battle] 设置全能量（Boost）")
-        # TODO: 实现全能量逻辑
+        self.device_manager.click(893, 654)
 
     def cmd_attack(self):
         """
@@ -242,21 +243,12 @@ class Battle:
         logger.info(f"[Battle] 释放特殊技能（SP），技能索引: {index}")
         # TODO: 实现SP技能逻辑
 
-    def cmd_reset(self):
+    def cmd_all_switch(self):
         """
-        重置技能和能量
+        切换前后排
         """
-        logger.info("[Battle] 重置技能和能量（Reset）")
-        # TODO: 实现重置逻辑
-
-    def cmd_switch(self, from_: int = 1, to: int = 2):
-        """
-        切换特定角色位置
-        :param from_: 源角色索引
-        :param to: 目标角色索引
-        """
-        logger.info(f"[Battle] 切换角色，从 {from_} 到 {to}")
-        # TODO: 实现角色切换逻辑
+        logger.info(f"[Battle] 全部切换")
+        self.device_manager.click(792, 659)
 
     def cmd_wait(self, seconds: float = 1.0):
         """
@@ -284,13 +276,6 @@ class Battle:
         logger.info(f"[Battle] 点击坐标 ({x}, {y})")
         self.device_manager.click(x, y)
 
-    def cmd_auto(self):
-        """
-        自动战斗/脚本结束后的自动操作
-        """
-        logger.info("[Battle] 自动战斗/脚本结束自动操作（Auto）")
-        # TODO: 实现自动战斗逻辑
-
     def cmd_battle_start(self):
         """
         战斗开始
@@ -305,14 +290,14 @@ class Battle:
         logger.info("[Battle] 战斗结束（BattleEnd）")
         # TODO: 实现战斗结束逻辑
 
-    def cmd_cmd_start(self):
+    def cmd_start(self):
         """
         指令开始
         """
         logger.info("[Battle] 指令开始（CmdStart）")
         # TODO: 实现指令开始逻辑
 
-    def cmd_cmd_end(self):
+    def cmd_end(self):
         """
         指令结束
         """

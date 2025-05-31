@@ -133,3 +133,23 @@ class DeviceManager:
                 logger.error("设备未连接，无法点击")
         except Exception as e:
             logger.error(f"点击坐标 ({x}, {y}) 失败: {str(e)}\n{traceback.format_exc()}") 
+    
+    def press_and_drag_step(self, start:tuple, end:tuple, duration:float=0.5):
+        """
+        长按和拖动指定坐标
+        :param start: 起始坐标 (x, y)
+        :param end: 结束坐标 (x, y)
+        :param duration: 长按和拖动时间 (秒)
+        """
+        if not self.device:
+            logger.error("设备未连接，无法长按和拖动")
+            return
+        start_x, start_y = start
+        end_x, end_y = end
+        logger.info(f"长按: {duration} 秒")
+        self.device.touch.down(start_x, start_y)
+        time.sleep(duration)
+        logger.info(f"拖动: {start} -> {end} {duration} 秒")
+        self.device.touch.move(end_x, end_y)
+        time.sleep(duration)
+        self.device.touch.up(end_x, end_y)

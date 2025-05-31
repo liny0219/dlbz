@@ -117,7 +117,7 @@ class World:
         """
         if image is None:
             image = self.device_manager.get_screenshot()
-        find_list = self.ocr_handler.match_image_multi(image, "assets/fengmo_point.png", debug=True)
+        find_list = self.ocr_handler.match_image_multi(image, "assets/fengmo_point.png", threshold=0.9)
         find = None
         if find_list is not None and len(find_list) > 0:
             # 转换为int
@@ -208,7 +208,7 @@ class World:
         if not in_world:
             logger.debug("不在城镇中")
             return
-        self.click_minimap()
+        self.open_minimap()
         in_minimap = sleep_until(self.in_minimap)
         if not in_minimap:
             return
@@ -229,7 +229,7 @@ class World:
         logger.debug("等待返回城镇")
         sleep_until(self.in_world)
         logger.debug("打开小地图")
-        self.click_minimap()
+        self.open_minimap()
         logger.debug("等待小地图")
         in_minimap = sleep_until(self.in_minimap)
         if not in_minimap:
@@ -249,7 +249,7 @@ class World:
         logger.info(f"[go_fengmo]检查是否在城镇")
         self.in_world_or_battle()
         logger.info(f"[go_fengmo]打开小地图")
-        self.click_minimap()
+        self.open_minimap()
         in_minimap = sleep_until(self.in_minimap)
         if not in_minimap:
             return
@@ -387,34 +387,7 @@ class World:
                 logger.debug("异常")
                 return False
 
-    def open_stay_minimap(self,check_battle:bool=True):
-        """
-        打开小地图
-        """
-        battle_done_done = False
-        while True:
-            screenshot = self.device_manager.get_screenshot()
-            if self.in_world(screenshot):
-                self.click_minimap()
-            if self.battle.in_battle(screenshot):
-                if not battle_done_done and check_battle:
-                    logger.info("执行战斗场景")
-                    monster = self.find_enemy(self.monsters)
-                    if monster is None:
-                        self.battle.auto_battle()
-                    if monster:
-                       loadConfig = self.battle_executor.load_commands_from_file(monster.battle_config)
-                       if loadConfig:
-                           self.battle_executor.execute_all()
-                       else:
-                           self.battle.auto_battle()
-                    battle_done_done = True
-            if self.in_minimap(screenshot):
-                break
-            time.sleep(0.2)
-        return True
-
-    def click_minimap(self):
+    def open_minimap(self):
         """
         点击小地图
         """
@@ -440,8 +413,6 @@ class World:
                 min_dist = dist
                 closest = pt
         return closest
-
-
     # 识别敌人
     def find_enemy(self, monsters:list[Monster],max_count:int=3) -> Monster | None:
         """
@@ -459,7 +430,7 @@ class World:
                 if monster.points is None:
                     logger.info(f"敌人{monster.name}没有配置点")
                     continue
-                if self.ocr_handler.match_point_color_mult(screenshot, monster.points,ambiguity=0.8):
+                if self.ocr_handler.match_point_color_mult(screenshot, monster.points,ambiguity=0.9):
                     logger.info(f"识别到敌人: {monster.name}")
                     return monster
             count += 1
