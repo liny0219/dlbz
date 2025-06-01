@@ -66,18 +66,22 @@ class NoMillisecFormatter(logging.Formatter):
             s = datetime.fromtimestamp(record.created).strftime("%Y-%m-%d %H:%M:%S")
         return s
 
+class BattleConfig(BaseModel):
+    wait_time: float = 0.1
+    wait_drag_time: float = 0.3
+
 class Config:
     def __init__(self, config_dir=None):
         if config_dir is None:
             config_dir = get_config_dir()
-        self.ocr = OCRConfig(**self._load_yaml_with_log(os.path.join(config_dir, "ocr.yaml"), name="ocr.yaml", fallback=os.path.join(config_dir, "settings.yaml"), key="ocr"))
-        self.device = DeviceConfig(**self._load_yaml_with_log(os.path.join(config_dir, "device.yaml"), name="device.yaml", fallback=os.path.join(config_dir, "settings.yaml"), key="device"))
-        self.game = GameConfig(**self._load_yaml_with_log(os.path.join(config_dir, "game.yaml"), name="game.yaml", fallback=os.path.join(config_dir, "settings.yaml"), key="game"))
-        self.logging = LoggingConfig(**self._load_yaml_with_log(os.path.join(config_dir, "logging.yaml"), name="logging.yaml", fallback=os.path.join(config_dir, "settings.yaml"), key="logging"))
-        self.command_interval = self._load_yaml_with_log(os.path.join(config_dir, "settings.yaml"), name="settings.yaml").get("command_interval", 1.0)
-        # 兼容fengmo等其他配置
+        self.ocr = OCRConfig(**self._load_yaml_with_log(os.path.join(config_dir, "ocr.yaml"), name="ocr.yaml", fallback=os.path.join(config_dir, "battle.yaml"), key="ocr"))
+        self.device = DeviceConfig(**self._load_yaml_with_log(os.path.join(config_dir, "device.yaml"), name="device.yaml", fallback=os.path.join(config_dir, "battle.yaml"), key="device"))
+        self.game = GameConfig(**self._load_yaml_with_log(os.path.join(config_dir, "game.yaml"), name="game.yaml", fallback=os.path.join(config_dir, "battle.yaml"), key="game"))
+        self.logging = LoggingConfig(**self._load_yaml_with_log(os.path.join(config_dir, "logging.yaml"), name="logging.yaml", fallback=os.path.join(config_dir, "battle.yaml"), key="logging"))
+        self.command_interval = self._load_yaml_with_log(os.path.join(config_dir, "battle.yaml"), name="battle.yaml").get("command_interval", 1.0)
         self.fengmo = FengmoConfig(**self._load_yaml_with_log(os.path.join(config_dir, "fengmo.yaml"), name="fengmo.yaml"))
         self.fengmo_cities = FengmoCityConfig(**self._load_yaml_with_log(os.path.join(config_dir, "fengmo_cities.yaml"), name="fengmo_cities.yaml")).cities
+        self.battle = BattleConfig(**self._load_yaml_with_log(os.path.join(config_dir, "battle.yaml"), name="battle.yaml"))
 
     def _load_yaml_with_log(self, path, name=None, fallback=None, key=None):
         print(f"[Config] 加载配置文件: {name or path}")

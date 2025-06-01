@@ -1,128 +1,163 @@
 cities:
   newdelsta:
-    inn_pos: [645, 573] # 旅馆点
-    entrance_pos: [337, 596] # 入口点
-    reset_pos: [548,343] # 重置点,当小地图被遮挡时,遇到无法匹配到图标的时候,点击重置点
-    monsters:
-      [
-        {
-          name: 逢魔精英怪,
-          points:[
-              [439, 368, "#1E021B", 5],
-              [411, 415, "#2F0219", 5],
-              [296, 444, "#BB8A6A", 5],
-              [280, 456, '#4F1416', 5], 
-              [313, 347, '#2C001B', 5],
-              [447, 346, '#220014', 5], 
-          ],
-          battle_config: "1.txt"
-        },
-        {
-          name: 逢魔之主,
-          points:[
-              [489, 177, '#CBA5B2', 9],
-              [396, 336, '#6B000E', 9],
-              [205, 344, '#260009', 9],
-              [228, 437, '#3C0113', 9],
-              [327, 370, '#B3866F', 9],
-              [467, 143, '#19010F', 9],
-          ],
-          battle_config: "2.txt"
-        }
-      ]
     check_points:
-      [       
-        {
-          "id": 1,
-          "pos": [420,615],
-          "reset_map": true,
-          "next_point": false,
-          "item_pos": [
-            [1164,349],
-            [316,387]
-          ]
-        },
-        {
-          "id": 2,
-          "pos": [533,617],
-          "reset_map": true,
-          "next_point": false,
-          "item_pos": [
-            [561,239],
-            [260,388]
-          ]
-        },
-        {
-          "id": 3,
-          "pos": [576,443],
-          "reset_map": true,
-          "next_point": true,
-          "item_pos": [
-            [732,349]
-          ]
-        },
-        {
-          "id": 4,
-          "pos": [557,259],
-          "reset_map": true,
-          "next_point": true,
-          "item_pos": [
-            [75,377]
-          ]
-        },
-        { 
-          "id": 5,
-          "pos": [675,289],
-          "reset_map": False,
-          "next_point": False,
-          "item_pos": [
-            [724,321],
-            [507,539]
-          ]
-        },
-        {
-          "id": 6,
-          "pos": [815,324],
-          "reset_map": true,
-          "next_point": true,
-          "item_pos": [
-            [635,397]
-          ]
-        },
-        {
-          "id": 7,
-          "pos": [804,504],
-          "reset_map": true,
-          "next_point": true,
-          "item_pos": [
-            [868,385]
-          ]
-        },
-        {
-          "id": 8,
-          "pos": [720,500],
-          "reset_map": true,
-          "next_point": true,
-          "item_pos": [
-            [639,357]
-          ]
-        },
-        {
-          "id": 9,
-          "pos": [753,621],
-          "reset_map": true,
-          "next_point": true,
-          "item_pos": [
-            [623,385]
-          ]
-        },
-        {
-          "id": 10,
-          "pos": [647,619],
-          "reset_map": true,
-          "next_point": true,
-          "item_pos": [
-            [400, 434]
-          ]
-        }
-      ]
+    - id: 1
+      item_pos:
+      - - 1164
+        - 349
+      - - 316
+        - 387
+      next_point: false
+      pos:
+      - 420
+      - 615
+      reset_map: true
+    - id: 2
+      item_pos:
+      - - 561
+        - 239
+      - - 260
+        - 388
+      next_point: false
+      pos:
+      - 533
+      - 617
+      reset_map: true
+    - id: 3
+      item_pos:
+      - - 732
+        - 349
+      next_point: true
+      pos:
+      - 576
+      - 443
+      reset_map: true
+    - id: 4
+      item_pos:
+      - - 75
+        - 377
+      next_point: true
+      pos:
+      - 557
+      - 259
+      reset_map: true
+    - id: 5
+      item_pos:
+      - - 724
+        - 321
+      - - 507
+        - 539
+      next_point: false
+      pos:
+      - 675
+      - 289
+      reset_map: false
+    - id: 6
+      item_pos:
+      - - 635
+        - 397
+      next_point: true
+      pos:
+      - 815
+      - 324
+      reset_map: true
+    - id: 7
+      item_pos:
+      - - 868
+        - 385
+      next_point: true
+      pos:
+      - 804
+      - 504
+      reset_map: true
+    - id: 8
+      item_pos:
+      - - 639
+        - 357
+      next_point: true
+      pos:
+      - 720
+      - 500
+      reset_map: true
+    - id: 9
+      item_pos:
+      - - 623
+        - 385
+      next_point: true
+      pos:
+      - 753
+      - 621
+      reset_map: true
+    - id: 10
+      item_pos:
+      - - 400
+        - 434
+      next_point: true
+      pos:
+      - 647
+      - 619
+      reset_map: true
+    entrance_pos:
+    - 337
+    - 596
+    inn_pos:
+    - 645
+    - 573
+    monsters:
+    - battle_config: 1.txt
+      name: 逢魔精英怪
+      points:
+      - - 439
+        - 368
+        - '#1E021B'
+        - 5
+      - - 411
+        - 415
+        - '#2F0219'
+        - 5
+      - - 296
+        - 444
+        - '#BB8A6A'
+        - 5
+      - - 280
+        - 456
+        - '#4F1416'
+        - 5
+      - - 313
+        - 347
+        - '#2C001B'
+        - 5
+      - - 447
+        - 346
+        - '#220014'
+        - 5
+    - battle_config: 2.txt
+      name: 逢魔之主
+      points:
+      - - 489
+        - 177
+        - '#CBA5B2'
+        - 9
+      - - 396
+        - 336
+        - '#6B000E'
+        - 9
+      - - 205
+        - 344
+        - '#260009'
+        - 9
+      - - 228
+        - 437
+        - '#3C0113'
+        - 9
+      - - 327
+        - 370
+        - '#B3866F'
+        - 9
+      - - 467
+        - 143
+        - '#19010F'
+        - 9
+    reset_pos:
+    - 548
+    - 343

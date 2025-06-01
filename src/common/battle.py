@@ -6,6 +6,7 @@ from core.ocr_handler import OCRHandler
 from typing import Optional, Any, Tuple
 from PIL import Image
 from utils.singleton import singleton
+from common.config import config
 
 @singleton
 class Battle:
@@ -26,8 +27,8 @@ class Battle:
         self.skill_base_x = [800,1020,1100,1200]
         self.skill_base_y = 200
         self.skill_base_y_offset = 105
-        self.wait_time = 0.1
-        self.wait_drag_time = 0.3
+        self.wait_time = config.battle.wait_time
+        self.wait_drag_time = config.battle.wait_drag_time
 
     # ================== 战斗状态判断相关方法 ==================
     def in_battle(self, image: Optional[Image.Image] = None) -> bool:

@@ -1,3 +1,3 @@
+datefmt: '%Y-%m-%d %H:%M:%S'
 format: '{time} {level} [{name}] {message}'
 level: INFO
-datefmt: '%Y-%m-%d %H:%M:%S'

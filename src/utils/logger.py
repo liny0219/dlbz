@@ -1,20 +1,36 @@
 import logging
 import sys
 import os
-from common.config import config
 
-def setup_logger(gui_log_func=None):
+class GuiLogHandler(logging.Handler):
+    def __init__(self, append_log_func):
+        super().__init__()
+        self.append_log_func = append_log_func
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            self.append_log_func(msg)
+        except Exception:
+            pass
+
+def setup_logger(append_log_func=None, log_format=None, datefmt=None):
     """
     配置标准logging日志输出到控制台/文件，并可选注册GUI日志Handler
     """
-    log_format, datefmt = config.get_logging_format_and_datefmt(config.logging.format, getattr(config.logging, 'datefmt', None))
-    log_level = config.logging.level
     logger = logging.getLogger("dldbz")
-    logger.setLevel(log_level)
+    logger.setLevel(logging.INFO)
     # 移除所有旧的handler
     if logger.hasHandlers():
         logger.handlers.clear()
-    formatter = config.get_no_millisec_formatter(log_format, datefmt)
+    # 始终有默认formatter
+    if log_format:
+        formatter = logging.Formatter(log_format, datefmt=datefmt)
+    else:
+        formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+    if append_log_func:
+        handler = GuiLogHandler(append_log_func)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
     # 控制台输出
     if sys.stdout is None:
         # 日志目录不存在则自动创建
@@ -24,24 +40,6 @@ def setup_logger(gui_log_func=None):
         handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    # GUI日志Handler（可选）
-    if gui_log_func is not None:
-        class GuiLogHandler(logging.Handler):
-            def __init__(self, append_log_func):
-                super().__init__()
-                self.append_log_func = append_log_func
-            def emit(self, record):
-                try:
-                    msg = self.format(record)
-                    self.append_log_func(msg)
-                except Exception:
-                    pass
-        gui_handler = GuiLogHandler(gui_log_func)
-        gui_handler.setLevel(log_level)
-        gui_handler.setFormatter(formatter)
-        # 避免重复添加
-        if not any(isinstance(h, GuiLogHandler) for h in logger.handlers):
-            logger.addHandler(gui_handler)
     # 屏蔽第三方库debug日志
     logging.getLogger("uiautomator2").setLevel(logging.WARNING)
     logging.getLogger("requests").setLevel(logging.WARNING)
