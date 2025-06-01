@@ -1,629 +1,611 @@
-from functools import partial
-import gc
-from engine.world import world
-from engine.battle_hook import BattleHook
-from engine.u2_device import u2_device
-from engine.comparator import comparator
-from utils.singleton import singleton
-from utils.config_loader import cfg_engine
 import time
-
-from utils.wait import wait_either, wait_until
-from app_data import app_data
-
+from utils import logger
+from common.app import AppManager
+from core.device_manager import DeviceManager
+from core.ocr_handler import OCRHandler
+from typing import Optional
+from PIL import Image
+from utils.singleton import singleton
+from common.config import config
 
 @singleton
 class Battle:
-    def __init__(self):
-        self.debug = False
-        self.hook_manager = BattleHook()
-        self.wait_interval = 0.2
-        self.instructions = []  # 用于存储预读取的指令列表
-        self.role_coords_y = [60, 162, 270, 378]    # 角色y坐标
-        self.role_coord_x = 816    # 角色x坐标
-        self.skill_coords_y = [151, 232, 313, 394, 475]    # 技能y坐标
-        self.skill_coord_x = 580    # 技能x坐标
-        self.boost_coords_x = [600, 787, 854, 921]   # boost终点x坐标
-        self.confirm_coord = [702, 348]   # 额外点击
-        self.sp_coords = [525, 68]      # sp坐标
-        self.sp_coords_skill = [512, 157]      # sp坐标
-        self.sp_confirm_coords = [702, 348]  # sp确认坐标
-        self.sp_confirm_coords1 = [702, 396]  # sp确认坐标
-        self.finish_hook = None
-        self.in_round_ctx = False
-        self.screenshot = None
-        self.round_number = 0
-        self.check_dead = False
-        self.auto_check_dead = True
-        self.swipe_duration = 0.5
-        self.cfg_attack = './assets/battle/attack.png'
-        self.cfg_switch = './assets/battle/switch.png'
-        self.cfg_round_ui = './assets/battle/round_ui.png'
-        self.cfg_battle_ui = './assets/battle/battle_ui.png'
-        self.cfg_skill_ui = './assets/battle/skill_ui.png'
-        self.cfg_allswitch = './assets/battle/allswitch.png'
-        self.cfg_allboost = './assets/battle/allboost.png'
+    """
+    战斗模块
+    负责实现战斗相关的自动化逻辑
+    """
+    def __init__(self, device_manager: DeviceManager, ocr_handler: OCRHandler,app_manager:AppManager) -> None:
+        """
+        :param device_manager: DeviceManager 实例
+        :param ocr_handler: OCRHandler 实例
+        """
+        self.app_manager = app_manager
+        self.device_manager = device_manager
+        self.ocr_handler = ocr_handler
+        self.role_base_pos = (1100, 80)
+        self.rols_base_y_offset = 140
+        self.skill_base_x = [800,1020,1100,1200]
+        self.skill_base_y = 200
+        self.skill_base_y_offset = 105
+        self.wait_time = config.battle.wait_time
+        self.wait_drag_time = config.battle.wait_drag_time
 
-    def set(self):
-        self.set_hook()
-
-    def reset(self):
-        self.in_round_ctx = False
-        self.round_number = 0
-        cfg_engine.reload()
-        u2_device.set_config()
-        self.wait_interval = float(cfg_engine.get('common.wait_interval'))
-        self.swipe_duration = float(cfg_engine.get('common.swipe_duration'))
-        self.auto_check_dead = cfg_engine.get('common.auto_check_dead')
-
-    def set_hook(self):
-        # 设置 Hook 函数，返回值为 bool 类型，表示是否继续执行
-        battle_hook = self.hook_manager
-        battle_hook.set(
-            'Finish', lambda: self.finish_hook and self.finish_hook())
-        battle_hook.set('CheckDead', lambda: self.cmd_check_dead())
-        battle_hook.set('CmdStart', lambda: not app_data.thread_stoped())
-        battle_hook.set('BattleStart', lambda: (self._wait_round(resetRound=True, return_end=False)))
-        battle_hook.set('BattleEnd', lambda: self.hook_battle_end())
-        battle_hook.set('Role', lambda role_id, skill_id, energy_level, x=None, y=None: self.cmd_role(
-            int(role_id), int(skill_id), int(energy_level), x, y))
-        battle_hook.set('XRole', lambda role_id, skill_id, energy_level, x=None, y=None: self.cmd_role(
-            int(role_id) + 4, int(skill_id), int(energy_level), x, y))
-        battle_hook.set('Attack', lambda: self.cmd_start_attack())
-        battle_hook.set('SwitchAll', lambda: self.btn_all_switch())
-        battle_hook.set('Boost', lambda: self.btn_all_bp())
-        battle_hook.set('SP', lambda role_id, x=None, y=None: self.cmd_sp(int(role_id), x, y))
-        battle_hook.set('XSP', lambda role_id, x=None, y=None: self.cmd_sp(int(role_id) + 4, x, y))
-        battle_hook.set('Wait', lambda time: self.cmd_wait(time))
-        battle_hook.set('Skip', lambda time: self.cmd_skip(time))
-        battle_hook.set('Click', lambda x, y: self.cmd_click(x, y))
-        battle_hook.set('Auto', lambda: self.btn_auto_battle())
-
-    def run(self, path):
-        self._load_instructions(path)
-        return self._run_script()
-
-    def btn_auto_battle(self):
-        wait_until(self._in_round, thread=app_data.thread, check_interval=0,
-                   time_out_operate_func=lambda: app_data.update_ui(f"Auto指令等待回合超时"))
-        u2_device.device.click(368, 482)
-        time.sleep(self.wait_interval)
-        u2_device.device.click(825, 482)
-        app_data.update_ui("自动战斗")
-
-    def btn_quit_battle(self):
-        wait_until(self._in_round, thread=app_data.thread, check_interval=0,
-                   time_out_operate_func=lambda: app_data.update_ui(f"退出指令等待回合超时"))
-        u2_device.device.click(440, 482)
-        app_data.update_ui("退出战斗")
-
-    def btn_all_switch(self):
-        world.btn_trim_click()
-        wait_until(self._in_round, thread=app_data.thread, check_interval=0,
-                   time_out_operate_func=lambda: app_data.update_ui(f"Switch指令等待回合超时"))
-        u2_device.device.click(577, 482)
-        app_data.update_ui("全体切换")
-
-    def btn_all_bp(self):
-        world.btn_trim_click()
-        wait_until(self._in_round, thread=app_data.thread, check_interval=0,
-                   time_out_operate_func=lambda: app_data.update_ui(f"Boost指令等待回合超时"))
-        all_boost_coord = comparator.template_compare(
-            self.cfg_allboost,  return_center_coord=True, screenshot=self.shot())
-        if all_boost_coord:
-            u2_device.device.click(all_boost_coord[0], all_boost_coord[1])
-        app_data.update_ui(f"全能量提升完成")
-
-    def btn_attack(self, screenshot=None):
-        if screenshot is None or len(screenshot) == 0:
-            screenshot = self.shot()
-        try:
-            if self.is_can_attack(screenshot):
-                u2_device.device.click(816, 487)
-                app_data.update_ui("开始攻击")
-                self.shot()
-                time.sleep(5)
-        except Exception as e:
-            app_data.update_ui(f"btn_attack攻击异常{e}")
-        finally:
-            del screenshot
-            gc.collect()
-
-    def cmd_click(self, x, y):
-        u2_device.device.click(int(x), int(y))
-        app_data.update_ui(f"点击坐标{x}, {y}")
-
-    def cmd_check_dead(self):
-        try:
-            wait_until(self._in_round, thread=app_data.thread, check_interval=0,
-                       time_out_operate_func=lambda: app_data.update_ui(f"CheckDead指令等待回合超时"))
-            if self.is_dead():
-                self.btn_quit_battle()
-                time.sleep(1)
-                self.check_confirm_quit_battle()
-                return True
-        except Exception as e:
-            app_data.update_ui(f"cmd_check_dead检查死亡异常{e}")
-
-    def cmd_start_attack(self):
-        try:
-            world.btn_trim_click()
-            wait_until(self._in_round, thread=app_data.thread, check_interval=0,
-                       time_out_operate_func=lambda: app_data.update_ui(f"Attack指令等待回合超时"))
-            world.btn_trim_click()
-            self.btn_attack()
-            time.sleep(self.wait_interval)
-            world.btn_trim_click()
-            self._wait_round()
-        except Exception as e:
-            app_data.update_ui(f"cmd_start_attack攻击异常{e}")
-
-    def _wait_state(self, timeout):
-        start_time = time.time()
-        thread = app_data.thread
-        app_data.update_ui(f"等待状态中..._wait_state", 'debug')
-        while True:
-            try:
-                duration = time.time() - start_time
-                screenshot = self.shot()
-                if duration > timeout:
-                    return -10
-                if thread is not None and thread.stopped():
-                    print("Thread has ended.")
-                    return -1
-                app_data.update_ui(f"等待状态中..._in_round", 'debug')
-                if self._in_round(screenshot):
-                    app_data.update_ui(f"in_round", 'debug')
-                    return 1
-                app_data.update_ui(f"等待状态中..._not_in_battle", 'debug')
-                if self._not_in_battle(screenshot):
-                    app_data.update_ui(f"not_in_battle", 'debug')
-                    return 2
-            except Exception as e:
-                app_data.update_ui(f"等待状态异常{e}")
-                return 0
-            finally:
-                del screenshot
-                gc.collect()
-
-    def _wait_round(self, resetRound=False, return_end=True, timeout=180):
-        try:
-            while not app_data.thread_stoped():  # 使用循环代替递归
-                wait_result = self._wait_state(timeout)
-
-                if wait_result == 2:  # 检查是否是战斗结束
-                    self.battle_end = True
-                    if return_end:
-                        return
-
-                if wait_result == 1:  # 进入回合
-                    self.in_round_ctx = True
-                    if resetRound:
-                        self.round_number = 0  # 重置回合计数
-                    self.round_number += 1  # 进入下一回合
-                    app_data.update_ui(f"进入回合{self.round_number}")
-                    break  # 跳出循环
-
-                else:  # 如果没有进入回合，等待继续
-                    self.in_round_ctx = False
-                    if resetRound:
-                        self.cmd_skip(3000)  # 跳过一定时间后继续等待
-
-            # 循环结束后，回合处理结束，退出函数
-
-        except Exception as e:
-            app_data.update_ui(f"_wait_round异常: {e}")
-
-    def cmd_role(self, role, skill, boost=0, x=None, y=None):
-        try:
-            world.btn_trim_click()
-            wait_until(self._in_round, thread=app_data.thread, check_interval=0,
-                       time_out_operate_func=lambda: app_data.update_ui(f"Role指令等待回合超时"))
-            if self.in_round_ctx != True:
-                raise Exception(f"执行Role指令{role},{skill},{boost}不在回合中")
-            if role < 1 or role > 8:
-                raise Exception(f"执行Role指令{role},{skill},{boost}角色号错误")
-            if skill < 0 or skill > 4:
-                raise Exception(f"执行Role指令{role},{skill},{boost}技能号错误")
-            if boost < 0 or boost > 3:
-                raise Exception(f"执行Role指令{role},{skill},{boost}boost号错误")
-            role_in_behind = role > 4
-            behide = '前排'
-            role_number = role
-            if role_in_behind:
-                behide = '后排'
-                role_number = role - 4
-            app_data.update_ui(f"执行{behide}{role_number}号位的{skill}技能, 加成{boost} ")
-            front_role_id = get_front_front_role_id(role)
-            u2_device.device.click(self.role_coord_x, self.role_coords_y[front_role_id])
-            wait_until(self._in_select_skill, thread=app_data.thread, check_interval=0,
-                       time_out_operate_func=lambda: app_data.update_ui(f"Role指令等待选技能超时"))
-            app_data.update_ui(f"进入选技能界面!")
-            time.sleep(self.wait_interval)
-            self._select_enemy(x, y)
-            if role_in_behind:
-                app_data.update_ui(f"开始切换人物!")
-                wait_until(self._in_select_switch, thread=app_data.thread, check_interval=0,
-                           time_out_operate_func=lambda: app_data.update_ui(f"Role指令等待切换后排超时"))
-                switch_coord = comparator.template_compare(
-                    self.cfg_switch, return_center_coord=True, screenshot=self.screenshot)
-                if switch_coord:
-                    time.sleep(self.wait_interval)
-                    u2_device.device.click(switch_coord[0], switch_coord[1])
-                    wait_until(self._in_select_skill, thread=app_data.thread, check_interval=0,
-                               time_out_operate_func=lambda: app_data.update_ui(f"Role指令等待切换后排选中技能超时"))
-                else:
-                    app_data.update_ui(f"未找到切换按钮")
-            time.sleep(self.wait_interval)
-            if boost > 0:
-                skill_start = [self.skill_coord_x, self.skill_coords_y[skill]]
-                skill_end = [self.boost_coords_x[boost], self.skill_coords_y[skill]]
-                app_data.update_ui(f"开始选中技能{skill}并加成{boost}")
-                u2_device.long_press_and_drag_step(skill_start, skill_end, self.swipe_duration)
-            else:
-                app_data.update_ui(f"开始选中技能{skill}")
-                u2_device.device.click(self.skill_coord_x, self.skill_coords_y[skill])
-            app_data.update_ui(f"选中技能{skill}")
-            time.sleep(self.wait_interval)
-        except Exception as e:
-            app_data.update_ui(f"执行技能异常{e}")
-
-    def cmd_sp(self, role, x, y):
-        try:
-            world.btn_trim_click()
-            wait_until(self._in_round, thread=app_data.thread, check_interval=0,
-                       time_out_operate_func=lambda: app_data.update_ui(f"SP指令等待回合超时"))
-            if self.in_round_ctx != True:
-                raise Exception(f"执行SP指令{role},不在回合中")
-            if role < 1 or role > 8:
-                raise Exception(f"执行SP指令{role},角色号错误")
-
-            role_in_behind = role > 4
-            behide = '前排'
-            role_number = role
-            if role_in_behind:
-                behide = '后排'
-                role_number = role - 4
-            app_data.update_ui(f"执行{behide}{role_number}号位的必杀技能!")
-
-            front_role_id = get_front_front_role_id(role)
-            u2_device.device.click(self.role_coord_x, self.role_coords_y[front_role_id])
-            wait_until(self._in_select_skill, thread=app_data.thread, check_interval=0,
-                       time_out_operate_func=lambda: app_data.update_ui(f"SP指令等待选技能超时"))
-            app_data.update_ui(f"进入选技能界面!")
-            time.sleep(self.wait_interval)
-            self._select_enemy(x, y)
-            role_in_behind = role > 4
-            if role_in_behind:
-                app_data.update_ui(f"切换人物!")
-                wait_until(self._in_select_switch, thread=app_data.thread, check_interval=0,
-                           time_out_operate_func=lambda: app_data.update_ui(f"SP指令等待切换后排超时"))
-                switch_coord = comparator.template_compare(
-                    self.cfg_switch, return_center_coord=True, screenshot=self.screenshot)
-                if switch_coord:
-                    time.sleep(self.wait_interval)
-                    u2_device.device.click(switch_coord[0], switch_coord[1])
-                    wait_until(self._in_select_skill, thread=app_data.thread, check_interval=0,
-                               time_out_operate_func=lambda: app_data.update_ui(f"SP指令等待切换后排选中技能超时"))
-                else:
-                    app_data.update_ui(f"未找到切换按钮")
-            app_data.update_ui(f"正在选中必杀!")
-            u2_device.device.click(self.sp_coords[0], self.sp_coords[1])
-            time.sleep(self.wait_interval)
-            app_data.update_ui(f"选中极限技")
-            u2_device.device.click(self.sp_coords_skill[0], self.sp_coords_skill[1])
-            time.sleep(0.8)
-            time.sleep(self.wait_interval)
-            u2_device.device.click(self.sp_confirm_coords[0], self.sp_confirm_coords[1])
-            u2_device.device.click(self.sp_confirm_coords1[0], self.sp_confirm_coords1[1])
-            app_data.update_ui(f"确认选中必杀技")
-            time.sleep(self.wait_interval)
-        except Exception as e:
-            app_data.update_ui(f"执行必杀技能异常{e}")
-
-    def cmd_wait(self, time_in_ms):
-        time_in_seconds = int(time_in_ms) / 1000.0
-        app_data.update_ui(f"等待 {time_in_ms} 毫秒...")
-        time.sleep(time_in_seconds)
-
-    def cmd_skip(self, time_in_ms):
-        app_data.update_ui(f"跳过 {time_in_ms} 毫秒...")
-        u2_device.device.long_click(self.confirm_coord[0], self.confirm_coord[1], int(time_in_ms)/1000)
-
-    def hook_battle_end(self):
-        app_data.update_ui(f"check-战斗结束...")
-        if self._not_in_battle():
-            self.cmd_skip(3000)
-
-    def hook_finish(self, finish_hook):
-        self.finish_hook = finish_hook
-
-    def _in_round(self, screenshot=None):
-        try:
-            if screenshot is None or len(screenshot) == 0:
-                screenshot = self.shot()
-            in_round = self.is_in_battle(screenshot) and self.is_can_attack(screenshot)
-            return in_round
-        except Exception as e:
-            app_data.update_ui(f"检查是否在回合界面异常{e}")
+    # ================== 战斗状态判断相关方法 ==================
+    def in_battle(self, image: Optional[Image.Image] = None) -> bool:
+        """
+        判断当前是否在战斗中。
+        :param image: 可选，外部传入截图
+        :param points_colors: 可选，[(x, y, color, range)] 数组，默认用原有6点
+        :return: bool
+        """
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在战斗中")
             return False
-        finally:
-            del screenshot
-            gc.collect()
-
-    def _in_battle_icon(self, screenshot=None):
-        app_data.update_ui("check-是否在战斗界面", 'debug')
-        try:
-            if screenshot is None or len(screenshot) == 0:
-                screenshot = self.shot()
-            return comparator.template_compare(self.cfg_battle_ui, screenshot=screenshot)
-        except Exception as e:
-            app_data.update_ui(f"检查是否在战斗界面异常{e}")
-            return False
-        finally:
-            del screenshot
-            gc.collect()
-
-    def _not_in_battle(self, screenshot=None):
-        app_data.update_ui("check-是否不在战斗界面", 'debug')
-        try:
-            if screenshot is None or len(screenshot) == 0:
-                screenshot = self.shot()
-            return not self.is_in_battle(screenshot) and not self._in_round(screenshot)
-        except Exception as e:
-            app_data.update_ui(f"检查是否不在战斗界面异常{e}")
-            return False
-        finally:
-            del screenshot
-            gc.collect()
-
-    def _attack_end(self, screenshot=None):
-        if screenshot is None or len(screenshot) == 0:
-            screenshot = self.shot()
-        try:
-            attack_end = self._in_round(screenshot) or (not self.is_in_battle(screenshot))
-            return attack_end
-        except Exception as e:
-            app_data.update_ui(f"检查是否攻击结束异常{e}")
-            return False
-        finally:
-            del screenshot
-            gc.collect()
-
-    def _in_select_skill(self, screenshot=None):
-        try:
-            if screenshot is None or len(screenshot) == 0:
-                screenshot = self.shot()
-            in_select_skill = self.is_in_battle(screenshot) and comparator.template_compare(
-                self.cfg_skill_ui, screenshot=screenshot)
-            return in_select_skill
-        except Exception as e:
-            app_data.update_ui(f"检查是否在选技能界面异常{e}")
-            return False
-        finally:
-            del screenshot
-            gc.collect()
-
-    def _in_select_switch(self, screenshot=None):
-        try:
-            if screenshot is None or len(screenshot) == 0:
-                screenshot = self.shot()
-            in_select_switch = self.is_in_battle(screenshot) and comparator.template_compare(
-                self.cfg_switch, screenshot=screenshot)
-            return in_select_switch
-        except Exception as e:
-            app_data.update_ui(f"检查是否在切换界面异常{e}")
-            return False
-        finally:
-            del screenshot
-            gc.collect()
-
-    def _select_enemy(self, x=None, y=None):
-        try:
-            if (not x or not y):
-                return
-            u2_device.device.click(int(x), int(y))
-            app_data.update_ui(f"选择敌人{x}, {y}")
-            time.sleep(self.wait_interval)
-        except Exception as e:
-            app_data.update_ui(f"选择敌人异常{e}")
-
-    def _load_instructions(self, filename):
-        """ 从文件中预读取指令并存储 """
-        try:
-            with open(filename, 'r', encoding='utf-8') as file:
-                self.instructions = [line.strip() for line in file if line.strip() and not line.startswith('#')]
-            if app_data.update_ui:
-                app_data.update_ui("指令加载成功。")
-        except Exception as e:
-            if app_data.update_ui:
-                app_data.update_ui(f"读取指令出错 {filename}. {e}")
-
-    def _execute_instruction(self, instruction):
-        hook_func_cmd_start = self.hook_manager.get('CmdStart')  # 获取对应指令的 hook 函数
-        if hook_func_cmd_start is not None and not hook_func_cmd_start():
-            return False
-
-        """ 解析并执行指令 """
-        parts = instruction.split(',')
-        command = parts[0]  # 获取指令名称
-        hook_func = self.hook_manager.get(command)
-
-        if hook_func is not None:
-            # 执行对应的 hook 函数，并传递参数
-            is_break = hook_func(*parts[1:])
-            if is_break == True:
-                return False
+        points_colors = [
+            (116, 19, "87878C", 1),
+            (125, 19, "878790", 1),
+            (116, 29, "8F9096", 1),
+            (125, 29, "8F8F98", 1),
+            (131, 26, "9999A1", 1),
+            (139, 26, "9A9BA3", 1),
+        ]
+        # 批量判断
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results:
+            logger.debug("检测到在战斗中")
+            time.sleep(self.wait_time)
+            return True
         else:
-            # 更新 UI
-            if app_data.update_ui:
-                app_data.update_ui(f"找不到对应战斗指令 '{command}'.")
+            logger.debug("不在战斗中")
+            return False
+
+    def in_round(self, image: Optional[Image.Image] = None) -> bool:
+        """
+        判断当前是否在战斗回合中。
+        :param image: 可选，外部传入截图
+        :param points_colors: 可选，[(x, y, color, range)] 数组，默认用原有6点
+        :return: bool
+        """
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在战斗回合中")
+            return False
+        points_colors = [
+            (1061,639, "FFFFFF", 1),
+            (1061,639, "FFFFFF", 1),
+            (1060,659, "FFFFFF", 1),
+            (1133,650, "FFFFFF", 1),
+            (1131,665, "FFFFFF", 1)
+        ]
+        # 批量判断
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results and self.in_battle(image):
+            logger.debug("检测到在战斗回合中")
+            time.sleep(self.wait_time)
+            return True
+        else:
+            logger.debug("不在战斗回合中")
+            return False
+
+    def in_sp_on(self, image: Optional[Image.Image] = None) -> bool:
+        """
+        判断当前是否在技能释放中。
+        :param image: 可选，外部传入截图
+        :return: bool
+        """
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在技能释放中")
+            return False
+        points_colors = [
+            (661,152, "F8F8FE", 1),
+            (633,173, "E8E9EA", 1),
+            (705,173, "E8E9EA", 1),
+            (660,169, "F8F8FE", 1),
+        ]
+        # 批量判断
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        return results and self.in_battle(image)
+
+    def in_skill_on(self, image: Optional[Image.Image] = None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在技能释放中")
+            return False
+        points_colors = [
+            (798, 203, '28292B', 1),
+            (718, 204, 'F8F6F7', 1),
+            (772, 176, '1E1F21', 1)
+        ]
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        return results and self.in_battle(image)
+    
+    def in_auto_off(self, image: Optional[Image.Image] = None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在技能释放中")
+            return False
+        points_colors = [
+            (460, 657, '050004', 1),
+            (521, 661, '050004', 1),
+        ]
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        return results and self.in_battle(image)
+
+    def in_auto_on(self, image: Optional[Image.Image] = None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在技能释放中")
+            return False
+        points_colors = [
+            (1099, 678, 'CAE7E5', 1),
+            (991, 651, '1BA4B4', 1),
+            (1199, 648, '1BAABB', 1),
+            (871, 654, '010002', 1),
+            (524, 656, '262427', 1),
+            (461, 656, '252326', 1),
+        ]
+        # 批量判断
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        return results and self.in_battle(image)
+    
+    def in_switch_on(self, image: Optional[Image.Image] = None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在技能释放中")
+            return False
+        points_colors = [
+            (767, 656, '262125', 1),
+            (816, 655, '211F22', 1),
+        ]
+        # 批量判断
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        return results and self.in_battle(image)
+
+    def in_switch_off(self, image: Optional[Image.Image] = None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在技能释放中")
+            return False
+        points_colors = [
+            (818, 660, '050004', 1),
+            (767, 658, '060004', 1),
+        ]
+        # 批量判断
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        return results and self.in_battle(image)
+    
+    def in_boost_on(self, image: Optional[Image.Image] = None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在技能释放中")
+            return False
+        points_colors = [
+            (918, 658, '7C7C7C', 1),
+            (869, 657, '848283', 1),
+        ]
+        # 批量判断
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        return results and self.in_battle(image)
+
+    def in_boost_off(self, image: Optional[Image.Image] = None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在技能释放中")
+            return False
+        points_colors = [
+            (918, 659, '0B090C', 1),
+            (872, 660, '010002', 1),
+        ]
+        # 批量判断
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        return results and self.in_battle(image)
+
+    def in_front_on(self, image: Optional[Image.Image] = None) -> bool:
+        """
+        判断当前是否在前排。
+        :param image: 可选，外部传入截图
+        :return: bool
+        """
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在技能释放中")
+            return False
+        points_colors = [
+            (791, 27, 'C8CAC9', 1),
+            (796, 30, 'E4E8E7', 1),
+        ]
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        logger.debug(f"判断当前是否在前排: {results}")
+        return results and self.in_skill_on(image)
+    
+    def in_back_on(self, image: Optional[Image.Image] = None) -> bool:
+        """
+        判断当前是否在后排。
+        :param image: 可选，外部传入截图
+        :return: bool
+        """
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在技能释放中")
+            return False  
+        points_colors = [
+            (785, 26, 'F3F5F2', 1),
+            (792, 15, 'C7C8C3', 1),
+        ]
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        logger.debug(f"判断当前是否在后排: {results}")
+        return results and self.in_skill_on(image)
+            
+
+    # ================== 战斗相关方法 ==================
+    def auto_battle(self, interval:float = 0.2,max_times:int = 30) -> bool:
+        """
+        自动战斗
+        """
+        screenshot = self.device_manager.get_screenshot()
+        if not self.in_round(screenshot):
+            return False
+        times = 0
+        while True: 
+            times += 1
+            if times >= max_times:
+                return False
+            if self.in_auto_on(screenshot):
+                logger.info("点击委托战斗开始")
+                self.device_manager.click(1104, 643)
+                return True
+            if self.in_auto_off(screenshot):
+                logger.info("点击委托")
+                self.device_manager.click(491, 654)
+            screenshot = self.device_manager.get_screenshot()
+            time.sleep(interval)
+
+    def check_dead(self, role_id: int = 1, check_count= 3) -> bool:
+        """
+        判断当前是否死亡。
+        :param image: 可选，外部传入截图
+        :param role_id: 可选，角色id，默认0代表任意角色死亡判断,1-8代表具体角色死亡判断
+        :return: bool
+        """
+        count = 0
+        while True:
+            image = self.device_manager.get_screenshot()
+            if image is None:
+                logger.warning("无法获取截图，无法判断是否死亡")
+                return False
+            # 1到8号角色血条检测
+            points_colors = [
+                (1100,84, "1A1A1A", 1),
+                (1100,228, "1A1A1A", 1),
+                (1100,370, "1A1A1A", 1),
+                (1100,516, "1A1A1A", 1),
+                (1200,86, "1A1A1A", 1),
+                (1200,230, "1A1A1A", 1),
+                (1200,372, "1A1A1A", 1),
+                (1200,665, "1A1A1A", 1),
+            ]
+            if role_id == 0:
+                # 任意角色死亡判断
+                results = self.ocr_handler.match_point_color(image, points_colors)
+                if results and self.in_battle(image):
+                    return True
+            else:
+                # 具体角色死亡判断
+                role_point = points_colors[role_id-1]
+                results = self.ocr_handler.match_point_color(image, [(role_point[0], role_point[1], role_point[2], role_point[3])]) and self.in_battle(image)
+                if results:
+                    return True
+            count += 1
+            if count >= check_count:
+                return False
+            
+    def exit_battle(self, interval:int = 1,max_times:int = 5) -> bool:
+        """
+        退出战斗
+        """
+        if not self.in_round():
+            return False
+        times = 0
+        while True: 
+            time.sleep(interval)
+            times += 1
+            if times >= max_times:
+                return False
+            screenshot = self.device_manager.get_screenshot()
+            if self.ocr_handler.match_click_text(["是"],region=(293,172,987,548),image=screenshot):
+                continue
+            if self.ocr_handler.match_click_text(["放弃"],region=(30,580,1240,700),image=screenshot):
+                continue
+            if not self.in_battle(screenshot):
+                return True
+
+    def switch_back_role(self, image: Optional[Image.Image] = None) -> bool:
+        """
+        切换到后排角色
+        """
+        logger.info("[Battle] 切换后排角色")
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        while True:
+            if self.in_back_on(image):
+                logger.info("[Battle] 切换后排角色完成")
+                time.sleep(self.wait_time)
+                return True
+            if self.in_front_on(image):
+                logger.info("[Battle] 点击切换后排角色")
+                self.device_manager.click(1115, 640)
+            time.sleep(self.wait_time)
+            image = self.device_manager.get_screenshot()
+
+    def cast_sp(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
+        in_sp_on = False
+        enemy_pos = None
+        if index < 1 or index > 4:
+            logger.error(f"[Battle] 角色索引错误，index: {index}")
+            return False
+        if role_id < 1 or role_id > 4:
+            logger.error(f"[Battle] 技能索引错误，role_id: {role_id}")
+            return False
+        if x != 0 and y != 9:
+            enemy_pos = [x, y]
+        role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
+        while True:
+            screen_shot = self.device_manager.get_screenshot()
+            if self.in_round(screen_shot) and not self.in_skill_on(screen_shot):
+                logger.info("[Battle] 战斗回合中, 选择角色")
+                self.device_manager.click(role_pos[0], role_pos[1])
+                time.sleep(self.wait_time)
+                screen_shot = self.device_manager.get_screenshot()
+            if switch:
+                self.switch_back_role(screen_shot)
+            if enemy_pos is not None:
+                self.device_manager.click(*enemy_pos)
+                time.sleep(self.wait_time)
+            while True:
+                if not self.in_sp_on(screen_shot):
+                    logger.info("[Battle] 技能界面中,切换额外技能界面")
+                    self.device_manager.click(696, 96)
+                    time.sleep(self.wait_time)
+                    break
+                screen_shot = self.device_manager.get_screenshot()
+            break
+        while True:
+            time.sleep(self.wait_time)
+            screen_shot = self.device_manager.get_screenshot()
+            if not in_sp_on and self.in_sp_on(screen_shot):
+                # 点击修正坐标1与修正坐标2,兼容必杀技\支炎兽\ex技能时点击必杀选项,切换到必杀选项
+                normalize_pos = [(563, 208),(677, 209)]
+                for pos in normalize_pos:
+                    self.device_manager.click(pos[0], pos[1])
+                time.sleep(self.wait_time)
+                screen_shot = self.device_manager.get_screenshot()
+                # 点击发动按钮,兼容必杀技\支炎兽\ex技能时点击必杀发动选项
+                normalize_pos = [(941, 525),(942, 464)]
+                for pos in normalize_pos:
+                    self.device_manager.click(pos[0], pos[1])
+                time.sleep(self.wait_time)
+
+                if role_id != 0:
+                    logger.info(f"[Battle] 点击配置角色{role_id}")
+                    role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
+                    self.device_manager.click(*role_pos)
+                    time.sleep(self.wait_time)
+                return True
+
+    def cast_skill(self, index: int = 1,skill: int = 1, bp: int = 0, role_id: int = 0,  x: int = 0, y: int = 0, switch: bool = False) -> bool:
+        """
+        使用技能
+        :param index: 角色索引
+        :param skill: 技能索引
+        :param bp: 倍率
+        :param x: 坐标x
+        :param y: 坐标y
+        :param switch: 是否切换角色
+        """
+        logger.info(f"[Battle] 选择角色，角色索引: {index},技能索引: {skill},倍率: {bp},坐标: ({x}, {y})")
+        # 检查index 1-8
+        # 检查skill 0-4
+        # 检查bp 0-3
+        if index < 1 or index > 8:
+            logger.error(f"[Battle] 角色索引错误，index: {index}")
+            return False
+        if skill < 0 or skill > 4:
+            logger.error(f"[Battle] 技能索引错误，skill: {skill}")
+            return False
+        if bp < 0 or bp > 3:
+            logger.error(f"[Battle] 倍率错误，bp: {bp}")
+            return False
+
+        enemy_pos = None
+        if x != 0 and y != 0:
+            enemy_pos = (x,y)
+        role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
+        skill_start = (self.skill_base_x[0], self.skill_base_y + (skill)*self.skill_base_y_offset)
+        skill_end = (self.skill_base_x[bp], self.skill_base_y + (skill)*self.skill_base_y_offset)
+        finish = False
+        while True:
+            screenshot = self.device_manager.get_screenshot()
+            if finish and self.in_round(screenshot):
+                logger.info("[Battle] 技能释放完成")
+                return True
+            if not finish and self.in_round(screenshot):
+                logger.info("[Battle] 选择角色")
+                self.device_manager.click(role_pos[0], role_pos[1])
+            if not finish and self.in_skill_on(screenshot):
+                logger.info("[Battle] 在技能面板")
+                if switch:
+                    self.switch_back_role(screenshot)
+                if enemy_pos:
+                    logger.info(f"[Battle] 点击敌人坐标: {enemy_pos}")
+                    self.device_manager.click(enemy_pos[0], enemy_pos[1])
+                    time.sleep(self.wait_time + 0.2)
+                if bp == 0:
+                    logger.info(f"[Battle] 点击选择技能")
+                    self.device_manager.click(skill_start[0], skill_start[1])
+                else:
+                    logger.info(f"[Battle] 拖动选择技能")
+                    self.device_manager.press_and_drag_step(skill_start, skill_end, self.wait_drag_time)
+                if role_id != 0:
+                    logger.info(f"[Battle] 点击配置角色{role_id}")
+                    skill_role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (role_id-1)*self.rols_base_y_offset)
+                    self.device_manager.click(skill_role_pos[0], skill_role_pos[1])
+                finish = True
+            time.sleep(self.wait_time)
+
+    def attack(self):
+        """
+        执行攻击
+        """
+        is_done = False
+        while True:
+            screen_shot = self.device_manager.get_screenshot()
+            if not is_done and self.in_round(screen_shot):
+                self.device_manager.click(1100, 650)
+                time.sleep(self.wait_time)
+            if is_done and not self.in_round(screen_shot):
+                return True
+            time.sleep(self.wait_time)
+            
+    # ================== 战斗指令执行相关方法 ==================
+    def cmd_role(self, index: int = 1,skill: int = 1, bp: int = 0, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
+        """
+        普通攻击
+        :param index: 角色索引
+        :param skill: 技能索引
+        :param bp: 倍率
+        :param role_id 技能目标角色索引
+        :param x: 坐标x
+        :param y: 坐标y
+        :param switch: 是否切换角色
+        """
+        logger.info(f"[Battle] 普通攻击，角色索引: {index},技能索引: {skill},倍率: {bp},技能目标角色索引: {role_id},坐标: ({x}, {y})")
+        return self.cast_skill(index, skill, bp, role_id, x, y, switch)
+            
+    def cmd_xrole(self, index: int = 1, skill: int = 1, bp: int = 1, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = True) -> bool:
+        """
+        切换并攻击
+        :param index: 角色索引
+        :param skill: 技能索引
+        :param bp: 倍率
+        :param role_id 技能目标角色索引
+        :param x: 坐标x
+        :param y: 坐标y
+        :param switch: 是否切换角色
+        """
+        logger.info(f"[Battle] 切换并攻击，角色索引: {index},技能索引: {skill},倍率: {bp},技能目标角色索引: {role_id},坐标: ({x}, {y})")
+        return self.cmd_role(index, skill, bp, role_id, x, y, switch)  
+        
+    def cmd_boost(self) -> bool:
+        """
+        全体加成
+        """
+        while True:
+            screenshot = self.device_manager.get_screenshot()
+            if self.in_boost_on(screenshot):
+                logger.info("[Battle] 全体加成on")
+                return True
+            if self.in_boost_off(screenshot):
+                logger.info("[Battle] 全体加成off")
+                self.device_manager.click(893, 654)
+            time.sleep(0.2)
+
+    def cmd_attack(self) -> bool:
+        """
+        执行攻击
+        """
+        logger.info("[Battle] 执行攻击（Attack）")
+        return self.attack()
+
+    def cmd_switch_all(self) -> bool:
+        """
+        全员交替
+        """
+        while True:
+            screenshot = self.device_manager.get_screenshot()
+            if self.in_switch_on(screenshot):
+                logger.info("[Battle] 全员交替on")
+                return True
+            if self.in_switch_off(screenshot):
+                logger.info("[Battle] 全员交替off")
+                self.device_manager.click(792, 659)
+            time.sleep(0.2)
+
+    def cmd_sp_skill(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
+        """
+        特殊技能（SP）
+        :param index: 技能索引
+        """
+        logger.info(f"[Battle] 释放前排特殊技能（SP），技能索引: 角色:{index} 技能对象:{role_id} 敌人坐标:{x,y}")
+        return self.cast_sp(index, role_id, x, y)
+    
+    def cmd_xsp_skill(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
+        """
+        特殊技能（XSP）
+        :param index: 技能索引
+        """
+        logger.info(f"[Battle] 释放后排特殊技能（SP），技能索引: 角色:{index} 技能对象:{role_id} 敌人坐标:{x,y}")
+        return self.cast_sp(index, role_id, x, y)
+
+    def cmd_wait(self, seconds: float = 1.0) -> bool:
+        """
+        等待指定时间
+        :param seconds: 等待秒数
+        """
+        logger.info(f"[Battle] 等待 {seconds} 秒")
+        time.sleep(seconds)
         return True
 
-    def _run_script(self):
-        """ 执行预加载的指令 """
-        result = 1
-        for instruction in self.instructions:
-            if self.check_dead:
-                self.check_dead = False
-                if self.auto_check_dead and self.is_dead():
-                    self.btn_quit_battle()
-                    time.sleep(1)
-                    self.check_confirm_quit_battle()
-                    result = 0
-                    break
-            if instruction.startswith('Attack'):
-                self.check_dead = True
-            is_continue = self._execute_instruction(instruction)
-            if app_data.thread_stoped():
-                result = -1
-                break
-            if not is_continue:
-                result = -2
-                break
-        # 文件读取完毕，执行 Finish Hook
-        finish_hook = self.hook_manager.get('Finish')
-        if finish_hook:
-            finish_hook()
-        return result
+    def cmd_skip(self, seconds: float = 1.0) -> bool:
+        """
+        跳过指定时间（可用于跳过动画等）
+        :param seconds: 跳过秒数
+        """
+        logger.info(f"[Battle] 跳过 {seconds} 秒（Skip）")
+        self.device_manager.long_click(1000, 300, seconds)
+        return True
 
-    def shot(self):
-        try:
-            app_data.update_ui("-----------开始截图", 'debug')
-            if self.screenshot is not None:
-                del self.screenshot
-                self.screenshot = None
-                gc.collect()
-            self.screenshot = u2_device.device.screenshot(format='opencv')
-            app_data.update_ui("-----------截图完成", 'debug')
-            return self.screenshot
-        except Exception as e:
-            app_data.update_ui(f"截图异常{e}")
-            return None
+    def cmd_click(self, x: int, y: int) -> bool:
+        """
+        点击指定坐标
+        :param x: X 坐标
+        :param y: Y 坐标
+        """
+        logger.info(f"[Battle] 点击坐标 ({x}, {y})")
+        self.device_manager.click(x, y)
+        return True
 
-    def check_quit_battle(self, screenshot=None):
-        if screenshot is None or len(screenshot) == 0:
-            raise Exception("check_quit_battle截图为空")
-        app_data.update_ui("check-是否退出战斗", 'debug')
-        result = comparator.template_compare('./assets/battle/quit_0.png', [(
-            177, 462), (676, 509)], screenshot=screenshot, return_center_coord=True)
-        if result:
-            app_data.update_ui("find-退出战斗", 'debug')
-        return result
+    def cmd_battle_start(self) -> bool:
+        """
+        战斗开始
+        """
+        logger.info("[Battle] 战斗开始（BattleStart）")
+        return True
 
-    def check_finish(self, screenshot=None):
-        try:
-            screenshot = self.shot()
-            if self.is_in_battle(screenshot):
-                croods = self.check_quit_battle(screenshot=screenshot)
-                if croods:
-                    u2_device.device.click(croods[0], croods[1])
-                    app_data.update_ui("点击退出战斗")
-                else:
-                    app_data.update_ui("未找到退出战斗按钮")
-                    world.btn_trim_click()
-                    app_data.update_ui("点击空白处")
-                return False
-            return True
-        except Exception as e:
-            app_data.update_ui(f"检查战斗结束异常{e}")
-            return False
-        finally:
-            del screenshot
-            gc.collect()
+    def cmd_battle_end(self) -> bool:
+        """
+        战斗结束
+        """
+        logger.info("[Battle] 战斗结束（BattleEnd）")
+        return True
 
-    def check_confirm_quit_battle(self, screenshot=None):
-        if screenshot is None or len(screenshot) == 0:
-            screenshot = self.shot()
-        try:
-            app_data.update_ui("check-是否确认退出战斗", 'debug')
-            result = comparator.template_compare('./assets/battle/quit_confirm.png', [(
-                510, 329), (692, 395)], screenshot=screenshot, return_center_coord=True)
-            if result is not None and len(result) > 0:
-                app_data.update_ui("find-确认退出战斗", 'debug')
-                u2_device.device.click(result[0], result[1])
-            return result
-        except Exception as e:
-            app_data.update_ui(f"检查是否确认退出战斗异常{e}")
-            return None
-        finally:
-            del screenshot
-            gc.collect()
-
-    def is_dead(self, screenshot=None):
-        if screenshot is None or len(screenshot) == 0:
-            screenshot = self.shot()
-        try:
-            app_data.update_ui("check-是否有人阵亡")
-            result = comparator.template_compare('./assets/battle/dead_tag.png', coordinate=[(750, 0), (960, 420)],
-                                                 screenshot=screenshot, gray=False, match_threshold=0.7)
-            if result:
-                app_data.update_ui("find-有人阵亡")
-            return result
-        except Exception as e:
-            app_data.update_ui(f"检查是否有人阵亡异常{e}")
-            return False
-        finally:
-            del screenshot
-            gc.collect()
-
-    def is_can_attack(self, screenshot=None):
-        app_data.update_ui("check-战斗准备界面中", 'debug')
-        ck1 = [(793, 480, [248, 255, 248]),
-               (836, 488, [255, 255, 232]),
-               (837, 502, [234, 239, 245]),
-               (808, 495, [255, 254, 255])]
-        cks = [ck1]
-        for i in cks:
-            if app_data.thread_stoped():
-                return False
-            if comparator.match_point_color(i, screenshot=screenshot):
-                app_data.update_ui("find-在战斗准备界面中", 'debug')
-                return True
-        return False
-
-    def is_in_battle(self, screenshot=None):
-        app_data.update_ui("check-战斗界面中", 'debug')
-        isR1 = [(790, 372, [241, 237, 228]), (822, 49, [19, 0, 2]), (787, 73, [230, 209, 206])]
-        isR2 = [(790, 264, [237, 231, 231]), (820, 158, [24, 0, 6]), (787, 180, [247, 235, 235])]
-        isR3 = [(790, 264, [237, 231, 231]), (818, 264, [0, 3, 0]), (787, 287, [240, 234, 236])]
-        isR4 = [(790, 372, [241, 237, 228]),  (819, 373, [21, 0, 2]), (787, 395, [233, 218, 221])]
-        Role = [isR1, isR2, isR3, isR4]
-        result = False
-        for i in Role:
-            if app_data.thread_stoped():
-                return False
-            if comparator.match_point_color(i, screenshot=screenshot):
-                result = True
-        if not result and self._in_battle_icon(screenshot):
-            result = True
-        if not result and self.is_sp_skill(screenshot):
-            result = True
-        if result:
-            app_data.update_ui("find-在战斗界面中", 'debug')
-        return result
-
-    def is_sp_skill(self, screenshot=None):
-        app_data.update_ui("check-战斗待确认必杀界面中", 'debug')
-        ck1 = [(461, 195, [99, 99, 99]), (880, 194, [0, 0, 0]), (309, 197, [101, 101, 101]),
-               (517, 195, [99, 99, 99]), (655, 195, [97, 96, 101])]
-        cks = [ck1]
-        for i in cks:
-            if app_data.thread_stoped():
-                return False
-            if comparator.match_point_color(i, screenshot=screenshot):
-                app_data.update_ui("find-在战斗待确认必杀界面中", 'debug')
-                return True
-        return False
-
-
-def get_front_front_role_id(role):    # 获某号位站到前排的index
-    assert role > 0 & role <= 8   # 最多有8号位
-    return (role - 1) % 4
-
-
-def get_front_role_order(role):  # 获得n号位的前排序号
-    return get_front_front_role_id(role) + 1
-
-
-battle = Battle()
+    def cmd_check_dead(self, role_id: int = 0) -> bool:
+        """
+        检查是否有角色死亡
+        :param role_id: 角色id，0为任意角色
+        """
+        logger.info(f"[Battle] 检查角色是否死亡，role_id={role_id}")
+        return self.check_dead(role_id)

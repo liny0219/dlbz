@@ -1,5 +1,5 @@
 import time
-from common.battle import Battle
+from core.battle import Battle
 from common.config import Monster
 from core.battle_command_executor import BattleCommandExecutor
 from utils import logger

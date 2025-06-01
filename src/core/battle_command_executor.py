@@ -1,7 +1,7 @@
 import yaml
 import logging
 from typing import List, Dict, Any, Optional
-from common.battle import Battle
+from core.battle import Battle
 
 class BattleCommandExecutor:
     """
@@ -23,14 +23,14 @@ class BattleCommandExecutor:
             "BattleStart": [],
             "BattleEnd":   [],
             "Attack":      [],
-            "Role":        ["index", "skill", "bp", "x", "y"],
-            "XRole":       ["index", "skill", "bp", "x", "y"],
-            "SP":          ["index"],
-            "XSP":         ["index"],
+            "Role":        ["index", "skill", "bp", "role_id", "x", "y"],
+            "XRole":       ["index", "skill", "bp", "role_id", "x", "y"],
+            "SP":          ["index", "role_id", "x", "y"],
+            "XSP":         ["index", "role_id", "x", "y"],
             "Wait":        ["seconds"],
             "Skip":        ["seconds"],
             "Click":       ["x", "y"],
-            "SwitchAll":   [],
+            "Switch":      [],
             "Boost":       [],
             # 其它指令可按需扩展
         }
@@ -123,7 +123,7 @@ class BattleCommandExecutor:
             self.battle.cmd_boost(**params)
         elif cmd_type == "Attack":
             self.battle.cmd_attack(**params)
-        elif cmd_type == "SwitchAll":
+        elif cmd_type == "Switch":
             self.battle.cmd_switch_all(**params)
         elif cmd_type == "SP":
             self.battle.cmd_sp_skill(**params)

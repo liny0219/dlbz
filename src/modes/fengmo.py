@@ -1,5 +1,6 @@
 from enum import Enum
 from dataclasses import dataclass
+from logging import Logger
 import time
 from typing import Any, Dict, Optional
 from core import ocr_handler
@@ -7,7 +8,7 @@ from utils import ManagedThread, app_alive_monitor_func
 from utils import logger
 import threading
 from common.app import AppManager
-from common.battle import Battle
+from core.battle import Battle
 from common.world import World
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
@@ -320,40 +321,44 @@ class FengmoMode:
         return None
 
     def check_info(self,shared: Dict[str, Any], stop_event: threading.Event, lock: Optional[threading.Lock] = None):
-        state_data = shared['state_data']
-        check_interval = shared.get('check_interval', 0.2)  # 检查间隔秒数
-        logger = shared.get('logger', None)
-        device_manager = shared.get('device_manager', None)
-        ocr_handler = OCRHandler(device_manager)
-        while not stop_event.is_set():
-            time.sleep(check_interval) 
-            screenshot = device_manager.get_current_screenshot()
-            region = (0, 0, 1280, 720)
-            results = ocr_handler.recognize_text(region=region,image=screenshot)
-            find_text = None
-            for r in results:
-                if "战斗结算" in r['text']:
-                    find_text = "battle_end"
-                    self.world.click_tirm(3)
-                    break
-                if "获得道具" in r['text']:
-                    find_text = "found_treasure"
-                    break
-                if "已发现所有的逢魔之影" in r['text']:
-                    state_data.step = Step.FIND_BOX
-                    find_text = "found_points"
-                    break
-                if "完全恢复了" in r['text']:
-                    find_text = "found_cure"
-                    break
-                if "逢魔之主" in r['text']:
-                    state_data.step = Step.FIGHT_BOSS
-                    find_text = "found_boss"
-                    ocr_handler.match_click_text(["是"],region=region,image=screenshot)
-                    break
-            if find_text:
-                logger.info(f"[check_info]找到文本: {find_text}")
-                ocr_handler.match_click_text(["确定"],region=region,image=screenshot)
+        try:
+            state_data: StateData = shared['state_data']
+            check_interval: float = shared.get('check_interval', 0.2)  # 检查间隔秒数
+            logger: Logger = shared.get('logger', None)
+            device_manager: DeviceManager = shared.get('device_manager', None)
+            ocr_handler: OCRHandler = OCRHandler(device_manager)
+            while not stop_event.is_set():
+                time.sleep(check_interval) 
+                screenshot = device_manager.get_cache_screenshot()
+                region = (0, 0, 1280, 720)
+                results = ocr_handler.recognize_text(region=region,image=screenshot)
+                find_text = None
+                for r in results:
+                    if "战斗结算" in r['text']:
+                        find_text = "battle_end"
+                        self.world.click_tirm(3)
+                        break
+                    if "获得道具" in r['text']:
+                        find_text = "found_treasure"
+                        break
+                    if "已发现所有的逢魔之影" in r['text']:
+                        state_data.step = Step.FIND_BOX
+                        find_text = "found_points"
+                        break
+                    if "完全恢复了" in r['text']:
+                        find_text = "found_cure"
+                        break
+                    if "逢魔之主" in r['text']:
+                        state_data.step = Step.FIGHT_BOSS
+                        find_text = "found_boss"
+                        ocr_handler.match_click_text(["是"],region=region,image=screenshot)
+                        break
+                if find_text:
+                    logger.info(f"[check_info]找到文本: {find_text}")
+                    ocr_handler.match_click_text(["确定"],region=region,image=screenshot)
+        except Exception as e:
+            err_msg = f"[check_info]出现异常: {e}"
+            logger.info(err_msg)
             
     def check_state(self,step:Step,check_point:CheckPoint|None=None):
         if self.state_data.step != step:

@@ -52,7 +52,7 @@ class DeviceManager:
             logger.error(f"Error connecting to device: {str(e)}\n{traceback.format_exc()}")
             return False
         
-    def get_current_screenshot(self) -> Optional[Image.Image]:
+    def get_cache_screenshot(self) -> Optional[Image.Image]:
         """
         获取当前屏幕截图，返回PIL.Image对象
         :return: PIL.Image 或 None
