@@ -104,7 +104,7 @@ cities:
     - 645
     - 573
     monsters:
-    - battle_config: 1.txt
+    - battle_config: ''
       name: 逢魔精英怪
       points:
       - - 439
@@ -131,7 +131,7 @@ cities:
         - 346
         - '#220014'
         - 5
-    - battle_config: 2.txt
+    - battle_config: ''
       name: 逢魔之主
       points:
       - - 489

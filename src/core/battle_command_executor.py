@@ -14,7 +14,7 @@ class BattleCommandExecutor:
         初始化指令执行器
         :param battle: Battle 实例，负责具体战斗操作
         """
-        self.battle = battle
+        self.battle: Battle = battle
         self.commands: List[Dict[str, Any]] = []
         self._current_index: int = 0
         self.logger = logging.getLogger(__name__)
@@ -34,23 +34,6 @@ class BattleCommandExecutor:
             "Boost":       [],
             # 其它指令可按需扩展
         }
-
-    def load_commands_from_file(self, path: str) -> bool:
-        """
-        加载 YAML 格式的战斗指令配置文件
-        :param path: 配置文件路径
-        :return: self（支持链式调用）
-        """
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                self.commands = yaml.safe_load(f) or []
-            self._current_index = 0
-            self.logger.info(f"成功加载战斗指令配置: {path}, 共 {len(self.commands)} 条指令")
-            return True
-        except Exception as e:
-            self.logger.error(f"加载战斗指令配置失败: {e}")
-            self.commands = []
-            return False
 
     def load_commands_from_txt(self, path: str) -> 'BattleCommandExecutor':
         """
@@ -100,7 +83,17 @@ class BattleCommandExecutor:
         for idx, cmd in enumerate(self.commands):
             try:
                 self.logger.info(f"执行第{idx+1}条指令: {cmd}")
-                self.execute_command(cmd)
+                result = self.execute_command(cmd)
+                if cmd.get('type') == 'CheckDead' and result and not self.battle.wait_done():
+                    self.logger.info(f"检测到角色死亡,战斗结束")
+                    self.battle.exit_battle()
+                    return
+                if cmd.get('type') == 'Attack' and self.battle.wait_done():
+                    self.logger.info(f"战斗结束")
+                    return
+                if cmd.get('type') == 'BattleEnd' and not self.battle.wait_done():
+                    self.logger.info(f"战斗结束")
+                    return
             except Exception as e:
                 self.logger.error(f"执行指令失败: {cmd}, 错误: {e}")
 

@@ -384,7 +384,7 @@ class World:
                                 logger.info(f"没有找到硬编码的映射敌人配置{enemyName}")
                                 self.do_default_battle()
                             else:
-                                loadConfig = self.battle_executor.load_commands_from_file(monster.battle_config)
+                                loadConfig = self.battle_executor.load_commands_from_txt(monster.battle_config)
                                 if not loadConfig:
                                     logger.info(f"没有找到硬编码映射敌人的战斗配置{enemyName}")
                                     self.do_default_battle()
@@ -395,7 +395,7 @@ class World:
                             logger.info("没有识别到敌人,使用默认战斗配置")
                             self.do_default_battle()
                     if monster:
-                        loadConfig = self.battle_executor.load_commands_from_file(monster.battle_config)
+                        loadConfig = self.battle_executor.load_commands_from_txt(monster.battle_config)
                         if not loadConfig:
                             logger.info("没有找到匹配敌人的战斗配置")
                             self.do_default_battle()
@@ -412,7 +412,7 @@ class World:
         """
         执行默认战斗
         """
-        loadConfig = self.battle_executor.load_commands_from_file(self.default_battle_config)
+        loadConfig = self.battle_executor.load_commands_from_txt(self.default_battle_config)
         if not loadConfig:
             logger.info("没有默认战斗配置,使用委托战斗")
             self.battle.auto_battle()

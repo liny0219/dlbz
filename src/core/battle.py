@@ -31,7 +31,7 @@ class Battle:
         self.wait_drag_time = config.battle.wait_drag_time
 
     # ================== 战斗状态判断相关方法 ==================
-    def in_battle(self, image: Optional[Image.Image] = None) -> bool:
+    def in_battle(self, image: Optional[Image.Image] = None, call_roll: bool = True,roll_count:int=2) -> bool:
         """
         判断当前是否在战斗中。
         :param image: 可选，外部传入截图
@@ -58,7 +58,16 @@ class Battle:
             time.sleep(self.wait_time)
             return True
         else:
-            logger.debug("不在战斗中")
+            if not call_roll:
+                logger.debug("不调用roll,不在战斗中")
+                return False
+            logger.debug("调用roll,不在战斗中")
+            time.sleep(self.wait_time)
+            image = self.device_manager.get_screenshot()
+            result = self.in_battle(image, call_roll=roll_count>0,roll_count=roll_count-1)
+            if result:
+                logger.debug("调用roll后在战斗中")
+                return True
             return False
 
     def in_round(self, image: Optional[Image.Image] = None) -> bool:
@@ -475,8 +484,22 @@ class Battle:
             screen_shot = self.device_manager.get_screenshot()
             if not is_done and self.in_round(screen_shot):
                 self.device_manager.click(1100, 650)
+                is_done = True
                 time.sleep(self.wait_time)
             if is_done and not self.in_round(screen_shot):
+                return True
+            time.sleep(self.wait_time)
+
+    def wait_done(self):
+        """
+        等待战斗结束
+        """
+        while True:
+            screen_shot = self.device_manager.get_screenshot()
+            if self.in_round(screen_shot):
+                logger.info("[Battle] 新的回合中")
+                return False
+            if not self.in_battle(screen_shot):
                 return True
             time.sleep(self.wait_time)
             
