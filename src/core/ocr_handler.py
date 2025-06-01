@@ -440,63 +440,8 @@ class OCRHandler:
                     return idx, x1 + x, y1 + y
         return -1, None, None
 
-    def match_point_color(
-        self, image: Image.Image, x: int, y: int, color, range_: int, ambiguity: float = 0.95, dir: int = 0
-    ) -> bool:
-        """
-        判断指定点(x, y)附近区域是否存在指定颜色。
-        :param image: PIL.Image，原始图片
-        :param x: 检查点的x坐标
-        :param y: 检查点的y坐标
-        :param color: 颜色字符串（"BBGGRR"）或RGB列表/元组([B,G,R])
-        :param range_: 匹配范围
-        :param ambiguity: 相似度
-        :param dir: 查找方向
-        :return: bool
-        """
-        x1 = x - range_
-        y1 = y - range_
-        x2 = x + range_
-        y2 = y + range_
-        # 支持两种格式
-        if isinstance(color, (list, tuple)) and len(color) == 3:
-            # 直接比对RGB
-            def color_sim(c1, c2):
-                dist = sum((c1[i] - c2[i]) ** 2 for i in range(3)) ** 0.5
-                return 1 - dist / (3 * 255)
-            region = image.crop((x1, y1, x2, y2)).convert('RGB')
-            width, height = region.size
-            pixels = region.load()
-            if pixels is None:
-                return False
-            for dx in range(width):
-                for dy in range(height):
-                    pix = pixels[dx, dy][:3]
-                    if color_sim(pix, color) >= ambiguity:
-                        return True
-            return False
-        else:
-            # 先确保color为str并去除#前缀
-            if not isinstance(color, str):
-                color = '{:02X}{:02X}{:02X}'.format(*color)
-            color = str(color).lstrip('#')
-            def hex_to_bgr(hexstr):
-                hexstr = str(hexstr).lstrip('#')
-                if len(hexstr) != 6:
-                    logger.error(f"Invalid color hex: {hexstr}")
-                    return None
-                try:
-                    return tuple(int(hexstr[i:i+2], 16) for i in (0, 2, 4))
-                except Exception as e:
-                    logger.error(f"hex_to_bgr error: {hexstr}, {e}")
-                    return None
-            target_bgr = hex_to_bgr(color)
-            if target_bgr is None:
-                return False
-            idx, intX, intY = self.FindColor(image, x1, y1, x2, y2, color, ambiguity, dir)
-            return intX is not None and intY is not None and intX > -1 and intY > -1
 
-    def match_point_color_mult(self, image: Image.Image, points: list[tuple[int, int, str, int]], 
+    def match_point_color(self, image: Image.Image, points: list[tuple[int, int, str, int]], 
                                 ambiguity: float = 0.95, dir: int = 0) -> bool:
         """
         高性能多点颜色匹配：所有点都需匹配成功才返回True

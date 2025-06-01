@@ -134,6 +134,20 @@ class DeviceManager:
         except Exception as e:
             logger.error(f"点击坐标 ({x}, {y}) 失败: {str(e)}\n{traceback.format_exc()}") 
     
+    def long_click(self, x: int, y: int, duration: float = 0.5):
+        """
+        长按指定坐标
+        :param x: 横坐标
+        :param y: 纵坐标
+        :param duration: 长按时间 (秒)
+        """
+        if not self.device:
+            logger.error("设备未连接，无法长按")
+            return
+        logger.info(f"长按: {duration} 秒")
+        self.device.long_click(x, y, duration)
+    
+    
     def press_and_drag_step(self, start:tuple, end:tuple, duration:float=0.5):
         """
         长按和拖动指定坐标

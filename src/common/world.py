@@ -51,8 +51,8 @@ class World:
             (73, 632, "E8EBF0", 10),
             (68, 575, "F6F5F6", 10),
         ]
-        results = [self.ocr_handler.match_point_color(image, x, y, color, rng) for x, y, color, rng in points_colors]
-        if all(results):
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results:
             logger.debug("检测到在世界中")
             return True
         else:
@@ -77,8 +77,8 @@ class World:
             (64, 649, [255, 254, 255], 1),
             (452, 676, [251, 249, 254], 1),
         ]
-        results = [self.ocr_handler.match_point_color(image, x, y, color, rng) for x, y, color, rng in points_colors]
-        if all(results):
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results:
             logger.debug("检测到在小地图中")
             return True
         else:
@@ -463,7 +463,7 @@ class World:
                 if monster.points is None:
                     logger.info(f"敌人{monster.name}没有配置点")
                     continue
-                if self.ocr_handler.match_point_color_mult(screenshot, monster.points,ambiguity=0.9):
+                if self.ocr_handler.match_point_color(screenshot, monster.points,ambiguity=0.9):
                     logger.info(f"识别到敌人: {monster.name}")
                     return monster
             count += 1

@@ -26,8 +26,8 @@ def mark_coord():
         if event == cv2.EVENT_LBUTTONDOWN:
             b, g, r = img_cv[y, x, :]
             # 十六进制的RGB
-            rgb_hex = f"#{r:02X}{g:02X}{b:02X}"
-            msg = [x, y, rgb_hex, 50]
+            rgb_hex = f"{r:02X}{g:02X}{b:02X}"
+            msg = [x, y, rgb_hex, 1]
             logger.info(f"标记坐标:\n{msg}, [{r}, {g}, {b}])")
             cv2.putText(img_cv, f"({x},{y})", (x, y), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 255), 2)
             cv2.imshow(wnd, img_cv)

@@ -20,13 +20,18 @@ class BattleCommandExecutor:
         self.logger = logging.getLogger(__name__)
         # 指令类型到参数名的映射
         self._param_map = {
-            "Role":        ["index", "arg2", "arg3"],
-            "XRole":       ["index", "arg2", "arg3"],
+            "BattleStart": [],
+            "BattleEnd":   [],
+            "Attack":      [],
+            "Role":        ["index", "skill", "bp", "x", "y"],
+            "XRole":       ["index", "skill", "bp", "x", "y"],
             "SP":          ["index"],
             "XSP":         ["index"],
             "Wait":        ["seconds"],
             "Skip":        ["seconds"],
             "Click":       ["x", "y"],
+            "SwitchAll":   [],
+            "Boost":       [],
             # 其它指令可按需扩展
         }
 
@@ -111,17 +116,19 @@ class BattleCommandExecutor:
             return
         # 指令类型与 Battle 方法映射（全部加 cmd_ 前缀）
         if cmd_type == "Role":
-            self.battle.cmd_normal_attack(**params)
+            self.battle.cmd_role(**params)
         elif cmd_type == "XRole":
-            self.battle.cmd_switch_and_attack(**params)
+            self.battle.cmd_xrole(**params)
         elif cmd_type == "Boost":
             self.battle.cmd_boost(**params)
         elif cmd_type == "Attack":
             self.battle.cmd_attack(**params)
         elif cmd_type == "SwitchAll":
             self.battle.cmd_switch_all(**params)
-        elif cmd_type in ("SP", "XSP"):
+        elif cmd_type == "SP":
             self.battle.cmd_sp_skill(**params)
+        elif cmd_type == "XSP":
+            self.battle.cmd_xsp_skill(**params)
         elif cmd_type == "Wait":
             self.battle.cmd_wait(**params)
         elif cmd_type == "Skip":
@@ -132,12 +139,6 @@ class BattleCommandExecutor:
             self.battle.cmd_battle_start(**params)
         elif cmd_type == "BattleEnd":
             self.battle.cmd_battle_end(**params)
-        elif cmd_type == "CmdStart":
-            self.battle.cmd_cmd_start(**params)
-        elif cmd_type == "CmdEnd":
-            self.battle.cmd_cmd_end(**params)
-        elif cmd_type == "Finish":
-            self.battle.cmd_finish(**params)
         elif cmd_type == "CheckDead":
             self.battle.cmd_check_dead(**params)
         else:
