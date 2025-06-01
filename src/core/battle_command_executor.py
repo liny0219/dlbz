@@ -35,13 +35,13 @@ class BattleCommandExecutor:
             # 其它指令可按需扩展
         }
 
-    def load_commands_from_txt(self, path: str) -> 'BattleCommandExecutor':
+    def load_commands_from_txt(self, path: str) -> bool:
         """
         加载纯文本格式的战斗指令配置文件（每行一个指令，逗号分隔，#注释，空行跳过）
         :param path: 配置文件路径
         :return: self（支持链式调用）
         """
-        self.commands = []
+        commands = []
         try:
             with open(path, 'r', encoding='utf-8') as f:
                 for line in f:
@@ -68,13 +68,14 @@ class BattleCommandExecutor:
                             params[param_names[i]] = v
                         else:
                             params[f'arg{i+1}'] = v
-                    self.commands.append({'type': cmd_type, 'params': params})
+                    commands.append({'type': cmd_type, 'params': params})
             self._current_index = 0
+            self.commands = commands
             self.logger.info(f"成功加载TXT战斗指令配置: {path}, 共 {len(self.commands)} 条指令")
+            return True
         except Exception as e:
             self.logger.error(f"加载TXT战斗指令配置失败: {e}")
-            self.commands = []
-        return self
+            return False
 
     def execute_all(self):
         """

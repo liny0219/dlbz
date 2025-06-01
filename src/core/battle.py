@@ -269,6 +269,7 @@ class Battle:
         if not self.in_round(screenshot):
             return False
         times = 0
+        done = False
         while True: 
             times += 1
             if times >= max_times:
@@ -277,9 +278,10 @@ class Battle:
                 logger.info("点击委托战斗开始")
                 self.device_manager.click(1104, 643)
                 return True
-            if self.in_auto_off(screenshot):
+            if not done and self.in_auto_off(screenshot):
                 logger.info("点击委托")
                 self.device_manager.click(491, 654)
+                done = True
             screenshot = self.device_manager.get_screenshot()
             time.sleep(interval)
 
