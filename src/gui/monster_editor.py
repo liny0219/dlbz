@@ -4,6 +4,9 @@ import yaml
 import os
 import subprocess
 from common.config import get_config_dir
+import logging
+import tkinter.messagebox as mbox
+import tkinter.filedialog as filedialog
 
 class MonsterEditor(ttk.LabelFrame):
     def __init__(self, parent, city_var, *args, **kwargs):
@@ -25,7 +28,7 @@ class MonsterEditor(ttk.LabelFrame):
         self.columnconfigure(1, weight=0)  # 标签
         self.columnconfigure(2, weight=1)  # 编辑区
         # Listbox
-        self.monster_list = tk.Listbox(self, height=5, width=30)
+        self.monster_list = tk.Listbox(self, height=5, width=30, exportselection=0)
         self.monster_list.grid(row=0, column=0, rowspan=5, padx=5, pady=3, sticky='nsew')
         label_width = 20
         # 名称
@@ -51,7 +54,9 @@ class MonsterEditor(ttk.LabelFrame):
         edit_btn = ttk.Button(btn_frame, text="编辑", width=6, command=self.on_edit_battle_file)
         edit_btn.pack(side=tk.LEFT, padx=(0, 2))
         help_btn = ttk.Button(btn_frame, text="说明", width=6, command=self.on_battle_help)
-        help_btn.pack(side=tk.LEFT)
+        help_btn.pack(side=tk.LEFT, padx=(0, 2))
+        set_btn = ttk.Button(btn_frame, text="设置", width=6, command=self.on_set_battle_file)
+        set_btn.pack(side=tk.LEFT)
         # 按钮区优化
         btn_frame2 = ttk.Frame(self)
         btn_frame2.grid(row=4, column=1, columnspan=3, padx=5, pady=3, sticky='w')
@@ -66,6 +71,10 @@ class MonsterEditor(ttk.LabelFrame):
         self.monster_name_var.trace_add('write', self.on_edit)
         self.monster_battle_var.trace_add('write', self.on_edit)
         self.monster_points_text.bind('<KeyRelease>', lambda e: self.on_edit())
+        # 新增：编辑区获得焦点时自动恢复Listbox选中态
+        self.monster_points_text.bind('<FocusIn>', self.restore_listbox_selection)
+        self.monster_name_entry.bind('<FocusIn>', self.restore_listbox_selection)
+        self.monster_battle_entry.bind('<FocusIn>', self.restore_listbox_selection)
 
     def get_monsters_for_city(self, city_name):
         cities_path = os.path.join(get_config_dir(), "fengmo_cities.yaml")
@@ -90,6 +99,7 @@ class MonsterEditor(ttk.LabelFrame):
         if not idx:
             self.selecting_monster = False
             return
+        self._last_selected_idx = idx[0]  # 记录上一次选中项
         m = self.monsters[idx[0]]
         self.monster_name_var.set(m.get("name", ""))
         pts = m.get("points", [])
@@ -108,6 +118,7 @@ class MonsterEditor(ttk.LabelFrame):
         self.selecting_monster = False
 
     def on_add(self):
+        logging.info(f"[MonsterEditor] on_add: name={self.monster_name_var.get()}, points={self.monster_points_text.get(1.0, tk.END).strip()}, battle_config={self.monster_battle_var.get()}")
         # 读取当前编辑区内容
         name = self.monster_name_var.get()
         pts_lines = self.monster_points_text.get(1.0, tk.END).strip().splitlines()
@@ -116,12 +127,14 @@ class MonsterEditor(ttk.LabelFrame):
             try:
                 x, y, color, r = line.split(",")
                 pts.append([int(x), int(y), color.strip(), int(r)])
-            except:
+            except Exception as e:
+                logging.warning(f"[MonsterEditor] on_add: 解析点失败: {line}, err={e}")
                 continue
         battle_config = self.monster_battle_var.get()
         # 构造新怪物
         new_monster = {"name": name or "新怪物", "points": pts, "battle_config": battle_config}
         self.monsters.append(new_monster)
+        logging.info(f"[MonsterEditor] on_add: 新怪物已添加: {new_monster}")
         self.save_to_yaml()
         self.refresh_monster_list()
         self.monster_list.selection_clear(0, tk.END)
@@ -154,6 +167,8 @@ class MonsterEditor(ttk.LabelFrame):
     def on_modify(self):
         idx = self.monster_list.curselection()
         if not idx:
+            mbox.showwarning("提示", "请先在左侧列表中选中要修改的怪物！")
+            logging.warning("[MonsterEditor] on_modify: 未选中怪物")
             return
         i = idx[0]
         # 读取当前编辑区内容并同步到self.monsters[i]
@@ -164,11 +179,13 @@ class MonsterEditor(ttk.LabelFrame):
             try:
                 x, y, color, r = line.split(",")
                 pts.append([int(x), int(y), color.strip(), int(r)])
-            except:
+            except Exception as e:
+                logging.warning(f"[MonsterEditor] on_modify: 解析点失败: {line}, err={e}")
                 continue
         battle_config = self.monster_battle_var.get()
-        # 用新dict替换，彻底同步
+        before = self.monsters[i].copy()
         self.monsters[i] = {"name": name, "points": pts, "battle_config": battle_config}
+        logging.info(f"[MonsterEditor] on_modify: 修改前: {before}, 修改后: {self.monsters[i]}")
         self.save_to_yaml()
         self.refresh_monster_list()
         self.monster_list.selection_clear(0, tk.END)
@@ -187,21 +204,31 @@ class MonsterEditor(ttk.LabelFrame):
         # 获取当前战斗配置文件名
         fname = self.monster_battle_var.get().strip()
         if not fname:
+            mbox.showwarning("提示", "请先填写战斗配置文件名！")
             return
-        # 配置文件相对路径，优先在config/battle_scripts下找
         config_dir = get_config_dir()
-        battle_path = os.path.join(config_dir, 'battle_scripts', fname)
+        # 1. 先直接用填写的路径（绝对或相对）
+        battle_path = fname
+        if not os.path.isabs(battle_path):
+            # 2. 如果不是绝对路径，尝试config_dir下
+            try_path = os.path.join(config_dir, fname)
+            if os.path.exists(try_path):
+                battle_path = try_path
+            else:
+                # 3. 再尝试battle_scripts下
+                try_path2 = os.path.join(config_dir, 'battle_scripts', fname)
+                if os.path.exists(try_path2):
+                    battle_path = try_path2
         if not os.path.exists(battle_path):
-            # 兼容直接在config目录下
-            battle_path = os.path.join(config_dir, fname)
-            if not os.path.exists(battle_path):
-                return
+            mbox.showwarning("提示", f"未找到文件: {battle_path}")
+            return
         try:
             if os.name == 'nt':
                 os.startfile(battle_path)
             else:
                 subprocess.Popen(['xdg-open', battle_path])
         except Exception as e:
+            mbox.showerror("错误", f"无法打开文件: {battle_path}\n{e}")
             print(f"无法打开文件: {battle_path}, {e}")
 
     def on_battle_help(self):
@@ -209,6 +236,7 @@ class MonsterEditor(ttk.LabelFrame):
         config_dir = get_config_dir()
         help_path = os.path.join(config_dir, 'readme', 'battle.txt')
         if not os.path.exists(help_path):
+            mbox.showwarning("提示", f"未找到文件: {help_path}")
             return
         try:
             if os.name == 'nt':
@@ -216,17 +244,38 @@ class MonsterEditor(ttk.LabelFrame):
             else:
                 subprocess.Popen(['xdg-open', help_path])
         except Exception as e:
+            mbox.showerror("错误", f"无法打开说明文件: {help_path}\n{e}")
             print(f"无法打开说明文件: {help_path}, {e}")
+
+    def on_set_battle_file(self):
+        config_dir = get_config_dir()
+        # 默认打开battle_scripts目录，但可选任意文件
+        default_dir = os.path.join(config_dir, 'battle_scripts')
+        filetypes = [("文本文件", "*.txt"), ("所有文件", "*.*")]
+        filepath = filedialog.askopenfilename(title="选择战斗配置文件", initialdir=default_dir, filetypes=filetypes)
+        if filepath:
+            self.monster_battle_var.set(filepath)
 
     def save_to_yaml(self):
         cities_path = os.path.join(get_config_dir(), "fengmo_cities.yaml")
-        with open(cities_path, 'r', encoding='utf-8') as f:
-            all_data = yaml.safe_load(f) or {}
-        city = self.city_var.get()
-        if "cities" not in all_data:
-            all_data["cities"] = {}
-        if city not in all_data["cities"]:
-            all_data["cities"][city] = {}
-        all_data["cities"][city]["monsters"] = self.monsters
-        with open(cities_path, 'w', encoding='utf-8') as f:
-            yaml.dump(all_data, f, allow_unicode=True) 
+        try:
+            with open(cities_path, 'r', encoding='utf-8') as f:
+                all_data = yaml.safe_load(f) or {}
+            city = self.city_var.get()
+            if "cities" not in all_data:
+                all_data["cities"] = {}
+            if city not in all_data["cities"]:
+                all_data["cities"][city] = {}
+            all_data["cities"][city]["monsters"] = self.monsters
+            with open(cities_path, 'w', encoding='utf-8') as f:
+                yaml.dump(all_data, f, allow_unicode=True)
+            logging.info(f"[MonsterEditor] save_to_yaml: 已保存到{cities_path}, city={city}, monsters={self.monsters}")
+        except Exception as e:
+            logging.error(f"[MonsterEditor] save_to_yaml: 保存失败: {e}")
+
+    def restore_listbox_selection(self, event=None):
+        # 如果当前没有选中项，自动选中上一次的项
+        if not self.monster_list.curselection() and hasattr(self, '_last_selected_idx'):
+            idx = self._last_selected_idx
+            if idx is not None and 0 <= idx < len(self.monsters):
+                self.monster_list.selection_set(idx) 

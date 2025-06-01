@@ -12,6 +12,7 @@ from core.ocr_handler import OCRHandler
 from modes.fengmo import FengmoMode
 from utils.mark_coord import mark_coord
 from utils.logger import setup_logger
+from gui.monster_editor import MonsterEditor
 
 version = "v0.9"
 
@@ -120,7 +121,7 @@ class MainWindow(tk.Tk):
                 row = 0
                 # 针对逢魔玩法特殊处理
                 if fname == "fengmo.yaml":
-                    label_width = 10  # 标签宽度
+                    label_width = 14  # 增大标签宽度
                     input_width = 20  # 输入控件宽度
                     # rest_in_inn
                     ttk.Label(frame, text="旅馆休息", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
@@ -170,6 +171,14 @@ class MainWindow(tk.Tk):
                         entry.grid(row=row, column=1, padx=5, pady=3, sticky='w')
                         vars_dict[k] = var
                         row += 1
+                    # 怪物配置区块放在最底部
+                    monster_editor = MonsterEditor(frame, city_var)
+                    monster_editor.grid(row=row, column=0, columnspan=2, sticky='nsew', padx=5, pady=10)
+                    frame.rowconfigure(row, weight=1)
+                    frame.columnconfigure(0, weight=1)
+                    frame.columnconfigure(1, weight=1)
+                    vars_dict["monster_editor"] = monster_editor
+                    row += 1
                 else:
                     for k, v in data.items():
                         ttk.Label(frame, text=k).grid(row=row, column=0, sticky='w', padx=5, pady=3)
