@@ -184,7 +184,7 @@ class World:
         else:
             raise ValueError(f"无效的操作: {op}")
 
-    def click_tirm(self,count: int = 1,interval: float = 0.2) -> None:
+    def click_tirm(self,count: int = 1,interval: float = 0.1) -> None:
         """
         点击跳过按钮，count次
         """

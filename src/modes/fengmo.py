@@ -139,8 +139,7 @@ class FengmoMode:
         check_info_shared = {
             'state_data': self.state_data,
             "device_manager": self.device_manager,
-            'logger': logger,              # 可选
-            'check_interval': 0.2,           # 可选
+            'logger': logger,   # 可选
         }
         check_info_thread = ManagedThread(self.check_info, check_info_shared)
         check_info_thread.start()
@@ -336,7 +335,7 @@ class FengmoMode:
                 for r in results:
                     if "战斗结算" in r['text']:
                         find_text = "battle_end"
-                        self.world.click_tirm(3)
+                        self.world.click_tirm(6)
                         break
                     if "获得道具" in r['text']:
                         find_text = "found_treasure"
