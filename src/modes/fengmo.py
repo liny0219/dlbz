@@ -223,9 +223,9 @@ class FengmoMode:
             logger.info(f"[find_box_phase]当前查找逢魔点: {self.state_data.current_point}")
             logger.info(f"[find_box_phase]是否等待在小镇中")
             self.world.in_world_or_battle()
+            self.wait_start_time()
             if self.check_state(Step.FIND_BOX,self.state_data.current_point):
                 return
-            self.wait_start_time()
             self.world.open_minimap()
             in_minimap = sleep_until(self.world.in_minimap)
             if not in_minimap:
@@ -290,7 +290,7 @@ class FengmoMode:
         logger.info(f"[fight_boss_phase]点击Boss逢魔点: {point_pos}")
         self.device_manager.click(*point_pos[:2])
         self.wait_start_time()
-        self.world.in_world_or_battle()
+        self.world.in_world_or_battle(enemyName="逢魔之主")
         self.state_data.step = Step.FINISH
          
 

@@ -33,6 +33,7 @@ class FengmoConfig(BaseModel):
     city: str = "newdelsta"
     find_point_wait_time: int = 2
     wait_start_time: float = 0.8
+    default_battle_config: str = ""
 
 class CheckPoint(BaseModel):
     id: int

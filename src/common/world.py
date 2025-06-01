@@ -28,9 +28,11 @@ class World:
         self.battle = battle
         self.battle_executor = BattleCommandExecutor(battle)
         self.monsters = []
+        self.default_battle_config = ""
     
-    def set_monsters(self,monsters:list[Monster]):
+    def set_monsters(self,monsters:list[Monster],default_battle_config:str=""):
         self.monsters = monsters
+        self.default_battle_config = default_battle_config
 
     def in_world(self, image: Optional[Image.Image] = None) -> bool:
         """
@@ -349,7 +351,7 @@ class World:
             logger.debug("未发现地图Boss点")
             return None
         
-    def in_world_or_battle(self, check_battle:bool=True):
+    def in_world_or_battle(self, enemyName:str='', check_battle:bool=True):
         def check_in_world_or_battle():
             screenshot = self.device_manager.get_screenshot()
             if self.in_world(screenshot):
@@ -374,18 +376,49 @@ class World:
                     logger.info("执行战斗场景")
                     monster = self.find_enemy(self.monsters)
                     if monster is None:
-                        self.battle.auto_battle()
+                        logger.info("没有识别到敌人")
+                        if enemyName:
+                            logger.info(f"没有识别到敌人{enemyName},使用硬编码的映射敌人配置")
+                            monster = next((x for x in self.monsters if x.name == enemyName), None)
+                            if monster is None:
+                                logger.info(f"没有找到硬编码的映射敌人配置{enemyName}")
+                                self.do_default_battle()
+                            else:
+                                loadConfig = self.battle_executor.load_commands_from_file(monster.battle_config)
+                                if not loadConfig:
+                                    logger.info(f"没有找到硬编码映射敌人的战斗配置{enemyName}")
+                                    self.do_default_battle()
+                                else:
+                                    logger.info("使用硬编码映射敌人的战斗配置")
+                                    self.battle_executor.execute_all()
+                        else:
+                            logger.info("没有识别到敌人,使用默认战斗配置")
+                            self.do_default_battle()
                     if monster:
                         loadConfig = self.battle_executor.load_commands_from_file(monster.battle_config)
-                        if loadConfig:
-                            self.battle_executor.execute_all()
+                        if not loadConfig:
+                            logger.info("没有找到匹配敌人的战斗配置")
+                            self.do_default_battle()
                         else:
-                            self.battle.auto_battle()
+                            logger.info("使用匹配敌人的战斗配置")
+                            self.battle_executor.execute_all()
                     battle_done_done = True
                 continue
             else:
                 logger.debug("异常")
                 return False
+            
+    def do_default_battle(self):
+        """
+        执行默认战斗
+        """
+        loadConfig = self.battle_executor.load_commands_from_file(self.default_battle_config)
+        if not loadConfig:
+            logger.info("没有默认战斗配置,使用委托战斗")
+            self.battle.auto_battle()
+        else:
+            logger.info("使用默认战斗配置")
+            self.battle_executor.execute_all()
 
     def open_minimap(self):
         """
