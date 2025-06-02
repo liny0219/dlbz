@@ -68,7 +68,8 @@ class NoMillisecFormatter(logging.Formatter):
 
 class BattleConfig(BaseModel):
     wait_time: float = 0.1
-    wait_drag_time: float = 0.3
+    wait_drag_time: float = 0.4
+    wait_ui_time: float = 0.1
 
 class Config:
     def __init__(self, config_dir=None):

@@ -161,6 +161,14 @@ class MainWindow(tk.Tk):
                     start_wait_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
                     vars_dict["start_wait_time"] = start_wait_var
                     row += 1
+                    # 新增：如果wait_ui_time未在data中，补充显示
+                    if "wait_ui_time" not in data:
+                        ttk.Label(frame, text="UI等待时间").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+                        wait_ui_var = tk.StringVar(value="0.3")
+                        entry = ttk.Entry(frame, textvariable=wait_ui_var, width=40)
+                        entry.grid(row=row, column=1, padx=5, pady=3)
+                        vars_dict["wait_ui_time"] = wait_ui_var
+                        row += 1
                     # 其余字段
                     for k, v in data.items():
                         if k in ("rest_in_inn", "city", "depth", "find_point_wait_time", "start_wait_time"):

@@ -131,7 +131,7 @@ cities:
         - 346
         - '#220014'
         - 5
-    - battle_config: ''
+    - battle_config: D:/dldbz/config/battle_scripts/1.txt
       name: 逢魔之主
       points:
       - - 489

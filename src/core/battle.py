@@ -3,7 +3,7 @@ from utils import logger
 from common.app import AppManager
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
-from typing import Optional
+from typing import Optional, Tuple
 from PIL import Image
 from utils.singleton import singleton
 from common.config import config
@@ -28,6 +28,7 @@ class Battle:
         self.skill_base_y = 200
         self.skill_base_y_offset = 105
         self.wait_time = config.battle.wait_time
+        self.wait_ui_time = config.battle.wait_ui_time
         self.wait_drag_time = config.battle.wait_drag_time
 
     # ================== 战斗状态判断相关方法 ==================
@@ -275,11 +276,11 @@ class Battle:
             if times >= max_times:
                 return False
             if self.in_auto_on(screenshot):
-                logger.info("点击委托战斗开始")
+                logger.debug("点击委托战斗开始")
                 self.device_manager.click(1104, 643)
                 return True
             if not done and self.in_auto_off(screenshot):
-                logger.info("点击委托")
+                logger.debug("点击委托")
                 self.device_manager.click(491, 654)
                 done = True
             screenshot = self.device_manager.get_screenshot()
@@ -348,74 +349,137 @@ class Battle:
         """
         切换到后排角色
         """
-        logger.info("[Battle] 切换后排角色")
+        logger.debug("[Battle] 切换后排角色")
         if image is None:
             image = self.device_manager.get_screenshot()
         while True:
             if self.in_back_on(image):
-                logger.info("[Battle] 切换后排角色完成")
-                time.sleep(self.wait_time)
+                logger.debug("[Battle] 切换后排角色完成")
+                time.sleep(self.wait_time + self.wait_ui_time)
                 return True
             if self.in_front_on(image):
-                logger.info("[Battle] 点击切换后排角色")
+                logger.debug("[Battle] 点击切换后排角色")
                 self.device_manager.click(1115, 640)
-            time.sleep(self.wait_time)
+                time.sleep(self.wait_time + self.wait_ui_time)
             image = self.device_manager.get_screenshot()
 
-    def cast_sp(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
-        in_sp_on = False
+    def cast_ex(self, index:int, role_id:int = 0, x: int = 0, y: int = 0) -> bool:
+        """
+        使用ex技能
+        """
+        return self.cast_external(index, role_id, x, y,
+                                  normalize_pos=[(800, 210),(910, 210)],
+                                  click_pos=[(945, 568)])
+            
+    def cast_pet(self, index:int, role_id:int = 0, x: int = 0, y: int = 0) -> bool:
+        """
+        使用宠物
+        """
+        return self.cast_external(index, role_id, x, y,
+                                  normalize_pos=[(910, 210),(1080, 210)],
+                                  click_pos=[(945, 533)])
+                
+    def cast_external(self, index:int, role_id:int = 0, 
+                      x: int = 0, y: int = 0,
+                      normalize_pos:list[Tuple[int, int]] = [(910, 210),(1080, 210)],
+                      click_pos:list[Tuple[int, int]] = [(945, 533)]) -> bool:
+        """
+        使用ex技能
+        """
         enemy_pos = None
         if index < 1 or index > 4:
             logger.error(f"[Battle] 角色索引错误，index: {index}")
             return False
-        if role_id < 1 or role_id > 4:
-            logger.error(f"[Battle] 技能索引错误，role_id: {role_id}")
+        if role_id < 0 or role_id > 4:
+            logger.error(f"[Battle] 作用角色索引错误，role_id: {role_id}")
             return False
         if x != 0 and y != 9:
             enemy_pos = [x, y]
         role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
         while True:
             screen_shot = self.device_manager.get_screenshot()
-            if self.in_round(screen_shot) and not self.in_skill_on(screen_shot):
-                logger.info("[Battle] 战斗回合中, 选择角色")
+            if self.in_round(screen_shot):
+                logger.debug("[Battle] 战斗回合中, 选择角色")
                 self.device_manager.click(role_pos[0], role_pos[1])
                 time.sleep(self.wait_time)
                 screen_shot = self.device_manager.get_screenshot()
-            if switch:
-                self.switch_back_role(screen_shot)
-            if enemy_pos is not None:
-                self.device_manager.click(*enemy_pos)
-                time.sleep(self.wait_time)
-            while True:
-                if not self.in_sp_on(screen_shot):
-                    logger.info("[Battle] 技能界面中,切换额外技能界面")
+                continue
+            if self.in_skill_on(screen_shot):
+                if enemy_pos is not None:
+                    self.device_manager.click(*enemy_pos)
+                    time.sleep(self.wait_time)
+                if  not self.in_sp_on(screen_shot):
+                    logger.debug("[Battle] 技能界面中,切换额外技能界面")
                     self.device_manager.click(696, 96)
-                    time.sleep(self.wait_time)
-                    break
-                screen_shot = self.device_manager.get_screenshot()
-            break
-        while True:
-            time.sleep(self.wait_time)
-            screen_shot = self.device_manager.get_screenshot()
-            if not in_sp_on and self.in_sp_on(screen_shot):
-                # 点击修正坐标1与修正坐标2,兼容必杀技\支炎兽\ex技能时点击必杀选项,切换到必杀选项
-                normalize_pos = [(563, 208),(677, 209)]
-                for pos in normalize_pos:
-                    self.device_manager.click(pos[0], pos[1])
-                time.sleep(self.wait_time)
-                screen_shot = self.device_manager.get_screenshot()
-                # 点击发动按钮,兼容必杀技\支炎兽\ex技能时点击必杀发动选项
-                normalize_pos = [(941, 525),(942, 464)]
-                for pos in normalize_pos:
-                    self.device_manager.click(pos[0], pos[1])
-                time.sleep(self.wait_time)
+                    time.sleep(self.wait_time + self.wait_ui_time)
+                    screen_shot = self.device_manager.get_screenshot()
+                if  self.in_sp_on(screen_shot):
+                    # 点击修正坐标1与修正坐标2,兼容必杀技\支炎兽\ex技能时点击必杀选项,切换到必杀选项
+                    normalize_pos = [(910, 210),(1080, 210)]
+                    for pos in normalize_pos:
+                        self.device_manager.click(pos[0], pos[1])
+                    time.sleep(self.wait_time + self.wait_ui_time)
+                    screen_shot = self.device_manager.get_screenshot()
+                    # 点击发动按钮,兼容必杀技\支炎兽\ex技能时点击必杀发动选项
+                    for pos in click_pos:
+                        self.device_manager.click(pos[0], pos[1])
+                    time.sleep(self.wait_time + self.wait_ui_time)
 
-                if role_id != 0:
-                    logger.info(f"[Battle] 点击配置角色{role_id}")
-                    role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
-                    self.device_manager.click(*role_pos)
+                    if role_id != 0:
+                        logger.debug(f"[Battle] 点击配置角色{role_id}")
+                        role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
+                        self.device_manager.click(*role_pos)
+                        time.sleep(self.wait_time + self.wait_ui_time)
+                    return True       
+            
+    def cast_sp(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
+        enemy_pos = None
+        if index < 1 or index > 4:
+            logger.error(f"[Battle] 角色索引错误，index: {index}")
+            return False
+        if role_id < 0 or role_id > 4:
+            logger.error(f"[Battle] 作用角色索引错误，role_id: {role_id}")
+            return False
+        if x != 0 and y != 9:
+            enemy_pos = [x, y]
+        role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
+        while True:
+            screenshot = self.device_manager.get_screenshot()
+            if self.in_round(screenshot):
+                logger.debug("[Battle] 选择角色")
+                self.device_manager.click(role_pos[0], role_pos[1])
+                time.sleep(self.wait_time + self.wait_ui_time)
+                continue
+            if self.in_skill_on(screenshot):
+                if switch:
+                    self.switch_back_role(screenshot)
+                if enemy_pos is not None:
+                    self.device_manager.click(*enemy_pos)
                     time.sleep(self.wait_time)
-                return True
+                if not self.in_sp_on(screenshot):
+                    logger.debug("[Battle] 技能界面中,切换额外技能界面")
+                    self.device_manager.click(696, 96)
+                    time.sleep(self.wait_time + self.wait_ui_time)
+                    screenshot = self.device_manager.get_screenshot()
+                    if self.in_sp_on(screenshot):
+                        # 点击修正坐标1与修正坐标2,兼容必杀技\支炎兽\ex技能时点击必杀选项,切换到必杀选项
+                        normalize_pos = [(560, 210),(680, 210)]
+                        for pos in normalize_pos:
+                            self.device_manager.click(pos[0], pos[1])
+                        time.sleep(self.wait_time + self.wait_ui_time)
+                        screenshot = self.device_manager.get_screenshot()
+                        # 点击发动按钮,兼容必杀技\支炎兽\ex技能时点击必杀发动选项
+                        normalize_pos = [(941, 525),(942, 464)]
+                        for pos in normalize_pos:
+                            self.device_manager.click(pos[0], pos[1])
+                        time.sleep(self.wait_time + self.wait_ui_time)
+                        screenshot = self.device_manager.get_screenshot()
+                        if role_id != 0:
+                            logger.debug(f"[Battle] 点击配置角色{role_id}")
+                            role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
+                            self.device_manager.click(*role_pos)
+                            time.sleep(self.wait_time + self.wait_ui_time)
+                        return True
 
     def cast_skill(self, index: int = 1,skill: int = 1, bp: int = 0, role_id: int = 0,  x: int = 0, y: int = 0, switch: bool = False) -> bool:
         """
@@ -427,7 +491,7 @@ class Battle:
         :param y: 坐标y
         :param switch: 是否切换角色
         """
-        logger.info(f"[Battle] 选择角色，角色索引: {index},技能索引: {skill},倍率: {bp},坐标: ({x}, {y})")
+        logger.debug(f"[Battle] 选择角色，角色索引: {index},技能索引: {skill},倍率: {bp},坐标: ({x}, {y})")
         # 检查index 1-8
         # 检查skill 0-4
         # 检查bp 0-3
@@ -447,35 +511,33 @@ class Battle:
         role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
         skill_start = (self.skill_base_x[0], self.skill_base_y + (skill)*self.skill_base_y_offset)
         skill_end = (self.skill_base_x[bp], self.skill_base_y + (skill)*self.skill_base_y_offset)
-        finish = False
         while True:
             screenshot = self.device_manager.get_screenshot()
-            if finish and self.in_round(screenshot):
-                logger.info("[Battle] 技能释放完成")
-                return True
-            if not finish and self.in_round(screenshot):
-                logger.info("[Battle] 选择角色")
+            if self.in_round(screenshot):
+                logger.debug("[Battle] 选择角色")
                 self.device_manager.click(role_pos[0], role_pos[1])
-            if not finish and self.in_skill_on(screenshot):
-                logger.info("[Battle] 在技能面板")
+                time.sleep(self.wait_time + self.wait_ui_time)
+                continue
+            if self.in_skill_on(screenshot):
+                logger.debug("[Battle] 在技能面板")
                 if switch:
                     self.switch_back_role(screenshot)
                 if enemy_pos:
-                    logger.info(f"[Battle] 点击敌人坐标: {enemy_pos}")
+                    logger.debug(f"[Battle] 点击敌人坐标: {enemy_pos}")
                     self.device_manager.click(enemy_pos[0], enemy_pos[1])
-                    time.sleep(self.wait_time + 0.2)
+                    time.sleep(self.wait_time + self.wait_ui_time)
                 if bp == 0:
-                    logger.info(f"[Battle] 点击选择技能")
+                    logger.debug(f"[Battle] 点击选择技能")
                     self.device_manager.click(skill_start[0], skill_start[1])
                 else:
-                    logger.info(f"[Battle] 拖动选择技能")
+                    logger.debug(f"[Battle] 拖动选择技能")
                     self.device_manager.press_and_drag_step(skill_start, skill_end, self.wait_drag_time)
                 if role_id != 0:
-                    logger.info(f"[Battle] 点击配置角色{role_id}")
+                    logger.debug(f"[Battle] 点击配置角色{role_id}")
                     skill_role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (role_id-1)*self.rols_base_y_offset)
                     self.device_manager.click(skill_role_pos[0], skill_role_pos[1])
-                finish = True
-            time.sleep(self.wait_time)
+                time.sleep(self.wait_time + self.wait_ui_time)
+                return True
 
     def attack(self):
         """
@@ -499,7 +561,7 @@ class Battle:
         while True:
             screen_shot = self.device_manager.get_screenshot()
             if self.in_round(screen_shot):
-                logger.info("[Battle] 新的回合中")
+                logger.debug("[Battle] 新的回合中")
                 return False
             if not self.in_battle(screen_shot):
                 return True
@@ -517,7 +579,7 @@ class Battle:
         :param y: 坐标y
         :param switch: 是否切换角色
         """
-        logger.info(f"[Battle] 普通攻击，角色索引: {index},技能索引: {skill},倍率: {bp},技能目标角色索引: {role_id},坐标: ({x}, {y})")
+        logger.debug(f"[Battle] 普通攻击，角色索引: {index},技能索引: {skill},倍率: {bp},技能目标角色索引: {role_id},坐标: ({x}, {y})")
         return self.cast_skill(index, skill, bp, role_id, x, y, switch)
             
     def cmd_xrole(self, index: int = 1, skill: int = 1, bp: int = 1, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = True) -> bool:
@@ -531,8 +593,30 @@ class Battle:
         :param y: 坐标y
         :param switch: 是否切换角色
         """
-        logger.info(f"[Battle] 切换并攻击，角色索引: {index},技能索引: {skill},倍率: {bp},技能目标角色索引: {role_id},坐标: ({x}, {y})")
+        logger.debug(f"[Battle] 切换并攻击，角色索引: {index},技能索引: {skill},倍率: {bp},技能目标角色索引: {role_id},坐标: ({x}, {y})")
         return self.cmd_role(index, skill, bp, role_id, x, y, switch)  
+
+    def cmd_pet(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
+        """
+        使用宠物
+        :param index: 宠物索引
+        :param role_id: 技能目标角色索引
+        :param x: 坐标x
+        :param y: 坐标y
+        """
+        logger.debug(f"[Battle] 使用宠物，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
+        return self.cast_pet(index, role_id, x, y)
+    
+    def cmd_ex(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
+        """
+        使用ex技能
+        :param index: ex技能索引
+        :param role_id: 技能目标角色索引
+        :param x: 坐标x
+        :param y: 坐标y
+        """
+        logger.debug(f"[Battle] 使用ex技能，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
+        return self.cast_ex(index, role_id, x, y)
         
     def cmd_boost(self) -> bool:
         """
@@ -541,18 +625,18 @@ class Battle:
         while True:
             screenshot = self.device_manager.get_screenshot()
             if self.in_boost_on(screenshot):
-                logger.info("[Battle] 全体加成on")
+                logger.debug("[Battle] 全体加成on")
                 return True
             if self.in_boost_off(screenshot):
-                logger.info("[Battle] 全体加成off")
+                logger.debug("[Battle] 全体加成off")
                 self.device_manager.click(893, 654)
-            time.sleep(0.2)
+            time.sleep(self.wait_time)
 
     def cmd_attack(self) -> bool:
         """
         执行攻击
         """
-        logger.info("[Battle] 执行攻击（Attack）")
+        logger.debug("[Battle] 执行攻击（Attack）")
         return self.attack()
 
     def cmd_switch_all(self) -> bool:
@@ -562,19 +646,19 @@ class Battle:
         while True:
             screenshot = self.device_manager.get_screenshot()
             if self.in_switch_on(screenshot):
-                logger.info("[Battle] 全员交替on")
+                logger.debug("[Battle] 全员交替on")
                 return True
             if self.in_switch_off(screenshot):
-                logger.info("[Battle] 全员交替off")
+                logger.debug("[Battle] 全员交替off")
                 self.device_manager.click(792, 659)
-            time.sleep(0.2)
+            time.sleep(self.wait_time)
 
     def cmd_sp_skill(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
         """
         特殊技能（SP）
         :param index: 技能索引
         """
-        logger.info(f"[Battle] 释放前排特殊技能（SP），技能索引: 角色:{index} 技能对象:{role_id} 敌人坐标:{x,y}")
+        logger.debug(f"[Battle] 释放前排特殊技能（SP），技能索引: 角色:{index} 技能对象:{role_id} 敌人坐标:{x,y}")
         return self.cast_sp(index, role_id, x, y)
     
     def cmd_xsp_skill(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
@@ -582,7 +666,7 @@ class Battle:
         特殊技能（XSP）
         :param index: 技能索引
         """
-        logger.info(f"[Battle] 释放后排特殊技能（SP），技能索引: 角色:{index} 技能对象:{role_id} 敌人坐标:{x,y}")
+        logger.debug(f"[Battle] 释放后排特殊技能（SP），技能索引: 角色:{index} 技能对象:{role_id} 敌人坐标:{x,y}")
         return self.cast_sp(index, role_id, x, y)
 
     def cmd_wait(self, seconds: float = 1.0) -> bool:
@@ -590,7 +674,7 @@ class Battle:
         等待指定时间
         :param seconds: 等待秒数
         """
-        logger.info(f"[Battle] 等待 {seconds} 秒")
+        logger.debug(f"[Battle] 等待 {seconds} 秒")
         time.sleep(seconds)
         return True
 
@@ -599,7 +683,7 @@ class Battle:
         跳过指定时间（可用于跳过动画等）
         :param seconds: 跳过秒数
         """
-        logger.info(f"[Battle] 跳过 {seconds} 秒（Skip）")
+        logger.debug(f"[Battle] 跳过 {seconds} 秒（Skip）")
         self.device_manager.long_click(1000, 300, seconds)
         return True
 
@@ -609,7 +693,7 @@ class Battle:
         :param x: X 坐标
         :param y: Y 坐标
         """
-        logger.info(f"[Battle] 点击坐标 ({x}, {y})")
+        logger.debug(f"[Battle] 点击坐标 ({x}, {y})")
         self.device_manager.click(x, y)
         return True
 
@@ -617,14 +701,14 @@ class Battle:
         """
         战斗开始
         """
-        logger.info("[Battle] 战斗开始（BattleStart）")
+        logger.debug("[Battle] 战斗开始（BattleStart）")
         return True
 
     def cmd_battle_end(self) -> bool:
         """
         战斗结束
         """
-        logger.info("[Battle] 战斗结束（BattleEnd）")
+        logger.debug("[Battle] 战斗结束（BattleEnd）")
         return True
 
     def cmd_check_dead(self, role_id: int = 0) -> bool:
@@ -632,5 +716,5 @@ class Battle:
         检查是否有角色死亡
         :param role_id: 角色id，0为任意角色
         """
-        logger.info(f"[Battle] 检查角色是否死亡，role_id={role_id}")
+        logger.debug(f"[Battle] 检查角色是否死亡，role_id={role_id}")
         return self.check_dead(role_id)

@@ -147,11 +147,12 @@ class FengmoMode:
         if monsters:
             self.world.set_monsters(monsters)
         while True:
-            self.state_data.turn_start()
             self.state_data.report_data()
             if self.rest_in_inn:
+                logger.info("[run]旅店休息")
                 self.world.rest_in_inn(self.inn_pos)
             self.world.go_fengmo(self.depth, self.entrance_pos)
+            self.state_data.turn_start()
             self.state_data.step = Step.COLLECT_JUNK
             self.state_data.done_cure = False
             if self.state_data.step == Step.COLLECT_JUNK:

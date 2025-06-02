@@ -27,6 +27,8 @@ class BattleCommandExecutor:
             "XRole":       ["index", "skill", "bp", "role_id", "x", "y"],
             "SP":          ["index", "role_id", "x", "y"],
             "XSP":         ["index", "role_id", "x", "y"],
+            "EX":          ["index", "role_id", "x", "y"],
+            "Pet":         ["index", "role_id", "x", "y"],
             "Wait":        ["seconds"],
             "Skip":        ["seconds"],
             "Click":       ["x", "y"],
@@ -123,6 +125,10 @@ class BattleCommandExecutor:
             self.battle.cmd_sp_skill(**params)
         elif cmd_type == "XSP":
             self.battle.cmd_xsp_skill(**params)
+        elif cmd_type == "EX":
+            self.battle.cmd_ex(**params)
+        elif cmd_type == "Pet":
+            self.battle.cmd_pet(**params)
         elif cmd_type == "Wait":
             self.battle.cmd_wait(**params)
         elif cmd_type == "Skip":

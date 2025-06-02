@@ -10,12 +10,10 @@ Attack
 
 #第2回合
 Role,1,3,3
-Click,700,102
-Wait,1
-Click,950,535
-Wait,3
+Pet,2
 SP,2
 Role,3,3,3
 Role,4,1,3
+Attack
 
 BattleEnd

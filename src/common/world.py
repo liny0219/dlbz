@@ -248,7 +248,7 @@ class World:
         前往逢魔
         """
         logger.info(f"[go_fengmo]前往逢魔入口: {entrance_pos}")
-        logger.info(f"[go_fengmo]检查是否在城镇")
+        logger.debug(f"[go_fengmo]检查是否在城镇")
         self.in_world_or_battle()
         logger.info(f"[go_fengmo]打开小地图")
         self.open_minimap()
@@ -361,6 +361,7 @@ class World:
             else:
                 return None
         battle_done_done = False
+        check_fail_count = 0
         while True:
             check_in_world = sleep_until(check_in_world_or_battle)
             if check_in_world == "in_world":
@@ -370,7 +371,14 @@ class World:
                 logger.debug("战斗场景中")
                 if not check_battle:
                     return False
-                if battle_done_done:
+                if battle_done_done :
+                    if self.battle.in_round():
+                        if check_fail_count >= 3:
+                            logger.info("战斗场景中,等待时间过长,自动战斗")
+                            self.battle.auto_battle()
+                        else:
+                            check_fail_count += 1
+                            time.sleep(self.battle.wait_time)
                     continue
                 if check_battle and not battle_done_done:
                     logger.info("执行战斗场景")

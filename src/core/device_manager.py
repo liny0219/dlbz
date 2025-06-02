@@ -144,7 +144,7 @@ class DeviceManager:
         if not self.device:
             logger.error("设备未连接，无法长按")
             return
-        logger.info(f"长按: {duration} 秒")
+        logger.debug(f"长按: {duration} 秒")
         self.device.long_click(x, y, duration)
     
     
@@ -160,10 +160,10 @@ class DeviceManager:
             return
         start_x, start_y = start
         end_x, end_y = end
-        logger.info(f"长按: {duration} 秒")
+        logger.debug(f"长按: {duration} 秒")
         self.device.touch.down(start_x, start_y)
         time.sleep(duration)
-        logger.info(f"拖动: {start} -> {end} {duration} 秒")
+        logger.debug(f"拖动: {start} -> {end} {duration} 秒")
         self.device.touch.move(end_x, end_y)
         time.sleep(duration)
         self.device.touch.up(end_x, end_y)

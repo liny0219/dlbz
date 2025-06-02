@@ -72,7 +72,7 @@ class OCRHandler:
                     all_texts.append((text, confidence))
                     if confidence >= threshold:
                         detected_texts.add(text)
-            logger.debug(f"OCR识别文本及置信度: {[f'{t}:{c:.2f}' for t,c in all_texts]}")
+            # logger.debug(f"OCR识别文本及置信度: {[f'{t}:{c:.2f}' for t,c in all_texts]}")
             for kw in keywords:
                 if not any(kw in t for t in detected_texts):
                     logger.debug(f"未检测到关键词: {kw}")
@@ -225,7 +225,7 @@ class OCRHandler:
                 for item in line:
                     confidence = item[1][1]
                     if confidence >= self.threshold:
-                        logger.debug(f"OCR识别文本: {item[1][0]}，置信度: {confidence:.2f}") 
+                        # logger.debug(f"OCR识别文本: {item[1][0]}，置信度: {confidence:.2f}") 
                         processed_results.append({
                             'text': item[1][0],
                             'box': item[0],
