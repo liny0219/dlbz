@@ -81,7 +81,7 @@ class SettingsPanel(ttk.Frame):
                         vars_dict[k] = var
                         row += 1
             self.config_vars[fname] = vars_dict
-        save_btn = ttk.Button(self, text="保存所有设置", command=self.save_settings)
+        save_btn = ttk.Button(self, text="保存设置", command=self.save_settings)
         save_btn.pack(pady=10)
 
     def save_settings(self):

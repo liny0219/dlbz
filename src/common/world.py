@@ -390,7 +390,7 @@ class World:
                     if self.battle.in_round():
                         if check_fail_count >= 3 and not auto_battle:
                             logger.info("战斗场景中,等待时间过长,自动战斗")
-                            self.battle.auto_battle()
+                            self.battle.auto_battle(interval=self.battle.wait_time)
                             auto_battle = True
                         if not auto_battle:
                             check_fail_count += 1
@@ -439,7 +439,7 @@ class World:
         loadConfig = self.battle_executor.load_commands_from_txt(self.default_battle_config)
         if not loadConfig:
             logger.info("没有默认战斗配置,使用委托战斗")
-            self.battle.auto_battle()
+            self.battle.auto_battle(interval=self.battle.wait_time)
         else:
             logger.info("使用默认战斗配置")
             self.battle_executor.execute_all()

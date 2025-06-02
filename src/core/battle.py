@@ -283,8 +283,8 @@ class Battle:
                 logger.debug("点击委托")
                 self.device_manager.click(491, 654)
                 done = True
+            time.sleep(interval + 0.2)
             screenshot = self.device_manager.get_screenshot()
-            time.sleep(interval)
 
     def check_dead(self, role_id: int = 1, check_count= 3) -> bool:
         """
@@ -363,24 +363,27 @@ class Battle:
                 time.sleep(self.wait_time + self.wait_ui_time)
             image = self.device_manager.get_screenshot()
 
-    def cast_ex(self, index:int, role_id:int = 0, x: int = 0, y: int = 0) -> bool:
+    def cast_ex(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
         """
         使用ex技能
         """
         return self.cast_external(index, role_id, x, y,
                                   normalize_pos=[(800, 210),(910, 210)],
-                                  click_pos=[(945, 568)])
+                                  click_pos=[(945, 568)],
+                                  switch=switch)
             
-    def cast_pet(self, index:int, role_id:int = 0, x: int = 0, y: int = 0) -> bool:
+    def cast_pet(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
         """
         使用宠物
         """
         return self.cast_external(index, role_id, x, y,
                                   normalize_pos=[(910, 210),(1080, 210)],
-                                  click_pos=[(945, 533)])
+                                  click_pos=[(945, 533)],
+                                  switch=switch)
                 
     def cast_external(self, index:int, role_id:int = 0, 
                       x: int = 0, y: int = 0,
+                      switch: bool = False,
                       normalize_pos:list[Tuple[int, int]] = [(910, 210),(1080, 210)],
                       click_pos:list[Tuple[int, int]] = [(945, 533)]) -> bool:
         """
@@ -405,6 +408,8 @@ class Battle:
                 screen_shot = self.device_manager.get_screenshot()
                 continue
             if self.in_skill_on(screen_shot):
+                if switch:
+                    self.switch_back_role(screen_shot)
                 if enemy_pos is not None:
                     self.device_manager.click(*enemy_pos)
                     time.sleep(self.wait_time)
@@ -606,6 +611,17 @@ class Battle:
         """
         logger.debug(f"[Battle] 使用宠物，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
         return self.cast_pet(index, role_id, x, y)
+
+    def cmd_xpet(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
+        """
+        切换并使用宠物
+        :param index: 宠物索引
+        :param role_id: 技能目标角色索引
+        :param x: 坐标x
+        :param y: 坐标y
+        """
+        logger.debug(f"[Battle] 切换并使用宠物，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
+        return self.cmd_pet(index, role_id, x, y, switch=True)
     
     def cmd_ex(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
         """
@@ -617,6 +633,17 @@ class Battle:
         """
         logger.debug(f"[Battle] 使用ex技能，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
         return self.cast_ex(index, role_id, x, y)
+    
+    def cmd_xex(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
+        """
+        使用ex技能
+        :param index: ex技能索引
+        :param role_id: 技能目标角色索引
+        :param x: 坐标x
+        :param y: 坐标y
+        """
+        logger.debug(f"[Battle] 使用ex技能，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
+        return self.cast_ex(index, role_id, x, y, switch=True)
         
     def cmd_boost(self) -> bool:
         """

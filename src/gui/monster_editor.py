@@ -66,6 +66,9 @@ class MonsterEditor(ttk.LabelFrame):
         self.del_btn.pack(side=tk.LEFT, padx=(0, 8))
         self.modify_btn = ttk.Button(btn_frame2, text="修改", width=8, command=self.on_modify)
         self.modify_btn.pack(side=tk.LEFT)
+        # 在修改按钮后添加tip文案
+        self.modify_tip_label = tk.Label(btn_frame2, text="保存路径先点击修改生效", fg="gray", anchor="w")
+        self.modify_tip_label.pack(side=tk.LEFT, padx=(8, 0))
         # 事件绑定
         self.monster_list.bind('<<ListboxSelect>>', self.on_select)
         self.monster_name_var.trace_add('write', self.on_edit)
