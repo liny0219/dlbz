@@ -73,9 +73,13 @@ class World:
             logger.warning("无法获取截图，无法判断是否在地图中")
             return False
         points_colors = [
-            (33, 638, [255, 254, 255], 1),
-            (64, 649, [255, 254, 255], 1),
-            (452, 676, [251, 249, 254], 1),
+            (33, 638, "FFFFFF", 1),
+            (64, 649, "FFFFFF", 1),
+            (452, 676, "FBF9FE", 1),
+            (266, 86, '8B847A', 1),
+            (226, 86, '847D73', 1),
+            (1236, 21, 'F0F0F0', 1),
+            (1187, 5, '6E6E6E', 1),
         ]
         results = self.ocr_handler.match_point_color(image, points_colors)
         if results:
@@ -193,7 +197,7 @@ class World:
             self.device_manager.click(1100,680)
             time.sleep(interval)
         
-    def rest_in_inn(self,inn_pos:list[int]) -> None:
+    def rest_in_inn(self,inn_pos:list[int],  wait_ui_time:float=0.3) -> None:
         """
         自动完成旅馆休息流程：
         1. 判断是否在城镇，打开小地图
@@ -210,13 +214,23 @@ class World:
         if not in_world:
             logger.debug("不在城镇中")
             return
-        self.open_minimap()
-        in_minimap = sleep_until(self.in_minimap)
-        if not in_minimap:
-            return
+        while True:
+            time.sleep(0.2)
+            logger.debug("打开小地图")
+            self.open_minimap()
+            logger.debug("等待小地图")
+            in_minimap = self.in_minimap()
+            if not in_minimap:
+                continue
+            else:
+                logger.debug("在小地图中")
+                break
+        logger.debug("点击旅馆")
         self.device_manager.click(*inn_pos)
+        logger.debug("等待旅馆")
         in_inn = sleep_until(self.in_inn)
         if not in_inn:
+            logger.debug("不在旅馆中")
             return
         logger.debug("点击旅馆老板")
         self.device_manager.click(*in_inn)
