@@ -261,6 +261,9 @@ class MainWindow(tk.Tk):
             fpath = os.path.join(config_dir, fname)
             data = {}
             for k, var in vars_dict.items():
+                # 跳过MonsterEditor等非tk.Variable对象
+                if not hasattr(var, 'get'):
+                    continue
                 v = var.get()
                 # 针对逢魔玩法特殊处理
                 if fname == "fengmo.yaml":
