@@ -106,6 +106,7 @@ class FengmoMode:
         self.city_name = self.fengmo_config.city
         self.depth = self.fengmo_config.depth
         self.rest_in_inn = self.fengmo_config.rest_in_inn
+        self.vip_cure = self.fengmo_config.vip_cure
         fengmo_cities = config.fengmo_cities
         if self.city_name not in fengmo_cities:
             raise ValueError(f"未找到城市配置: {self.city_name}")
@@ -149,8 +150,8 @@ class FengmoMode:
         while True:
             self.state_data.report_data()
             if self.rest_in_inn:
-                logger.info("[run]旅店休息")
-                self.world.rest_in_inn(self.inn_pos, self.wait_map_time)
+                logger.info("[run]休息检查")
+                self.world.rest_in_inn(self.inn_pos,self.vip_cure)
             self.world.go_fengmo(self.depth, self.entrance_pos)
             self.state_data.turn_start()
             self.state_data.step = Step.COLLECT_JUNK
@@ -234,11 +235,11 @@ class FengmoMode:
                 if self.world.in_minimap():
                     return 'continue'
                 return False
-            in_minimap = sleep_until(in_minimap_callback,timeout=3)
+            in_minimap = sleep_until(in_minimap_callback)
             if in_minimap == 'return':
                 return
             if not in_minimap:
-                raise Exception("[find_box_phase]打开小地图失败")
+                continue
             logger.info(f"[find_box_phase]查找小地图标签")
             closest_point = self.find_map_tag()
             # 如果为空,则当前点遮挡了地图

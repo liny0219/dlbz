@@ -14,7 +14,7 @@ CONFIG_FILES = [
 ]
 
 def main():
-    version = "v0.0.9 测试版"
+    version = "v1.0.1"
     title = f"旅人休息站.免费脚本 {version} 分辨率 1280x720 (dpi 240)"
     app = MainWindow(title, CONFIG_FILES)
     app.mainloop()

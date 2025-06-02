@@ -122,11 +122,24 @@ class MainWindow(tk.Tk):
                     label_width = 14  # 增大标签宽度
                     input_width = 20  # 输入控件宽度
                     # rest_in_inn
+                    rest_val = data.get("rest_in_inn", False)
+                    if isinstance(rest_val, str):
+                        rest_val = rest_val.lower() == "true"
+                    rest_var = tk.StringVar(value="是" if rest_val else "否")
                     ttk.Label(frame, text="旅馆休息", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                    rest_var = tk.StringVar(value="是" if data.get("rest_in_inn", True) else "否")
                     rest_combo = ttk.Combobox(frame, textvariable=rest_var, values=["是", "否"], state="readonly", width=input_width)
                     rest_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')
                     vars_dict["rest_in_inn"] = rest_var
+                    row += 1
+                    # 月卡恢复
+                    vip_cure_val = data.get("vip_cure", False)
+                    if isinstance(vip_cure_val, str):
+                        vip_cure_val = vip_cure_val.lower() == "true"
+                    vip_cure_var = tk.StringVar(value="是" if rest_val else "否")
+                    ttk.Label(frame, text="月卡恢复", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+                    vip_cure_combo = ttk.Combobox(frame, textvariable=vip_cure_var, values=["是", "否"], state="readonly", width=input_width)
+                    vip_cure_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+                    vars_dict["vip_cure"] = vip_cure_var
                     row += 1
                     # city
                     from common.config import config
@@ -169,7 +182,7 @@ class MainWindow(tk.Tk):
                         row += 1
                     # 其余字段
                     for k, v in data.items():
-                        if k in ("rest_in_inn", "city", "depth", "find_point_wait_time", "wait_map_time"):
+                        if k in ("rest_in_inn", "vip_cure", "city", "depth", "find_point_wait_time", "wait_map_time"):
                             continue
                         ttk.Label(frame, text=k, width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
                         var = tk.StringVar(value=str(v))
@@ -196,6 +209,11 @@ class MainWindow(tk.Tk):
             self.config_vars[fname] = vars_dict
         save_btn = ttk.Button(self.settings_frame, text="保存设置", command=self.save_settings)
         save_btn.pack(pady=10)
+        self.settings_notebook.select(0)
+        # 调试：打印控件对象和id
+        if "fengmo.yaml" in self.config_vars:
+            print("rest_in_inn控件对象：", self.config_vars["fengmo.yaml"].get("rest_in_inn"), id(self.config_vars["fengmo.yaml"].get("rest_in_inn")))
+            print("vip_cure控件对象：", self.config_vars["fengmo.yaml"].get("vip_cure"), id(self.config_vars["fengmo.yaml"].get("vip_cure")))
 
     def show_main(self):
         self.settings_frame.pack_forget()
@@ -263,6 +281,10 @@ class MainWindow(tk.Tk):
 
     def save_settings(self):
         config_dir = get_config_dir()
+        # 调试：保存前打印控件值
+        if "fengmo.yaml" in self.config_vars:
+            print("保存时rest_in_inn控件值：", self.config_vars["fengmo.yaml"]["rest_in_inn"].get())
+            print("保存时vip_cure控件值：", self.config_vars["fengmo.yaml"]["vip_cure"].get())
         for fname, vars_dict in self.config_vars.items():
             fpath = os.path.join(config_dir, fname)
             data = {}
@@ -274,7 +296,7 @@ class MainWindow(tk.Tk):
                 # 针对逢魔玩法特殊处理
                 if fname == "fengmo.yaml":
                     if k == "rest_in_inn":
-                        v = True if v == "是" else False
+                        v = True if str(v) == "是" else False
                     elif k == "depth":
                         try:
                             v = int(v)
@@ -282,6 +304,8 @@ class MainWindow(tk.Tk):
                             v = 1
                     elif k == "city":
                         v = str(v)
+                    elif k == "vip_cure":
+                        v = True if str(var.get()) == "是" else False
                 else:
                     if v.lower() in ("true", "false"):
                         v = v.lower() == "true"

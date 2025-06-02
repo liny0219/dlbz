@@ -29,6 +29,7 @@ class World:
         self.battle_executor = BattleCommandExecutor(battle)
         self.monsters = []
         self.default_battle_config = ""
+        self.vip_cure_count = 0
     
     def set_monsters(self,monsters:list[Monster],default_battle_config:str=""):
         self.monsters = monsters
@@ -197,7 +198,7 @@ class World:
             self.device_manager.click(1100,680)
             time.sleep(interval)
         
-    def rest_in_inn(self,inn_pos:list[int],  wait_ui_time:float=0.3) -> None:
+    def rest_in_inn(self,inn_pos:list[int], vip_cure:bool=False) -> None:
         """
         自动完成旅馆休息流程：
         1. 判断是否在城镇，打开小地图
@@ -225,6 +226,15 @@ class World:
             else:
                 logger.debug("在小地图中")
                 break
+        if vip_cure and self.vip_cure_count > 0:
+            logger.debug("使用vip治疗")
+            self.device_manager.click(1238, 20)
+            sleep_until(self.in_world)
+            time.sleep(0.2)
+            self.vip_cure()
+            self.vip_cure_count -= 1
+            time.sleep(4)
+            return
         logger.debug("点击旅馆")
         self.device_manager.click(*inn_pos)
         logger.debug("等待旅馆")
@@ -256,6 +266,7 @@ class World:
             return
         logger.debug("点击旅馆门口")
         self.device_manager.click(*door_pos)
+        self.vip_cure_count = 3
 
     def go_fengmo(self,depth:int,entrance_pos:list[int],wait_time:float=0.2):
         """
@@ -263,8 +274,21 @@ class World:
         """
         logger.info(f"[go_fengmo]前往逢魔入口: {entrance_pos}")
         logger.debug(f"[go_fengmo]检查是否在城镇")
-        self.in_world_or_battle()
-        logger.info(f"[go_fengmo]打开小地图")
+        in_world = sleep_until(self.in_world)
+        if not in_world:
+            logger.debug("不在城镇中")
+            return
+        while True:
+            time.sleep(0.2)
+            logger.debug("打开小地图")
+            self.open_minimap()
+            logger.debug("等待小地图")
+            in_minimap = self.in_minimap()
+            if not in_minimap:
+                continue
+            else:
+                logger.debug("在小地图中")
+                break
         self.open_minimap()
         in_minimap = sleep_until(self.in_minimap)
         if not in_minimap:
@@ -284,6 +308,15 @@ class World:
         # 涉入
         logger.info(f"[go_fengmo]涉入")
         sleep_until(lambda: self.ocr_handler.match_click_text(["涉入"],region=(760,465,835,499)))
+
+    def vip_cure(self):
+        """
+        使用vip治疗
+        """
+        logger.info(f"[vip_cure]使用vip治疗")
+        self.device_manager.click(1222, 525)
+        sleep_until(lambda: self.ocr_handler.match_click_text(["是"]))
+        time.sleep(5)
 
     def select_fengmo_mode(self,depth:int):
         """

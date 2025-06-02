@@ -34,6 +34,7 @@ class FengmoConfig(BaseModel):
     find_point_wait_time: int = 2
     wait_start_time: float = 0.8
     default_battle_config: str = ""
+    vip_cure: bool = False  # 月卡恢复
 
 class CheckPoint(BaseModel):
     id: int
