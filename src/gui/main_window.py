@@ -14,8 +14,6 @@ from utils.mark_coord import mark_coord
 from utils.logger import setup_logger
 from gui.monster_editor import MonsterEditor
 
-version = "v0.9"
-
 CONFIG_FILES = [
     ("fengmo.yaml", "逢魔玩法"),
     ("device.yaml", "设备"),
@@ -30,9 +28,9 @@ class MainWindow(tk.Tk):
     """
     主窗口，包含主界面和设置界面，玩法主流程用子进程启动/终止，支持日志级别动态调整
     """
-    def __init__(self, config_files=CONFIG_FILES):
+    def __init__(self, title:str, config_files=CONFIG_FILES):
         super().__init__()
-        self.title(f"旅人休息站.免费脚本 {version} 分辨率 1280x720 (dpi 240)")
+        self.title(title)
         self.geometry("800x600")
         self.minsize(700, 400)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
