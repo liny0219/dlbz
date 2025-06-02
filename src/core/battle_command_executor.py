@@ -1,23 +1,28 @@
+from __future__ import annotations
 import yaml
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from core.battle import Battle
-
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from common.world import World
 class BattleCommandExecutor:
     """
     战斗指令执行器
     负责加载、解析、顺序执行战斗指令配置文件，直接调用 Battle 类方法。
     支持重置、销毁、链式调用，便于在复杂流程中多次复用。
     """
-    def __init__(self, battle: Battle):
+    def __init__(self, battle: Battle, world: "World"):
         """
         初始化指令执行器
         :param battle: Battle 实例，负责具体战斗操作
+        :param world: World 实例，负责具体世界操作
         """
         self.battle: Battle = battle
         self.commands: List[Dict[str, Any]] = []
         self._current_index: int = 0
         self.logger = logging.getLogger(__name__)
+        self.world: World = world
         # 指令类型到参数名的映射
         self._param_map = {
             "BattleStart": [],
@@ -89,14 +94,14 @@ class BattleCommandExecutor:
             try:
                 self.logger.info(f"执行第{idx+1}条指令: {cmd}")
                 result = self.execute_command(cmd)
-                if cmd.get('type') == 'CheckDead' and result and not self.battle.wait_done():
+                if cmd.get('type') == 'CheckDead' and result and not self.battle.wait_done(lambda screenshot: self.world.in_world(screenshot)):
                     self.logger.info(f"检测到角色死亡,战斗结束")
                     self.battle.exit_battle()
                     return
-                if cmd.get('type') == 'Attack' and self.battle.wait_done():
+                if cmd.get('type') == 'Attack' and self.battle.wait_done(lambda screenshot: self.world.in_world(screenshot)):
                     self.logger.info(f"战斗结束")
                     return
-                if cmd.get('type') == 'BattleEnd' and not self.battle.wait_done():
+                if cmd.get('type') == 'BattleEnd' and not self.battle.wait_done(lambda screenshot: self.world.in_world(screenshot)):
                     self.logger.info(f"战斗结束")
                     return
             except Exception as e:

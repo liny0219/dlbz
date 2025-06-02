@@ -131,11 +131,11 @@ class MainWindow(tk.Tk):
                     rest_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')
                     vars_dict["rest_in_inn"] = rest_var
                     row += 1
-                    # 月卡恢复
+                    # vip_cure
                     vip_cure_val = data.get("vip_cure", False)
                     if isinstance(vip_cure_val, str):
                         vip_cure_val = vip_cure_val.lower() == "true"
-                    vip_cure_var = tk.StringVar(value="是" if rest_val else "否")
+                    vip_cure_var = tk.StringVar(value="是" if vip_cure_val else "否")
                     ttk.Label(frame, text="月卡恢复", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
                     vip_cure_combo = ttk.Combobox(frame, textvariable=vip_cure_var, values=["是", "否"], state="readonly", width=input_width)
                     vip_cure_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')

@@ -26,7 +26,7 @@ class World:
         self.device_manager = device_manager
         self.ocr_handler = ocr_handler
         self.battle = battle
-        self.battle_executor = BattleCommandExecutor(battle)
+        self.battle_executor = BattleCommandExecutor(battle,self)
         self.monsters = []
         self.default_battle_config = ""
         self.vip_cure_count = 0
@@ -49,8 +49,10 @@ class World:
             logger.warning("无法获取截图，无法判断是否在世界中")
             return False
         points_colors = [
-            (73, 632, "E8EBF0", 10),
-            (68, 575, "F6F5F6", 10),
+            (73, 632, "E8EBF0", 2),
+            (68, 575, "F6F5F6", 2),
+            (114, 621, '403F3B', 2),
+            (52, 613, '464541', 2),
         ]
         results = self.ocr_handler.match_point_color(image, points_colors)
         if results:
@@ -420,6 +422,7 @@ class World:
                 if not check_battle:
                     return False
                 if battle_done_done :
+                    logger.debug("in_world_or_battle 战斗场景中,等待回合")
                     if self.battle.in_round():
                         if check_fail_count >= 3 and not auto_battle:
                             logger.info("战斗场景中,等待时间过长,自动战斗")

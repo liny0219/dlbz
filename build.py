@@ -30,7 +30,36 @@ def main():
             shutil.rmtree(dst_dir)
         shutil.copytree(src_dir, dst_dir)
         print(f"[打包脚本] 已将 {src_dir} 目录完整复制到 {dst_dir}")
-    # TODO: 在此添加更多打包相关自动化逻辑
+
+    # 从gui_main.py获取version
+    version = None
+    with open('src/gui_main.py', 'r', encoding='utf-8') as f:
+        for line in f:
+            if line.startswith('version = '):
+                version = line.split('=')[1].strip().strip('"\'')
+                break
+    
+    if not version:
+        print("[打包脚本] 警告: 无法从gui_main.py获取版本号")
+        version = "unknown"
+        
+    # 压缩dist目录
+    zip_name = f"旅人休息站{version}.zip"
+    # 创建一个临时目录来包装dist内容
+    temp_dir = "temp_package"
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
+    os.makedirs(temp_dir)
+    # 将dist目录内容复制到临时目录的子目录中
+    shutil.copytree('dist', os.path.join(temp_dir, f'旅人休息站{version}'))
+    # 从临时目录创建zip文件
+    shutil.make_archive(zip_name.replace('.zip',''), 'zip', temp_dir)
+    print(f"[打包脚本] 已将 dist 目录压缩为 {zip_name} 文件")
+    # 压缩后放到dist目录下
+    shutil.move(zip_name, os.path.join('dist', zip_name))
+    print(f"[打包脚本] 已将 {zip_name} 文件移动到 dist 目录下")
+    # 清理临时目录
+    shutil.rmtree(temp_dir)
 
     # 检查 paddle/libs 目录
     print(os.path.join(os.path.dirname(paddle.__file__), 'libs'))

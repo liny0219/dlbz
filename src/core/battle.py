@@ -3,7 +3,7 @@ from utils import logger
 from common.app import AppManager
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 from PIL import Image
 from utils.singleton import singleton
 from common.config import config
@@ -267,6 +267,7 @@ class Battle:
         自动战斗
         """
         screenshot = self.device_manager.get_screenshot()
+        logger.debug("auto_battle 战斗场景中,等待回合")
         if not self.in_round(screenshot):
             return False
         times = 0
@@ -400,31 +401,33 @@ class Battle:
             enemy_pos = [x, y]
         role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
         while True:
-            screen_shot = self.device_manager.get_screenshot()
-            if self.in_round(screen_shot):
+            screenshot = self.device_manager.get_screenshot()
+            if self.in_round(screenshot):
                 logger.debug("[Battle] 战斗回合中, 选择角色")
                 self.device_manager.click(role_pos[0], role_pos[1])
                 time.sleep(self.wait_time)
-                screen_shot = self.device_manager.get_screenshot()
+                screenshot = self.device_manager.get_screenshot()
                 continue
-            if self.in_skill_on(screen_shot):
+            if not self.in_battle(screenshot):
+                return False
+            if self.in_skill_on(screenshot):
                 if switch:
-                    self.switch_back_role(screen_shot)
+                    self.switch_back_role(screenshot)
                 if enemy_pos is not None:
                     self.device_manager.click(*enemy_pos)
                     time.sleep(self.wait_time)
-                if  not self.in_sp_on(screen_shot):
+                if  not self.in_sp_on(screenshot):
                     logger.debug("[Battle] 技能界面中,切换额外技能界面")
                     self.device_manager.click(696, 96)
                     time.sleep(self.wait_time + self.wait_ui_time)
-                    screen_shot = self.device_manager.get_screenshot()
-                if  self.in_sp_on(screen_shot):
+                    screenshot = self.device_manager.get_screenshot()
+                if  self.in_sp_on(screenshot):
                     # 点击修正坐标1与修正坐标2,兼容必杀技\支炎兽\ex技能时点击必杀选项,切换到必杀选项
                     normalize_pos = [(910, 210),(1080, 210)]
                     for pos in normalize_pos:
                         self.device_manager.click(pos[0], pos[1])
                     time.sleep(self.wait_time + self.wait_ui_time)
-                    screen_shot = self.device_manager.get_screenshot()
+                    screenshot = self.device_manager.get_screenshot()
                     # 点击发动按钮,兼容必杀技\支炎兽\ex技能时点击必杀发动选项
                     for pos in click_pos:
                         self.device_manager.click(pos[0], pos[1])
@@ -455,6 +458,8 @@ class Battle:
                 self.device_manager.click(role_pos[0], role_pos[1])
                 time.sleep(self.wait_time + self.wait_ui_time)
                 continue
+            if not self.in_battle(screenshot):
+                return False
             if self.in_skill_on(screenshot):
                 if switch:
                     self.switch_back_role(screenshot)
@@ -523,6 +528,8 @@ class Battle:
                 self.device_manager.click(role_pos[0], role_pos[1])
                 time.sleep(self.wait_time + self.wait_ui_time)
                 continue
+            if not self.in_battle(screenshot):
+                return False
             if self.in_skill_on(screenshot):
                 logger.debug("[Battle] 在技能面板")
                 if switch:
@@ -550,26 +557,33 @@ class Battle:
         """
         is_done = False
         while True:
-            screen_shot = self.device_manager.get_screenshot()
-            if not is_done and self.in_round(screen_shot):
+            screenshot = self.device_manager.get_screenshot()
+            if not is_done and self.in_round(screenshot):
                 self.device_manager.click(1100, 650)
                 is_done = True
                 time.sleep(self.wait_time)
-            if is_done and not self.in_round(screen_shot):
+            if is_done and not self.in_round(screenshot):
                 return True
             time.sleep(self.wait_time)
 
-    def wait_done(self):
+    def wait_done(self, callback:Callable[[Image.Image], bool]|None = None) -> bool:
         """
         等待战斗结束
         """
         while True:
-            screen_shot = self.device_manager.get_screenshot()
-            if self.in_round(screen_shot):
+            screenshot = self.device_manager.get_screenshot()
+            logger.debug(f"[wait_done] 等待战斗结束")
+            if screenshot is None:
+                logger.error("[Battle] 无法获取截图")
+                return False
+            if self.in_round(screenshot):
                 logger.debug("[Battle] 新的回合中")
                 return False
-            if not self.in_battle(screen_shot):
+            if not self.in_battle(screenshot):
                 return True
+            if callback:
+                if callback(screenshot):
+                    return True 
             time.sleep(self.wait_time)
             
     # ================== 战斗指令执行相关方法 ==================
