@@ -232,9 +232,9 @@ class MonsterEditor(ttk.LabelFrame):
             print(f"无法打开文件: {battle_path}, {e}")
 
     def on_battle_help(self):
-        # 打开config/readme/battle.txt
+        # 打开config/readme.txt
         config_dir = get_config_dir()
-        help_path = os.path.join(config_dir, 'readme', 'battle.txt')
+        help_path = os.path.join(config_dir, 'readme.txt')
         if not os.path.exists(help_path):
             mbox.showwarning("提示", f"未找到文件: {help_path}")
             return

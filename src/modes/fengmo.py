@@ -115,7 +115,7 @@ class FengmoMode:
         self.check_points = self.city_config.get("check_points", [])
         self.reset_pos = self.city_config.get("reset_pos", [])
         self.find_point_wait_time = getattr(self.fengmo_config, 'find_point_wait_time', 2)
-        self.start_wait_time = getattr(self.fengmo_config, 'start_wait_time', 0.8)
+        self.wait_map_time = getattr(self.fengmo_config, 'wait_map_time', 0.8)
         self.state_data = StateData()
 
     def run(self) -> None:
@@ -149,6 +149,8 @@ class FengmoMode:
         while True:
             self.state_data.report_data()
             if self.rest_in_inn:
+                if self.state_data.turn_count > 1:
+                    time.sleep(4 + self.wait_map_time)
                 logger.info("[run]旅店休息")
                 self.world.rest_in_inn(self.inn_pos)
             self.world.go_fengmo(self.depth, self.entrance_pos)
@@ -377,7 +379,7 @@ class FengmoMode:
         return False
     
     def wait_start_time(self):
-        time.sleep(self.start_wait_time)
+        time.sleep(self.wait_map_time)
 
     def exit_battle(self):
         """

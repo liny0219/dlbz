@@ -58,10 +58,10 @@ class SettingsPanel(ttk.Frame):
                     vars_dict["find_point_wait_time"] = wait_var
                     row += 1
                     ttk.Label(frame, text="起步等待时间", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                    start_wait_var = tk.StringVar(value=str(data.get("start_wait_time", 0.5)))
-                    start_wait_spin = tk.Spinbox(frame, from_=0.5, to=1.5, increment=0.1, textvariable=start_wait_var, width=input_width)
+                    wait_map_time_var = tk.StringVar(value=str(data.get("wait_map_time", 0.5)))
+                    start_wait_spin = tk.Spinbox(frame, from_=0.5, to=1.5, increment=0.1, textvariable=wait_map_time_var, width=input_width)
                     start_wait_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-                    vars_dict["start_wait_time"] = start_wait_var
+                    vars_dict["wait_map_time"] = wait_map_time_var
                     row += 1
                     # 怪物配置区块
                     monster_editor = MonsterEditor(frame, city_var)

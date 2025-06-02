@@ -362,6 +362,7 @@ class World:
                 return None
         battle_done_done = False
         check_fail_count = 0
+        auto_battle = False
         while True:
             check_in_world = sleep_until(check_in_world_or_battle)
             if check_in_world == "in_world":
@@ -373,10 +374,11 @@ class World:
                     return False
                 if battle_done_done :
                     if self.battle.in_round():
-                        if check_fail_count >= 3:
+                        if check_fail_count >= 3 and not auto_battle:
                             logger.info("战斗场景中,等待时间过长,自动战斗")
                             self.battle.auto_battle()
-                        else:
+                            auto_battle = True
+                        if not auto_battle:
                             check_fail_count += 1
                             time.sleep(self.battle.wait_time)
                     continue

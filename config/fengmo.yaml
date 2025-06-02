@@ -2,5 +2,5 @@ city: newdelsta
 depth: 3
 find_point_wait_time: '2'
 rest_in_inn: true
-start_wait_time: '0.5'
+wait_map_time: '0.5'
 wait_ui_time: '0.3'

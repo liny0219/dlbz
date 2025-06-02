@@ -492,10 +492,10 @@ class Battle:
         :param switch: 是否切换角色
         """
         logger.debug(f"[Battle] 选择角色，角色索引: {index},技能索引: {skill},倍率: {bp},坐标: ({x}, {y})")
-        # 检查index 1-8
+        # 检查index 1-4
         # 检查skill 0-4
         # 检查bp 0-3
-        if index < 1 or index > 8:
+        if index < 1 or index > 4:
             logger.error(f"[Battle] 角色索引错误，index: {index}")
             return False
         if skill < 0 or skill > 4:
