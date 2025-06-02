@@ -228,7 +228,15 @@ class FengmoMode:
             if self.check_state(Step.FIND_BOX,self.state_data.current_point):
                 return
             self.world.open_minimap()
-            in_minimap = sleep_until(self.world.in_minimap)
+            def in_minimap_callback():
+                if self.check_state(Step.FIND_BOX,self.state_data.current_point):
+                    return 'return'
+                if self.world.in_minimap():
+                    return 'continue'
+                return False
+            in_minimap = sleep_until(in_minimap_callback,timeout=3)
+            if in_minimap == 'return':
+                return
             if not in_minimap:
                 raise Exception("[find_box_phase]打开小地图失败")
             logger.info(f"[find_box_phase]查找小地图标签")
