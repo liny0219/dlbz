@@ -25,7 +25,7 @@ for package in packages:
     hiddenimports += pkg_hiddenimports
 
 # 添加手动指定的数据目录（如有）
-datas += [('config/settings.yaml', 'config/settings.yaml')]
+datas += []
 
 # 自动收集 paddle/libs 下所有 DLL 文件到 dist 根目录
 try:
