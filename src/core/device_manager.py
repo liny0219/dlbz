@@ -5,7 +5,7 @@ from PIL import Image
 import cv2
 import numpy as np
 import os
-from typing import Optional
+from typing import Optional, Union
 from common.config import config
 import traceback
 
@@ -167,3 +167,24 @@ class DeviceManager:
         self.device.touch.move(end_x, end_y)
         time.sleep(duration)
         self.device.touch.up(end_x, end_y)
+
+    def save_screenshot(self, img_or_path: Union[Image.Image, str], save_path: Optional[str] = None) -> None:
+        """
+        保存截图到指定路径。
+        - 如果只传一个参数（img_or_path为str），则获取当前截图并保存到该路径。
+        - 如果传入PIL.Image对象和路径，则保存该图片到路径。
+        :param img_or_path: PIL.Image对象 或 保存路径（str）
+        :param save_path: 保存路径（可选）
+        """
+        if save_path is None and isinstance(img_or_path, str):
+            # 只传了路径，自动截图
+            save_path = img_or_path
+            img = self.get_screenshot()
+        else:
+            img = img_or_path
+        if isinstance(img, Image.Image) and save_path is not None:
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            img.save(save_path)
+            logger.info(f"Screenshot saved to {save_path}")
+        else:
+            logger.error("Failed to save screenshot: image is not a PIL.Image.Image or path is None")

@@ -36,13 +36,16 @@ class FengmoConfig(BaseModel):
     default_battle_config: str = ""
     vip_cure: bool = False  # 月卡恢复
 
+class ItemPos(BaseModel):
+    pos: List[int]
+    backup_pos: List[int]
+
 class CheckPoint(BaseModel):
     id: int
     pos: List[int]
     reset_map: bool
     next_point: bool
-    item_pos: List[List[int]]
-    backup_pos: dict[int, List[int]] = {}
+    item_pos: List[ItemPos]
 
 class Monster(BaseModel):
     name: str

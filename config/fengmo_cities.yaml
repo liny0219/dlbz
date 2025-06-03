@@ -3,10 +3,14 @@ cities:
     check_points:
     - id: 1
       item_pos:
-      - - 1164
-        - 349
-      - - 316
-        - 387
+      - backup_pos: []
+        pos:
+        - 1169
+        - 280
+      - backup_pos: []
+        pos:
+        - 316
+        - 352
       next_point: false
       pos:
       - 420
@@ -14,9 +18,13 @@ cities:
       reset_map: true
     - id: 2
       item_pos:
-      - - 561
+      - backup_pos: []
+        pos:
+        - 561
         - 239
-      - - 260
+      - backup_pos: []
+        pos:
+        - 260
         - 388
       next_point: false
       pos:
@@ -25,16 +33,20 @@ cities:
       reset_map: true
     - id: 3
       item_pos:
-      - - 732
-        - 349
+      - backup_pos: []
+        pos:
+        - 732
+        - 378
       next_point: true
       pos:
-      - 576
-      - 443
+      - 590
+      - 444
       reset_map: true
     - id: 4
       item_pos:
-      - - 75
+      - backup_pos: []
+        pos:
+        - 75
         - 377
       next_point: true
       pos:
@@ -43,9 +55,13 @@ cities:
       reset_map: true
     - id: 5
       item_pos:
-      - - 724
+      - backup_pos: []
+        pos:
+        - 724
         - 321
-      - - 507
+      - backup_pos: []
+        pos:
+        - 507
         - 539
       next_point: false
       pos:
@@ -54,7 +70,9 @@ cities:
       reset_map: false
     - id: 6
       item_pos:
-      - - 635
+      - backup_pos: []
+        pos:
+        - 635
         - 397
       next_point: true
       pos:
@@ -63,7 +81,9 @@ cities:
       reset_map: true
     - id: 7
       item_pos:
-      - - 868
+      - backup_pos: []
+        pos:
+        - 868
         - 385
       next_point: true
       pos:
@@ -72,7 +92,9 @@ cities:
       reset_map: true
     - id: 8
       item_pos:
-      - - 639
+      - backup_pos: []
+        pos:
+        - 639
         - 357
       next_point: true
       pos:
@@ -81,7 +103,9 @@ cities:
       reset_map: true
     - id: 9
       item_pos:
-      - - 623
+      - backup_pos: []
+        pos:
+        - 623
         - 385
       next_point: true
       pos:
@@ -90,8 +114,10 @@ cities:
       reset_map: true
     - id: 10
       item_pos:
-      - - 400
-        - 434
+      - backup_pos: []
+        pos:
+        - 398
+        - 420
       next_point: true
       pos:
       - 647
@@ -104,60 +130,44 @@ cities:
     - 645
     - 573
     monsters:
-    - battle_config: D:/dldbz/config/battle_scripts/1.txt
+    - battle_config: ''
       name: 逢魔精英怪
       points:
-      - - 439
-        - 368
-        - '#1E021B'
-        - 9
-      - - 411
-        - 415
-        - '#2F0219'
-        - 9
-      - - 296
-        - 444
-        - '#BB8A6A'
-        - 9
-      - - 280
-        - 456
-        - '#4F1416'
-        - 9
-      - - 313
-        - 347
-        - '#2C001B'
-        - 9
-      - - 447
-        - 346
-        - '#220014'
-        - 9
-    - battle_config: D:/dldbz/config/battle_scripts/1.txt
-      name: 逢魔之主
+      - - 292
+        - 457
+        - '170012'
+        - 15
+      - - 333
+        - 493
+        - 317E36
+        - 15
+      - - 415
+        - 493
+        - '348036'
+        - 15
+      - - 270
+        - 447
+        - 949E96
+        - 15
+    - battle_config: ''
+      name: 逢魔Boss
       points:
-      - - 489
-        - 177
-        - '#CBA5B2'
-        - 9
-      - - 396
-        - 336
-        - '#6B000E'
-        - 9
-      - - 205
-        - 344
-        - '#260009'
-        - 9
-      - - 228
-        - 437
-        - '#3C0113'
-        - 9
-      - - 327
-        - 370
-        - '#B3866F'
-        - 9
-      - - 467
-        - 143
-        - '#19010F'
-        - 9
+      - - 402
+        - 538
+        - 3B7B3E
+        - 15
+      - - 321
+        - 539
+        - 337F35
+        - 15
+      - - 556
+        - 325
+        - D7C3B8
+        - 15
+      - - 302
+        - 322
+        - 9D030D
+        - 15
     reset_pos:
     - 548
     - 343

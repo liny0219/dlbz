@@ -116,7 +116,7 @@ class FengmoMode:
         self.check_points = self.city_config.get("check_points", [])
         self.reset_pos = self.city_config.get("reset_pos", [])
         self.find_point_wait_time = getattr(self.fengmo_config, 'find_point_wait_time', 2)
-        self.wait_map_time = getattr(self.fengmo_config, 'wait_map_time', 0.8)
+        self.wait_map_time = getattr(self.fengmo_config, 'wait_map_time', 0.5)
         self.state_data = StateData()
 
     def run(self) -> None:
@@ -180,11 +180,9 @@ class FengmoMode:
                 reset_map = False
                 next_tag = False
                 while True:
-                    self.wait_map()
-                    #  当前查找逢魔点
-                    logger.info(f"[collect_junk_phase]当前查找逢魔点: {check_point}")
                     if next_point:
                         break
+                    self.wait_map()
                     logger.info(f"[collect_junk_phase]检查是否在城镇,是否在战斗中,执行战斗回调")
                     in_world_or_battle = self.world.in_world_or_battle()
                     if in_world_or_battle:
@@ -213,16 +211,17 @@ class FengmoMode:
                                 if in_world_or_battle["in_battle"]:
                                     logger.info(f"[collect_junk_phase]遇敌战斗过")
                                     time.sleep(self.wait_map_time)
-                                    continue
                             if self.check_state(Step.COLLECT_JUNK,check_point):
                                 return
-                        self.wait_map()
+                    self.wait_map()
+                    #  当前查找逢魔点
+                    logger.info(f"[collect_junk_phase]当前查找逢魔点: {check_point.id}")
                     point_pos = sleep_until(self.world.find_fengmo_point, self.find_point_wait_time)
-                    logger.info(f"[collect_junk_phase]查找逢魔点: {point_pos} 点位: {check_point}")
+                    logger.info(f"[collect_junk_phase]查找到逢魔点: {point_pos}")
                     if not point_pos:
                         next_point = True
                         break
-                    logger.info(f"[collect_junk_phase]点击逢魔点: {point_pos} 点位: {check_point}")
+                    logger.info(f"[collect_junk_phase]点击逢魔点: {point_pos}")
                     self.device_manager.click(*point_pos[:2])
                     reset_map = check_point.reset_map
                     next_point = check_point.next_point
@@ -236,18 +235,9 @@ class FengmoMode:
         - 可能因状态变化提前 return，或因异常抛出。
         """
         while True:
-            while True:
-                logger.info(f"[find_box_phase]当前查找逢魔点: {self.state_data.current_point}")
-                logger.info(f"[find_box_phase]是否等待在小镇中")
-                in_world_or_in_battle = self.world.in_world_or_battle()
-                if in_world_or_in_battle:
-                    if in_world_or_in_battle["in_world"]:
-                        logger.info(f"[find_box_phase]在城镇中")
-                        break
-                    if in_world_or_in_battle["in_battle"]:
-                        logger.info(f"[find_box_phase]遇敌战斗过")
-                        time.sleep(self.wait_map_time)
-                        continue
+            logger.info(f"[find_box_phase]当前查找逢魔点: {self.state_data.current_point}")
+            logger.info(f"[find_box_phase]是否等待在小镇中")
+            self.world.in_world_or_battle()
             self.wait_map()
             if self.check_state(Step.FIND_BOX,self.state_data.current_point):
                 return
@@ -275,24 +265,22 @@ class FengmoMode:
             logger.info(f"[find_box_phase]点击小地图找到的最近点位: {check_point.pos}")
             self.device_manager.click(*check_point.pos)
             self.wait_map()
-            logger.info(f"[find_box_phase]轮询配置的点位: {check_point.item_pos}")
-            for point in check_point.item_pos:  
-                logger.info(f"[find_box_phase]in_world_or_battle")
-                while True:
-                    self.world.in_world_or_battle()
-                    self.wait_map()
-                    if self.check_state(Step.FIND_BOX,self.state_data.current_point):
-                        return
-                    if in_world_or_in_battle["in_world"]:
-                        logger.info(f"[find_box_phase]在城镇中")
-                        break
-                    if in_world_or_in_battle["in_battle"]:
-                        logger.info(f"[find_box_phase]遇敌战斗过")
-                        time.sleep(self.wait_map_time)
-                        continue
-                logger.info(f"[find_box_phase]点击配置的点位: {point}")
-                self.device_manager.click(point[0],point[1])
+            in_world_or_in_battle = self.world.in_world_or_battle()
+            if in_world_or_in_battle and in_world_or_in_battle["in_battle"]:
+                logger.info(f"[find_box_phase]遇敌战斗过")
                 self.wait_map()
+            logger.info(f"[find_box_phase]轮询配置的点位: {check_point.item_pos}")
+            is_first = True
+            for point in check_point.item_pos:
+                if not is_first:
+                    self.world.in_world_or_battle()
+                    logger.info(f"[find_box_phase]in_world_or_battle")
+                    self.wait_map()    
+                is_first = False
+                logger.info(f"[find_box_phase]点击配置的点位: {point}")
+                self.device_manager.click(point.pos[0],point.pos[1])
+                self.wait_map()
+ 
 
 
     def _fight_boss_phase(self):
@@ -304,14 +292,12 @@ class FengmoMode:
         logger.info(f"[fight_boss_phase]打开小地图")
         while True:
             in_world_or_in_battle = self.world.in_world_or_battle()
-            if in_world_or_in_battle:
-                if in_world_or_in_battle["in_world"]:
-                    logger.info(f"[fight_boss_phase]在城镇中")
-                if in_world_or_in_battle["in_battle"]:
-                    logger.info(f"[fight_boss_phase]遇敌战斗过")
-                    time.sleep(self.wait_map_time)
-                    continue
+            if in_world_or_in_battle and in_world_or_in_battle["in_battle"]:
+                logger.info(f"[fight_boss_phase]遇敌战斗过")
+                time.sleep(self.wait_map_time)
+                continue
             self.wait_map()
+            logger.info(f"[fight_boss_phase]打开小地图")
             self.world.open_minimap()
             in_minimap = sleep_until(self.world.in_minimap)
             if not in_minimap:
@@ -331,19 +317,10 @@ class FengmoMode:
             self.device_manager.click(*check_point.pos)
             self.wait_map()
             logger.info(f"[fight_boss_phase]in_world_or_battle")
-            while True:
-                in_world_or_in_battle = self.world.in_world_or_battle()
-                self.wait_map()
-                if self.check_state(Step.FIGHT_BOSS,self.state_data.current_point):
-                    return
-                if in_world_or_in_battle:
-                    if in_world_or_in_battle["in_world"]:
-                        logger.info(f"[fight_boss_phase]在城镇中")
-                        break
-                    if in_world_or_in_battle["in_battle"]:
-                        logger.info(f"[fight_boss_phase]遇敌战斗过")
-                        time.sleep(self.wait_map_time)
-                        continue
+            in_world_or_in_battle = self.world.in_world_or_battle()
+            if in_world_or_in_battle and in_world_or_in_battle["in_battle"]:
+                logger.info(f"[fight_boss_phase]遇敌战斗过")
+            self.wait_map()
             point_pos = sleep_until(self.world.find_fengmo_point, self.find_point_wait_time)
             logger.info(f"[fight_boss_phase]查找Boss逢魔点: {point_pos}")
             if point_pos is None:

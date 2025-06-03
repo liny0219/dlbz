@@ -1,6 +1,6 @@
 import time
 from core.battle import Battle
-from common.config import Monster
+from common.config import CheckPoint, Monster
 from core.battle_command_executor import BattleCommandExecutor
 from utils import logger
 from common.app import AppManager
@@ -50,9 +50,9 @@ class World:
             return False
         points_colors = [
             (73, 632, "E8EBF0", 2),
-            (68, 575, "F6F5F6", 2),
-            (114, 621, '403F3B', 2),
-            (52, 613, '464541', 2),
+            (100, 637, '1F1E1C', 2),
+            (73, 632, 'F5F1EE', 2),
+            (86, 664, '8F8C85', 2),
         ]
         results = self.ocr_handler.match_point_color(image, points_colors)
         if results:
@@ -120,7 +120,7 @@ class World:
             logger.debug("不在旅馆门口")
             return None
     
-    def find_fengmo_point(self, image: Optional[Image.Image] = None, type: str = "right",offset=60) -> Optional[tuple[int, int, int]] | None:
+    def find_fengmo_point(self, image: Optional[Image.Image] = None, type: str = "right",offset=60, current_point:CheckPoint|None=None) -> Optional[tuple[int, int, int]] | None:
         """
         判断当前是否有逢魔点(逢魔入口也是这个,判断感叹号)。
         """
@@ -148,13 +148,15 @@ class World:
         # 如果find在禁止范围内,则返回None
         if find:
             if forbidden_range[0] <= find[0] <= forbidden_range[2] and forbidden_range[1] <= find[1] <= forbidden_range[3]:
-                logger.debug("检测到逢魔点,但在禁止范围内")
+                logger.info(f"检测到逢魔点,但在禁止范围内: {find}")
                 return None
             else:
-                logger.debug("检测到逢魔点")
                 return (find[0],find[1]+offset,len(find_list))
         else:
-            logger.debug("没有逢魔点")
+            logger.info("没有找到逢魔点")
+            if current_point and image:
+                # 保存以current_point的id为key的截图到debug目录
+                self.device_manager.save_screenshot(image,f"debug/fengmo_point_{current_point.id}.png")
             return None
         
     def find_fengmo_point_cure(self, image: Optional[Image.Image] = None) -> Optional[tuple[int, int]]:
@@ -310,6 +312,7 @@ class World:
         # 涉入
         logger.info(f"[go_fengmo]涉入")
         sleep_until(lambda: self.ocr_handler.match_click_text(["涉入"],region=(760,465,835,499)))
+        time.sleep(5)
 
     def vip_cure(self):
         """
@@ -401,13 +404,17 @@ class World:
             return None
         
     def in_world_or_battle(self, enemyName:str='', check_battle:bool=True)-> dict[str,bool]|None:
+        logger.info("[in_world_or_battle]开始检查")
         def check_in_world_or_battle():
             screenshot = self.device_manager.get_screenshot()
             if self.in_world(screenshot):
+                logger.info("[in_world_or_battle]小镇中")
                 return "in_world"
             elif self.battle.in_battle(screenshot):
+                logger.info("[in_world_or_battle]战斗中")
                 return "in_battle"
             else:
+                logger.info("[in_world_or_battle]没检查出来")  
                 return None
         battle_done_done = False
         check_fail_count = 0
@@ -434,7 +441,7 @@ class World:
                             check_fail_count += 1
                             time.sleep(self.battle.wait_time)
                     continue
-                if check_battle and not battle_done_done:
+                if check_battle and not battle_done_done and self.battle.in_round():
                     logger.info("执行战斗场景")
                     monster = self.find_enemy(self.monsters)
                     if monster is None:
@@ -509,7 +516,7 @@ class World:
                 closest = pt
         return closest
     # 识别敌人
-    def find_enemy(self, monsters:list[Monster],max_count:int=3) -> Monster | None:
+    def find_enemy(self, monsters:list[Monster],max_count:int=6, interval:float= 0.5 ) -> Monster | None:
         """
         识别敌人
         """
@@ -529,6 +536,7 @@ class World:
                     logger.info(f"识别到敌人: {monster.name}")
                     return monster
             count += 1
+            time.sleep(interval)
             if count >= max_count:
                 return None
 

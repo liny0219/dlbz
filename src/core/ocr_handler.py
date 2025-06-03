@@ -12,6 +12,7 @@ from common.config import config
 from utils.get_asset_path import get_asset_path
 import traceback
 import threading
+import concurrent.futures
 
 class OCRHandler:
     def __init__(self, device_manager: DeviceManager) -> None:
@@ -423,7 +424,8 @@ class OCRHandler:
             # c1, c2: (B, G, R)
             if bias:
                 bias_bgr = hex_to_bgr(bias)
-                c2 = tuple(min(255, max(0, c2[i] + bias_bgr[i])) for i in range(3))
+                if bias_bgr is not None:
+                    c2 = tuple(min(255, max(0, c2[i] + bias_bgr[i])) for i in range(3))
             dist = sum((c1[i] - c2[i]) ** 2 for i in range(3)) ** 0.5
             return 1 - dist / (3 * 255)
         
@@ -442,7 +444,7 @@ class OCRHandler:
 
 
     def match_point_color(self, image: Image.Image, points: list[tuple[int, int, str, int]], 
-                                ambiguity: float = 0.95, dir: int = 0) -> bool:
+                                ambiguity: float = 0.95, dir: int = 0, debug = False) -> bool:
         """
         高性能多点颜色匹配：所有点都需匹配成功才返回True
         :param image: PIL.Image，原始图片
@@ -451,9 +453,8 @@ class OCRHandler:
         :param dir: 查找方向
         :return: bool，所有点都匹配才返回True
         """
-        # 5. 支持多点并行（默认多线程并行，避免多进程pickle问题）
-        import concurrent.futures
         try:
+            # 5. 支持多点并行（默认多线程并行，避免多进程pickle问题）
             # 预处理：将所有点的区域crop出来，避免重复读取
             regions = []  # [(region_img, x, y, color, range_)]
             for x, y, color, range_ in points:
@@ -510,10 +511,17 @@ class OCRHandler:
 
             # 多线程并行检查所有点
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = [executor.submit(check_point, region_img, color, ambiguity) for region_img, x, y, color, range_ in regions]
-                for future in concurrent.futures.as_completed(futures):
-                    if not future.result():
-                        return False
+                future_region_pairs = [
+                    (executor.submit(check_point, region_img, color, ambiguity), (region_img, x, y, color, range_))
+                    for region_img, x, y, color, range_ in regions
+                ]
+                all_passed = True
+                for future, (region_img, x, y, color, range_) in future_region_pairs:
+                    result = future.result()
+                    if not result:
+                        all_passed = False
+                if not all_passed:
+                    return False
             return True
         except Exception as e:
             logger.error(f"match_point_color_mult 执行异常: {e}\n{traceback.format_exc()}")
