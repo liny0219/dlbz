@@ -149,7 +149,7 @@ cities:
         - 447
         - 949E96
         - 5
-    - battle_config: ''
+    - battle_config: D:/dldbz/config/battle_scripts/1.txt
       name: 逢魔Boss
       points:
       - - 402

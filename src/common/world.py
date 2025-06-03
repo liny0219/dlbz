@@ -516,7 +516,7 @@ class World:
                 closest = pt
         return closest
     # 识别敌人
-    def find_enemy(self, monsters:list[Monster],max_count:int=6, interval:float= 0.5 ) -> Monster | None:
+    def find_enemy(self, monsters:list[Monster],max_count:int=20, interval:float= 0.2 ) -> Monster | None:
         """
         识别敌人
         """
@@ -532,7 +532,7 @@ class World:
                 if monster.points is None:
                     logger.info(f"敌人{monster.name}没有配置点")
                     continue
-                if self.ocr_handler.match_point_color(screenshot, monster.points,ambiguity=0.9):
+                if self.ocr_handler.match_point_color(screenshot, monster.points,ambiguity=0.85):
                     logger.info(f"识别到敌人: {monster.name}")
                     return monster
             count += 1
