@@ -42,6 +42,7 @@ class CheckPoint(BaseModel):
     reset_map: bool
     next_point: bool
     item_pos: List[List[int]]
+    backup_pos: dict[int, List[int]] = {}
 
 class Monster(BaseModel):
     name: str

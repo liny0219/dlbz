@@ -400,7 +400,7 @@ class World:
             logger.debug("未发现地图Boss点")
             return None
         
-    def in_world_or_battle(self, enemyName:str='', check_battle:bool=True):
+    def in_world_or_battle(self, enemyName:str='', check_battle:bool=True)-> dict[str,bool]|None:
         def check_in_world_or_battle():
             screenshot = self.device_manager.get_screenshot()
             if self.in_world(screenshot):
@@ -412,15 +412,17 @@ class World:
         battle_done_done = False
         check_fail_count = 0
         auto_battle = False
+        has_battle = False
         while True:
             check_in_world = sleep_until(check_in_world_or_battle)
             if check_in_world == "in_world":
                 logger.info("在城镇中")
-                return True
+                return {"in_world":True,"in_battle":has_battle}
             elif check_in_world == "in_battle":
                 logger.debug("战斗场景中")
                 if not check_battle:
-                    return False
+                    return {"in_world":False,"in_battle":True}
+                has_battle = True
                 if battle_done_done :
                     logger.debug("in_world_or_battle 战斗场景中,等待回合")
                     if self.battle.in_round():
@@ -466,7 +468,7 @@ class World:
                 continue
             else:
                 logger.debug("异常")
-                return False
+                return None
             
     def do_default_battle(self):
         """

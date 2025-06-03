@@ -671,6 +671,9 @@ class Battle:
             if self.in_boost_off(screenshot):
                 logger.debug("[Battle] 全体加成off")
                 self.device_manager.click(893, 654)
+            if not self.in_battle():
+                logger.debug("[Battle] 不在战斗中")
+                return False
             time.sleep(self.wait_time)
 
     def cmd_attack(self) -> bool:
@@ -692,6 +695,9 @@ class Battle:
             if self.in_switch_off(screenshot):
                 logger.debug("[Battle] 全员交替off")
                 self.device_manager.click(792, 659)
+            if not self.in_battle():
+                logger.debug("[Battle] 不在战斗中")
+                return False
             time.sleep(self.wait_time)
 
     def cmd_sp_skill(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
