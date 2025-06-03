@@ -353,6 +353,7 @@ class FengmoMode:
             self.wait_map()
             self.world.in_world_or_battle(enemyName="逢魔之主")
             self.state_data.step = Step.FINISH
+            break
          
 
     def find_map_tag(self):
