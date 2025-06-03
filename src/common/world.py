@@ -404,17 +404,17 @@ class World:
             return None
         
     def in_world_or_battle(self, enemyName:str='', check_battle:bool=True)-> dict[str,bool]|None:
-        logger.info("[in_world_or_battle]开始检查")
+        logger.debug("[in_world_or_battle]开始检查")
         def check_in_world_or_battle():
             screenshot = self.device_manager.get_screenshot()
             if self.in_world(screenshot):
-                logger.info("[in_world_or_battle]小镇中")
+                logger.debug("[in_world_or_battle]小镇中")
                 return "in_world"
             elif self.battle.in_battle(screenshot):
-                logger.info("[in_world_or_battle]战斗中")
+                logger.debug("[in_world_or_battle]战斗中")
                 return "in_battle"
             else:
-                logger.info("[in_world_or_battle]没检查出来")  
+                logger.debug("[in_world_or_battle]没检查出来")  
                 return None
         battle_done_done = False
         check_fail_count = 0
@@ -423,7 +423,7 @@ class World:
         while True:
             check_in_world = sleep_until(check_in_world_or_battle)
             if check_in_world == "in_world":
-                logger.info("在城镇中")
+                logger.debug("在城镇中")
                 return {"in_world":True,"in_battle":has_battle}
             elif check_in_world == "in_battle":
                 logger.debug("战斗场景中")
