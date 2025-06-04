@@ -22,6 +22,8 @@ class Battle:
         self.app_manager = app_manager
         self.device_manager = device_manager
         self.ocr_handler = ocr_handler
+        self.extra_skill_bp_pos = (570, 305)
+        self.extra_bp_offset_x = [0, 778, 865, 948]
         self.role_base_pos = (1100, 80)
         self.rols_base_y_offset = 140
         self.skill_base_x = [800,1020,1100,1200]
@@ -368,25 +370,25 @@ class Battle:
         """
         使用ex技能
         """
-        return self.cast_external(index, role_id, x, y,
+        return self.cast_extra_skill(index, role_id, x, y,
                                   normalize_pos=[(800, 210),(910, 210)],
                                   click_pos=[(945, 568)],
                                   switch=switch)
             
-    def cast_pet(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
+    def cast_pet(self, index:int, bp:int = 0, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
         """
         使用宠物
         """
-        return self.cast_external(index, role_id, x, y,
+        return self.cast_extra_skill(index, bp, role_id, x, y,
                                   normalize_pos=[(910, 210),(1080, 210)],
                                   click_pos=[(945, 533)],
                                   switch=switch)
                 
-    def cast_external(self, index:int, role_id:int = 0, 
+    def cast_extra_skill(self, index:int, bp:int = 0, role_id:int = 0, 
                       x: int = 0, y: int = 0,
                       switch: bool = False,
-                      normalize_pos:list[Tuple[int, int]] = [(910, 210),(1080, 210)],
-                      click_pos:list[Tuple[int, int]] = [(945, 533)]) -> bool:
+                      normalize_pos:list[Tuple[int, int]] = [],
+                      click_pos:list[Tuple[int, int]] = []) -> bool:
         """
         使用ex技能
         """
@@ -396,6 +398,9 @@ class Battle:
             return False
         if role_id < 0 or role_id > 4:
             logger.error(f"[Battle] 作用角色索引错误，role_id: {role_id}")
+            return False
+        if bp < 0 or bp > 3:
+            logger.error(f"[Battle] 宠物bp错误，bp: {bp}")
             return False
         if x != 0 and y != 9:
             enemy_pos = [x, y]
@@ -423,11 +428,17 @@ class Battle:
                     screenshot = self.device_manager.get_screenshot()
                 if  self.in_sp_on(screenshot):
                     # 点击修正坐标1与修正坐标2,兼容必杀技\支炎兽\ex技能时点击必杀选项,切换到必杀选项
-                    normalize_pos = [(910, 210),(1080, 210)]
                     for pos in normalize_pos:
                         self.device_manager.click(pos[0], pos[1])
                     time.sleep(self.wait_time + self.wait_ui_time)
-                    screenshot = self.device_manager.get_screenshot()
+
+                    if bp > 0:
+                        self.device_manager.press_and_drag_step(
+                            self.extra_skill_bp_pos,
+                            (self.extra_bp_offset_x[bp], self.extra_skill_bp_pos[1]),
+                            duration=0.5
+                        )
+                        time.sleep(self.wait_time + self.wait_ui_time)
                     # 点击发动按钮,兼容必杀技\支炎兽\ex技能时点击必杀发动选项
                     for pos in click_pos:
                         self.device_manager.click(pos[0], pos[1])
@@ -615,7 +626,7 @@ class Battle:
         logger.debug(f"[Battle] 切换并攻击，角色索引: {index},技能索引: {skill},倍率: {bp},技能目标角色索引: {role_id},坐标: ({x}, {y})")
         return self.cmd_role(index, skill, bp, role_id, x, y, switch)  
 
-    def cmd_pet(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
+    def cmd_pet(self, index: int = 1, bp:int = 0, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
         """
         使用宠物
         :param index: 宠物索引
@@ -624,9 +635,9 @@ class Battle:
         :param y: 坐标y
         """
         logger.debug(f"[Battle] 使用宠物，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
-        return self.cast_pet(index, role_id, x, y)
+        return self.cast_pet(index, bp, role_id, x, y)
 
-    def cmd_xpet(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
+    def cmd_xpet(self, index: int = 1, bp:int = 0, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
         """
         切换并使用宠物
         :param index: 宠物索引
@@ -635,9 +646,9 @@ class Battle:
         :param y: 坐标y
         """
         logger.debug(f"[Battle] 切换并使用宠物，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
-        return self.cmd_pet(index, role_id, x, y, switch=True)
+        return self.cmd_pet(index, bp, role_id, x, y)
     
-    def cmd_ex(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
+    def cmd_ex(self, index: int = 1, bp:int = 0, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
         """
         使用ex技能
         :param index: ex技能索引
@@ -646,9 +657,9 @@ class Battle:
         :param y: 坐标y
         """
         logger.debug(f"[Battle] 使用ex技能，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
-        return self.cast_ex(index, role_id, x, y)
+        return self.cast_ex(index, bp, role_id, x, y)
     
-    def cmd_xex(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
+    def cmd_xex(self, index: int = 1, bp:int = 0, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
         """
         使用ex技能
         :param index: ex技能索引
@@ -657,7 +668,7 @@ class Battle:
         :param y: 坐标y
         """
         logger.debug(f"[Battle] 使用ex技能，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
-        return self.cast_ex(index, role_id, x, y, switch=True)
+        return self.cast_ex(index, bp, role_id, x, y, switch=True)
         
     def cmd_boost(self) -> bool:
         """
