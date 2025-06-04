@@ -126,7 +126,7 @@ class World:
         """
         if image is None:
             image = self.device_manager.get_screenshot()
-        find_list = self.ocr_handler.match_image_multi(image, "assets/fengmo_point.png", threshold=0.86)
+        find_list = self.ocr_handler.match_image_multi(image, "assets/fengmo_point.png", threshold=0.9)
         find = None
         if find_list is not None and len(find_list) > 0:
             # 转换为int
@@ -151,6 +151,7 @@ class World:
                 logger.info(f"检测到逢魔点,但在禁止范围内: {find}")
                 return None
             else:
+                logger.info(f"检测到逢魔点: {find}")
                 return (find[0],find[1]+offset,len(find_list))
         else:
             logger.info("没有找到逢魔点")
