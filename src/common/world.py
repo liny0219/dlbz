@@ -202,7 +202,7 @@ class World:
             self.device_manager.click(1100,680)
             time.sleep(interval)
         
-    def rest_in_inn(self,inn_pos:list[int], vip_cure:bool=False) -> None:
+    def rest_in_inn(self,inn_pos:list[int], vip_cure:bool=False) -> str:
         """
         自动完成旅馆休息流程：
         1. 判断是否在城镇，打开小地图
@@ -218,7 +218,7 @@ class World:
         in_world = sleep_until(self.in_world)
         if not in_world:
             logger.debug("不在城镇中")
-            return
+            return 'not_in_world' 
         while True:
             time.sleep(0.2)
             logger.debug("打开小地图")
@@ -237,15 +237,14 @@ class World:
             time.sleep(0.2)
             self.vip_cure()
             self.vip_cure_count -= 1
-            time.sleep(4)
-            return
+            return 'vip_cure'
         logger.debug("点击旅馆")
         self.device_manager.click(*inn_pos)
         logger.debug("等待旅馆")
         in_inn = sleep_until(self.in_inn)
         if not in_inn:
             logger.debug("不在旅馆中")
-            return
+            return 'not_in_inn'
         logger.debug("点击旅馆老板")
         self.device_manager.click(*in_inn)
         logger.debug("等待欢迎光临")
@@ -263,14 +262,15 @@ class World:
         logger.debug("等待小地图")
         in_minimap = sleep_until(self.in_minimap)
         if not in_minimap:
-            return
+            return 'not_in_minimap'
         logger.debug("查找旅馆门口")
         door_pos = self.find_inn_door()
         if not door_pos:
-            return
+            return 'not_find_inn_door'
         logger.debug("点击旅馆门口")
         self.device_manager.click(*door_pos)
         self.vip_cure_count = 3
+        return 'rest_in_inn'
 
     def go_fengmo(self,depth:int,entrance_pos:list[int],wait_time:float=0.2):
         """
@@ -322,6 +322,8 @@ class World:
         self.device_manager.click(1222, 525)
         sleep_until(lambda: self.ocr_handler.match_click_text(["是"]))
         time.sleep(5)
+        sleep_until(lambda: self.ocr_handler.match_click_text(["完全恢复了"]))
+        time.sleep(1)
 
     def select_fengmo_mode(self,depth:int):
         """

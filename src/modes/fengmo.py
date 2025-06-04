@@ -23,6 +23,7 @@ class Step(Enum):
     - FIND_BOX: 寻找宝箱/怪物/治疗点阶段
     - FIGHT_BOSS: 战斗Boss阶段
     """
+    UN_START = 0
     FINISH = 1
     COLLECT_JUNK = 2
     FIND_BOX = 3
@@ -152,11 +153,15 @@ class FengmoMode:
         monsters = self.city_config.get("monsters", [])
         if monsters:
             self.world.set_monsters(monsters)
+        self.state_data.step = Step.UN_START
         while True:
             self.state_data.report_data()
             if self.rest_in_inn:
                 logger.info("[run]休息检查")
-                self.world.rest_in_inn(self.inn_pos,self.vip_cure)
+                result = self.world.rest_in_inn(self.inn_pos,self.vip_cure)
+                if result == 'vip_cure':
+                    logger.info("[run]使用vip治疗")
+                    self.wait_map()
             self.world.go_fengmo(self.depth, self.entrance_pos)
             self.state_data.turn_start()
             self.state_data.step = Step.COLLECT_JUNK
@@ -386,7 +391,9 @@ class FengmoMode:
             device_manager: DeviceManager = shared.get('device_manager', None)
             ocr_handler: OCRHandler = OCRHandler(device_manager)
             while not stop_event.is_set():
-                time.sleep(check_interval) 
+                time.sleep(check_interval)
+                if state_data.step not in [Step.COLLECT_JUNK,Step.FIND_BOX,Step.FIGHT_BOSS]:
+                    continue
                 screenshot = device_manager.get_cache_screenshot()
                 region = (0, 0, 1280, 720)
                 results = ocr_handler.recognize_text(region=region,image=screenshot)
