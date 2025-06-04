@@ -1,7 +1,7 @@
 city: newdelsta
 depth: 3
-find_point_wait_time: '2'
-rest_in_inn: true
+find_point_wait_time: '3'
+rest_in_inn: false
 vip_cure: true
 wait_map_time: '0.5'
 wait_ui_time: '0.3'

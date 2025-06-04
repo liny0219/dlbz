@@ -224,7 +224,7 @@ class FengmoMode:
                     self.wait_map()
                     #  当前查找逢魔点
                     logger.info(f"[collect_junk_phase]当前查找逢魔点: {check_point.id}")
-                    point_pos = sleep_until(self.world.find_fengmo_point, self.find_point_wait_time)
+                    point_pos = sleep_until(lambda: self.world.find_fengmo_point(current_point=check_point), self.find_point_wait_time)
                     logger.info(f"[collect_junk_phase]查找到逢魔点: {point_pos}")
                     if not point_pos:
                         next_point = True
@@ -336,7 +336,7 @@ class FengmoMode:
             if self.check_state(Step.FIGHT_BOSS,self.state_data.current_point):
                 return
             while True:
-                point_pos = sleep_until(self.world.find_fengmo_point, self.find_point_wait_time)
+                point_pos = sleep_until(lambda: self.world.find_fengmo_point(current_point=check_point), self.find_point_wait_time)
                 logger.info(f"[fight_boss_phase]查找Boss逢魔点: {point_pos}")
                 if point_pos is None:
                     for item_pos in self.state_data.current_point.item_pos:
@@ -422,7 +422,7 @@ class FengmoMode:
                             self.battle.auto_battle()
                             count += 1
                         break
-                    if "红宝石" in r['text']:
+                    if "消费以上内容即可继续" in r['text']:
                         ocr_handler.match_click_text(["否"],region=region,image=screenshot)
                         logger.info("[check_info]使用红宝石?，死了算了")
                         break
