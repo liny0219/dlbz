@@ -144,11 +144,11 @@ cities:
       - - 415
         - 493
         - '348036'
-        - 10
+        - 6
       - - 270
         - 447
         - 949E96
-        - 10
+        - 6
     - battle_config: D:/dldbz/config/battle_scripts/1.txt
       name: 逢魔Boss
       points:
@@ -163,11 +163,11 @@ cities:
       - - 556
         - 325
         - D7C3B8
-        - 10
+        - 6
       - - 302
         - 322
         - 9D030D
-        - 10
+        - 6
     reset_pos:
     - 548
     - 343
