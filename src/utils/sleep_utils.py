@@ -1,4 +1,5 @@
 import time
+import traceback
 from utils import logger
 
 def sleep(interval: float = 1.0, multiplier: float = 1.0) -> None:
@@ -9,11 +10,11 @@ def sleep(interval: float = 1.0, multiplier: float = 1.0) -> None:
     time.sleep(interval*multiplier)
     logger.debug(f"指令间隔sleep {interval}秒")
 
-def sleep_until(condition_func, timeout: float = 30.0, interval: float = 0.2):
+def sleep_until(condition_func, timeout: float = 30.0, interval: float = 0.2, function_name: str = ""):
     """
     通用sleep_until函数，轮询等待条件。
     """
-    logger.debug(f"开始轮询等待条件，最大超时{timeout}秒，每次间隔{interval}秒")
+    logger.info(f"开始轮询等待条件，{condition_func.__name__} {function_name}")
     start_time = time.time()
     while time.time() - start_time < timeout:
         result = condition_func()

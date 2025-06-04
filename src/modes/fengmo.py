@@ -209,10 +209,11 @@ class FengmoMode:
                     if (not reset_map and not next_tag) or (reset_map and next_tag):
                         logger.info(f"[collect_junk_phase]打开小地图")
                         while True:
+                            self.wait_map()
                             self.world.open_minimap()
-                            in_minimap = sleep_until(self.world.in_minimap)
+                            in_minimap = sleep_until(self.world.in_minimap,timeout=5)
                             if not in_minimap:
-                                return
+                                break
                             logger.info(f"[collect_junk_phase]点击小地图: {check_point}")
                             self.device_manager.click(*check_point.pos)
                             self.wait_map()
@@ -229,7 +230,9 @@ class FengmoMode:
                     self.wait_map()
                     #  当前查找逢魔点
                     logger.info(f"[collect_junk_phase]当前查找逢魔点: {check_point.id}")
-                    point_pos = sleep_until(lambda: self.world.find_fengmo_point(current_point=check_point), self.find_point_wait_time)
+                    point_pos = sleep_until(lambda: self.world.find_fengmo_point(current_point=check_point), 
+                                            timeout=self.find_point_wait_time,
+                                            function_name=f"find_fengmo_point {check_point.id}")
                     logger.info(f"[collect_junk_phase]查找到逢魔点: {point_pos}")
                     if not point_pos:
                         next_point = True
@@ -261,7 +264,7 @@ class FengmoMode:
                 if self.world.in_minimap():
                     return 'continue'
                 return False
-            in_minimap = sleep_until(in_minimap_callback)
+            in_minimap = sleep_until(in_minimap_callback,timeout=5)
             if in_minimap == 'return':
                 return
             if not in_minimap:

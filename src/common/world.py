@@ -127,6 +127,20 @@ class World:
         if image is None:
             image = self.device_manager.get_screenshot()
         find_list = self.ocr_handler.match_image_multi(image, "assets/fengmo_point.png", threshold=0.9)
+        # 过滤在禁止范围内的点
+        forbidden_range = (936,36,1208,195)
+        # 打印禁止范围和点的坐标，用于调试
+        logger.debug(f"禁止范围: {forbidden_range}")
+        # 过滤掉在禁止范围内的点，并在过滤时输出日志
+        filtered_list = []
+        for point in find_list:
+            in_forbidden = (forbidden_range[0] <= int(point[0]) <= forbidden_range[2] and
+                            forbidden_range[1] <= int(point[1]) <= forbidden_range[3])
+            logger.info(f"发现点坐标: ({point[0]}, {point[1]})")
+            logger.info(f"是否在禁止范围内: {in_forbidden}")
+            if not in_forbidden:
+                filtered_list.append(point)
+        find_list = filtered_list
         find = None
         if find_list is not None and len(find_list) > 0:
             # 转换为int
@@ -144,15 +158,8 @@ class World:
             # 获取y最小的点
             elif type == "up":
                 find = min(points, key=lambda x: x[1])
-        forbidden_range = (936,36,1208,195)
-        # 如果find在禁止范围内,则返回None
         if find:
-            if forbidden_range[0] <= find[0] <= forbidden_range[2] and forbidden_range[1] <= find[1] <= forbidden_range[3]:
-                logger.info(f"检测到逢魔点,但在禁止范围内: {find}")
-                return None
-            else:
-                logger.info(f"检测到逢魔点: {find}")
-                return (find[0],find[1]+offset,len(find_list))
+            return (find[0],find[1]+offset,len(find_list))
         else:
             logger.info("没有找到逢魔点")
             if current_point and image:
@@ -249,13 +256,13 @@ class World:
         logger.debug("点击旅馆老板")
         self.device_manager.click(*in_inn)
         logger.debug("等待欢迎光临")
-        sleep_until(lambda: self.ocr_handler.match_click_text(["欢迎光临"]))
+        sleep_until(lambda: self.ocr_handler.match_click_text(["欢迎光临"]),function_name="旅馆 欢迎光临")
         logger.debug("点击跳过")
         self.click_tirm(3)
         logger.debug("点击是")
-        sleep_until(lambda: self.ocr_handler.match_click_text(["是"]))
+        sleep_until(lambda: self.ocr_handler.match_click_text(["是"]),function_name="旅馆 是")
         logger.debug("等待完全恢复")
-        sleep_until(lambda: self.ocr_handler.match_click_text(["精力完全恢复了"]))
+        sleep_until(lambda: self.ocr_handler.match_click_text(["精力完全恢复了"]), function_name="旅馆 精力完全恢复了")
         logger.debug("等待返回城镇")
         sleep_until(self.in_world)
         logger.debug("打开小地图")
@@ -303,7 +310,7 @@ class World:
         self.in_world_or_battle()
         time.sleep(wait_time)
         # 寻找逢魔入口
-        fengmo_pos = sleep_until(self.find_fengmo_point)
+        fengmo_pos = sleep_until(self.find_fengmo_point,function_name=f"go_fengmo 寻找逢魔入口 {entrance_pos}")
         if fengmo_pos is None:
             return
         logger.info(f"[go_fengmo]点击逢魔入口: {fengmo_pos}")
@@ -312,7 +319,7 @@ class World:
         self.select_fengmo_mode(depth)
         # 涉入
         logger.info(f"[go_fengmo]涉入")
-        sleep_until(lambda: self.ocr_handler.match_click_text(["涉入"],region=(760,465,835,499)))
+        sleep_until(lambda: self.ocr_handler.match_click_text(["涉入"],region=(760,465,835,499)),function_name="涉入")
         time.sleep(5)
 
     def vip_cure(self):
@@ -321,9 +328,9 @@ class World:
         """
         logger.info(f"[vip_cure]使用vip治疗")
         self.device_manager.click(1222, 525)
-        sleep_until(lambda: self.ocr_handler.match_click_text(["是"]))
+        sleep_until(lambda: self.ocr_handler.match_click_text(["是"]),function_name="vip治疗 是")
         time.sleep(5)
-        sleep_until(lambda: self.ocr_handler.match_click_text(["完全恢复了"]))
+        sleep_until(lambda: self.ocr_handler.match_click_text(["完全恢复了"]),function_name="vip治疗 完全恢复了")
         time.sleep(1)
 
     def select_fengmo_mode(self,depth:int):
@@ -331,7 +338,7 @@ class World:
         选择逢魔模式
         """
         logger.info(f"[select_fengmo_mode]等待选择深度")
-        sleep_until(lambda: self.ocr_handler.match_texts(["选择深度"]))
+        sleep_until(lambda: self.ocr_handler.match_texts(["选择深度"]),function_name="选择深度")
         logger.info(f"[select_fengmo_mode]读取当前深度")
         current_depth = self.read_fengmo_depth()
         while current_depth != depth:
