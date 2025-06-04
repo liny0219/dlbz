@@ -426,12 +426,7 @@ def run_fengmo_main(log_queue, log_level):
         # monkeypatch report_data: 发送统计到主进程
         def report_data_patch(self):
             lines = [
-                f"当前轮数: {self.turn_count}",
-                f"当前轮次用时: {self.turn_time}分钟",
-                f"当前成功次数: {self.total_finished_count}",
-                f"当前成功用时: {self.total_finished_time}分钟",
-                f"当前成功平均用时: {self.avg_finished_time}分钟",
-                f"当前失败平均用时: {self.avg_fail_time}分钟",
+                f"大霸,启动!",
             ]
             report_str = '\n'.join(lines)
             log_queue.put("REPORT_DATA__" + report_str)

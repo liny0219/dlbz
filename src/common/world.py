@@ -126,7 +126,7 @@ class World:
         """
         if image is None:
             image = self.device_manager.get_screenshot()
-        find_list = self.ocr_handler.match_image_multi(image, "assets/fengmo_point.png", threshold=0.9)
+        find_list = self.ocr_handler.match_image_multi(image, "assets/fengmo_point.png", threshold=0.88)
         find = None
         if find_list is not None and len(find_list) > 0:
             # 转换为int

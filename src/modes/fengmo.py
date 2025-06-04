@@ -27,6 +27,7 @@ class Step(Enum):
     COLLECT_JUNK = 2
     FIND_BOX = 3
     FIGHT_BOSS = 4
+    BATTLE_FAIL = 5
 
 @dataclass
 class StateData:
@@ -71,7 +72,10 @@ class StateData:
             else:
                 self.total_fail_count += 1
                 self.total_fail_time = round((self.total_fail_time + self.turn_time), 2)
-            self.avg_finished_time = round((self.total_finished_time / self.total_finished_count), 2)
+            if self.total_finished_count > 0:
+                self.avg_finished_time = round((self.total_finished_time / self.total_finished_count), 2)
+            if self.total_fail_count > 0:
+                self.avg_fail_time = round((self.total_fail_time / self.total_fail_count), 2)
         except Exception as e:
             logger.info(f"{e.__traceback__}\n{traceback.format_exc()}")
 
@@ -80,6 +84,7 @@ class StateData:
         logger.info(f"[report_data]当前轮数: {self.turn_count}")
         logger.info(f"[report_data]当前轮次用时: {self.turn_time}分钟")
         logger.info(f"[report_data]当前成功次数: {self.total_finished_count}")
+        logger.info(f"[report_data]当前失败次数: {self.total_fail_count}")
         logger.info(f"[report_data]当前成功用时: {self.total_finished_time}分钟")
         logger.info(f"[report_data]当前成功平均用时: {self.avg_finished_time}分钟")
         logger.info(f"[report_data]当前失败平均用时: {self.avg_fail_time}分钟")
@@ -164,7 +169,10 @@ class FengmoMode:
             logger.info(f"[run]进入三阶段当前状态: {self.state_data.step}")
             if self.state_data.step == Step.FIGHT_BOSS:
                 self._fight_boss_phase()
-            self.state_data.turn_end(type='success')
+            if self.state_data.step == Step.BATTLE_FAIL:
+                self.state_data.turn_end(type='fail')
+            if self.state_data.step == Step.FINISH:
+                self.state_data.turn_end(type='success')
             
 
     def _collect_junk_phase(self) -> None:
@@ -269,19 +277,21 @@ class FengmoMode:
             if in_world_or_in_battle and in_world_or_in_battle["in_battle"]:
                 logger.info(f"[find_box_phase]遇敌战斗过")
                 self.wait_map()
+            if self.check_state(Step.FIND_BOX,self.state_data.current_point):
+                return
             logger.info(f"[find_box_phase]轮询配置的点位: {check_point.item_pos}")
             is_first = True
             for point in check_point.item_pos:
                 if not is_first:
                     self.world.in_world_or_battle()
                     logger.info(f"[find_box_phase]in_world_or_battle")
-                    self.wait_map()    
+                    self.wait_map()
+                    if self.check_state(Step.FIND_BOX,self.state_data.current_point):
+                        return
                 is_first = False
                 logger.info(f"[find_box_phase]点击配置的点位: {point}")
                 self.device_manager.click(point.pos[0],point.pos[1])
                 self.wait_map()
- 
-
 
     def _fight_boss_phase(self):
         """
@@ -297,6 +307,8 @@ class FengmoMode:
                 time.sleep(self.wait_map_time)
                 continue
             self.wait_map()
+            if self.check_state(Step.FIGHT_BOSS,self.state_data.current_point):
+                return
             logger.info(f"[fight_boss_phase]打开小地图")
             self.world.open_minimap()
             in_minimap = sleep_until(self.world.in_minimap)
@@ -321,17 +333,25 @@ class FengmoMode:
             if in_world_or_in_battle and in_world_or_in_battle["in_battle"]:
                 logger.info(f"[fight_boss_phase]遇敌战斗过")
             self.wait_map()
-            point_pos = sleep_until(self.world.find_fengmo_point, self.find_point_wait_time)
-            logger.info(f"[fight_boss_phase]查找Boss逢魔点: {point_pos}")
-            if point_pos is None:
-                raise Exception("[_fight_boss_phase]查找Boss逢魔点失败")
-            logger.info(f"[fight_boss_phase]点击Boss逢魔点: {point_pos}")
-            self.device_manager.click(*point_pos[:2])
-            self.wait_map()
-            self.world.in_world_or_battle(enemyName="逢魔之主")
-            self.state_data.step = Step.FINISH
-            break
-         
+            if self.check_state(Step.FIGHT_BOSS,self.state_data.current_point):
+                return
+            while True:
+                point_pos = sleep_until(self.world.find_fengmo_point, self.find_point_wait_time)
+                logger.info(f"[fight_boss_phase]查找Boss逢魔点: {point_pos}")
+                if point_pos is None:
+                    for item_pos in self.state_data.current_point.item_pos:
+                        logger.info(f"[fight_boss_phase]点击Boss逢魔点: {item_pos.pos}")
+                        self.device_manager.click(item_pos.pos[0],item_pos.pos[1])
+                else:
+                    logger.info(f"[fight_boss_phase]点击Boss逢魔点: {point_pos}")
+                    self.device_manager.click(*point_pos[:2])
+                self.wait_map()
+                in_world_or_in_battle = self.world.in_world_or_battle(enemyName="逢魔之主")
+                if in_world_or_in_battle and in_world_or_in_battle["in_battle"]:
+                    self.state_data.step = Step.FINISH
+                    break
+                if self.check_state(Step.FIGHT_BOSS,self.state_data.current_point):
+                    return
 
     def find_map_tag(self):
         screenshot = self.device_manager.get_screenshot()
@@ -390,6 +410,31 @@ class FengmoMode:
                         state_data.step = Step.FIGHT_BOSS
                         find_text = "found_boss"
                         ocr_handler.match_click_text(["是"],region=region,image=screenshot)
+                        break
+                    if "全灭" in r['text']:
+                        ocr_handler.match_click_text(["是"],region=region,image=screenshot)
+                        logger.info("[check_info]全灭，确认复活")
+                        count = 0
+                        max_count = 2
+                        while count < max_count:
+                            logger.info("[check_info]全灭，确认复活，尝试自动战斗")
+                            time.sleep(1)
+                            self.battle.auto_battle()
+                            count += 1
+                        break
+                    if "红宝石" in r['text']:
+                        ocr_handler.match_click_text(["否"],region=region,image=screenshot)
+                        logger.info("[check_info]使用红宝石?，死了算了")
+                        break
+                    if "选择放弃的话" in r['text']:
+                        ocr_handler.match_click_text(["是"],region=region,image=screenshot)
+                        logger.info("[check_info]确认，不复活了")
+                        state_data.step = Step.BATTLE_FAIL
+                        find_text = "battle_fail"
+                        break
+                    if "提示" in r['text']:
+                        ocr_handler.match_click_text(["是"],region=region,image=screenshot)
+                        logger.info("[check_info]提示，确认")
                         break
                 if find_text:
                     logger.info(f"[check_info]找到文本: {find_text}")
