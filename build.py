@@ -9,6 +9,19 @@ import paddle
 """
 
 def main():
+    # 清空dist目录内的文件
+    if os.path.exists('dist'):
+        print("[打包脚本] 清空 dist 目录内的文件...")
+        for item in os.listdir('dist'):
+            item_path = os.path.join('dist', item)
+            if os.path.isfile(item_path):
+                os.unlink(item_path)
+            elif os.path.isdir(item_path):
+                shutil.rmtree(item_path)
+        print("[打包脚本] dist 目录内文件已清空")
+    else:
+        os.makedirs('dist')
+        print("[打包脚本] 创建 dist 目录")
     # 1. 运行PyInstaller打包
     print("[打包脚本] 开始运行 PyInstaller 打包...")
     result = subprocess.run([
