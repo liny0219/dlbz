@@ -350,6 +350,10 @@ class FengmoMode:
                     for item_pos in self.state_data.current_point.item_pos:
                         logger.info(f"[fight_boss_phase]点击Boss逢魔点: {item_pos.pos}")
                         self.device_manager.click(item_pos.pos[0],item_pos.pos[1])
+                    self.wait_map()
+                    in_world_or_in_battle = self.world.in_world_or_battle(enemyName="逢魔之主")
+                    if in_world_or_in_battle and in_world_or_in_battle["in_battle"]:
+                        break
                 else:
                     logger.info(f"[fight_boss_phase]点击Boss逢魔点: {point_pos}")
                     self.device_manager.click(*point_pos[:2])

@@ -20,16 +20,16 @@ cities:
       item_pos:
       - backup_pos: []
         pos:
-        - 561
-        - 239
+        - 672
+        - 362
       - backup_pos: []
         pos:
-        - 260
-        - 388
+        - 862
+        - 228
       next_point: false
       pos:
-      - 533
-      - 617
+      - 486
+      - 621
       reset_map: true
     - id: 3
       item_pos:
