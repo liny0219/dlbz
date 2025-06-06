@@ -1,3 +1,4 @@
+from os import lseek
 import time
 from core.battle import Battle
 from common.config import CheckPoint, Monster
@@ -92,6 +93,18 @@ class World:
             logger.debug("不在小地图中")
             return False
         
+    def in_fengmo_map(self, image: Optional[Image.Image] = None):
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        find = self.ocr_handler.match_texts(["深度"],image,(960,205,1022,238))
+        if find:
+            logger.debug("检测到在逢魔地图中")
+            return find
+        else:
+            logger.debug("不在逢魔地图中")
+            return None
+        
+        
     def in_inn(self, image: Optional[Image.Image] = None) -> Optional[Tuple[int, int]] | None:
         """
         判断当前是否在旅馆中。
@@ -105,6 +118,61 @@ class World:
         else:
             logger.debug("不在旅馆中")
             return None
+        
+    def wait_in_fengmo_map(self, image: Optional[Image.Image] = None, timeout:float= 10):
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            if self.in_fengmo_map(image) and self.in_world(image):
+                logger.info("在逢魔地图中")
+                return True
+            time.sleep(0.2)
+            image = self.device_manager.get_screenshot()
+        logger.info("不在逢魔地图中")
+        return False
+    
+    def exit_fengmo_map(self,pops:list[int], image: Optional[Image.Image] = None, timeout:float= 10):
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        interval = 1
+        start_time = time.time()
+        in_fengmo_map = False
+        while time.time() - start_time < timeout:
+            if self.in_fengmo_map(image) and self.in_world(image):
+                in_fengmo_map = True
+                break
+            time.sleep(interval)
+            image = self.device_manager.get_screenshot()
+        if not in_fengmo_map:
+            return
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            image = self.device_manager.get_screenshot()
+            if self.in_world(image):
+                time.sleep(interval)
+                self.open_minimap()
+                continue
+            if not self.in_minimap(image):
+                continue
+            self.device_manager.click(*pops)
+            time.sleep(1)
+            sleep_until(self.in_fengmo_map)
+            time.sleep(1)
+            
+            entrance_pop = self.find_fengmo_point(image)
+            time.sleep(interval)
+            if entrance_pop is not None:
+                self.device_manager.click(entrance_pop[0],entrance_pop[1])
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                image = self.device_manager.get_screenshot()
+                time.sleep(interval)
+                if self.ocr_handler.match_texts(["是否离开"],image):
+                    self.device_manager.click(800,480)
+                    continue
+                if not self.in_fengmo_map(image) and self.in_world(image):
+                    return True
     
     def find_inn_door(self, image: Optional[Image.Image] = None) -> Optional[Tuple[int, int]] | None:
         """
@@ -422,36 +490,25 @@ class World:
                 return "in_world"
             elif self.battle.in_battle(screenshot):
                 logger.debug("[in_world_or_battle]战斗中")
+                time.sleep(2)
                 return "in_battle"
             else:
                 logger.debug("[in_world_or_battle]没检查出来")  
                 return None
-        battle_done_done = False
-        check_fail_count = 0
-        auto_battle = False
+        check_battle_command = False
+        is_battle_success = True
         has_battle = False
         while True:
             check_in_world = sleep_until(check_in_world_or_battle)
             if check_in_world == "in_world":
                 logger.debug("在城镇中")
-                return {"in_world":True,"in_battle":has_battle}
+                return { "in_world":True, "in_battle":has_battle, 'is_battle_state':is_battle_success }
             elif check_in_world == "in_battle":
                 logger.debug("战斗场景中")
                 if not check_battle:
-                    return {"in_world":False,"in_battle":True}
-                has_battle = True
-                if battle_done_done :
-                    logger.debug("in_world_or_battle 战斗场景中,等待回合")
-                    if self.battle.in_round():
-                        if check_fail_count >= 3 and not auto_battle:
-                            logger.info("战斗场景中,等待时间过长,自动战斗")
-                            self.battle.auto_battle(interval=self.battle.wait_time)
-                            auto_battle = True
-                        if not auto_battle:
-                            check_fail_count += 1
-                            time.sleep(self.battle.wait_time)
                     continue
-                if check_battle and not battle_done_done and self.battle.in_round():
+                has_battle = True
+                if check_battle and not check_battle_command and self.battle.in_round():
                     logger.info("执行战斗场景")
                     monster = self.find_enemy(self.monsters)
                     if monster is None:
@@ -461,43 +518,44 @@ class World:
                             monster = next((x for x in self.monsters if x.name == enemyName), None)
                             if monster is None:
                                 logger.info(f"没有找到硬编码的映射敌人配置{enemyName}")
-                                self.do_default_battle()
+                                is_battle_success = self.do_default_battle()['success']
                             else:
                                 loadConfig = self.battle_executor.load_commands_from_txt(monster.battle_config)
                                 if not loadConfig:
                                     logger.info(f"没有找到硬编码映射敌人的战斗配置{enemyName}")
-                                    self.do_default_battle()
+                                    is_battle_success = self.do_default_battle()['success']
                                 else:
                                     logger.info("使用硬编码映射敌人的战斗配置")
                                     self.battle_executor.execute_all()
                         else:
                             logger.info("没有识别到敌人,使用默认战斗配置")
-                            self.do_default_battle()
+                            is_battle_success = self.do_default_battle()['success']
                     if monster:
                         loadConfig = self.battle_executor.load_commands_from_txt(monster.battle_config)
                         if not loadConfig:
                             logger.info("没有找到匹配敌人的战斗配置")
-                            self.do_default_battle()
+                            is_battle_success = self.do_default_battle()['success']
                         else:
                             logger.info("使用匹配敌人的战斗配置")
-                            self.battle_executor.execute_all()
-                    battle_done_done = True
-                continue
+                            is_battle_success = self.battle_executor.execute_all()
+                    check_battle_command = True
             else:
                 logger.debug("异常")
                 return None
             
-    def do_default_battle(self):
+    def do_default_battle(self) -> dict:
         """
         执行默认战斗
         """
         loadConfig = self.battle_executor.load_commands_from_txt(self.default_battle_config)
         if not loadConfig:
             logger.info("没有默认战斗配置,使用委托战斗")
-            self.battle.auto_battle(interval=self.battle.wait_time)
+            result = self.battle.auto_battle()
+            return { "type": "auto_battle", "success": result}
         else:
             logger.info("使用默认战斗配置")
-            self.battle_executor.execute_all()
+            result = self.battle_executor.execute_all()
+            return { "type": "battle_executor", "success": result}
 
     def open_minimap(self):
         """

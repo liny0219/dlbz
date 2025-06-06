@@ -264,7 +264,7 @@ class Battle:
             
 
     # ================== 战斗相关方法 ==================
-    def auto_battle(self, interval:float = 0.2,max_times:int = 30) -> bool:
+    def auto_battle(self, timeout:float = 10) -> bool:
         """
         自动战斗
         """
@@ -272,11 +272,11 @@ class Battle:
         logger.debug("auto_battle 战斗场景中,等待回合")
         if not self.in_round(screenshot):
             return False
-        times = 0
+        start_time = time.time()
         done = False
         while True: 
-            times += 1
-            if times >= max_times:
+            if time.time() - start_time > timeout:
+                logger.info(f"[battle]auto_battle 超时")
                 return False
             if self.in_auto_on(screenshot):
                 logger.debug("点击委托战斗开始")
@@ -286,18 +286,21 @@ class Battle:
                 logger.debug("点击委托")
                 self.device_manager.click(491, 654)
                 done = True
-            time.sleep(interval + 0.2)
+            time.sleep(0.2)
             screenshot = self.device_manager.get_screenshot()
 
-    def check_dead(self, role_id: int = 1, check_count= 3) -> bool:
+    def check_dead(self, role_id: int = 1, timeout:float = 3) -> bool:
         """
         判断当前是否死亡。
         :param image: 可选，外部传入截图
         :param role_id: 可选，角色id，默认0代表任意角色死亡判断,1-8代表具体角色死亡判断
         :return: bool
         """
-        count = 0
+        start_time = time.time()
         while True:
+            if time.time() - start_time > timeout:
+                logger.info(f"[battle]check_dead超时")
+                return False
             image = self.device_manager.get_screenshot()
             if image is None:
                 logger.warning("无法获取截图，无法判断是否死亡")
@@ -324,21 +327,25 @@ class Battle:
                 results = self.ocr_handler.match_point_color(image, [(role_point[0], role_point[1], role_point[2], role_point[3])]) and self.in_battle(image)
                 if results:
                     return True
-            count += 1
-            if count >= check_count:
-                return False
+            time.sleep(0.2)
             
-    def exit_battle(self, interval:int = 1,max_times:int = 5) -> bool:
+    def exit_battle(self, timeout:float = 10) -> bool:
         """
         退出战斗
         """
+        start_time = time.time()
+        while not self.in_round():
+            if time.time() - start_time > timeout:
+                logger.info(f"[battle]exit_battle 超时")
+                return False
+            self.device_manager.click(150,50)
+            time.sleep(0.1)
         if not self.in_round():
             return False
-        times = 0
         while True: 
-            time.sleep(interval)
-            times += 1
-            if times >= max_times:
+            time.sleep(0.2)
+            if time.time() - start_time > timeout:
+                logger.info(f"[battle]exit_battle 超时")
                 return False
             screenshot = self.device_manager.get_screenshot()
             if self.ocr_handler.match_click_text(["是"],region=(293,172,987,548),image=screenshot):
@@ -348,14 +355,20 @@ class Battle:
             if not self.in_battle(screenshot):
                 return True
 
-    def switch_back_role(self, image: Optional[Image.Image] = None) -> bool:
+    def switch_back_role(self, image: Optional[Image.Image] = None, timeout:float = 5) -> bool:
         """
         切换到后排角色
         """
         logger.debug("[Battle] 切换后排角色")
         if image is None:
             image = self.device_manager.get_screenshot()
+        # 设置超时时间为5秒
+        start_time = time.time()
         while True:
+            # 检查是否超时
+            if time.time() - start_time > timeout:
+                logger.info("[Battle] switch_back_role超时")
+                return False
             if self.in_back_on(image):
                 logger.debug("[Battle] 切换后排角色完成")
                 time.sleep(self.wait_time + self.wait_ui_time)
@@ -366,11 +379,11 @@ class Battle:
                 time.sleep(self.wait_time + self.wait_ui_time)
             image = self.device_manager.get_screenshot()
 
-    def cast_ex(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
+    def cast_ex(self, index:int,bp:int = 0, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
         """
         使用ex技能
         """
-        return self.cast_extra_skill(index, role_id, x, y,
+        return self.cast_extra_skill(index, bp, role_id, x, y,
                                   normalize_pos=[(800, 210),(910, 210)],
                                   click_pos=[(945, 568)],
                                   switch=switch)
@@ -416,8 +429,8 @@ class Battle:
             if not self.in_battle(screenshot):
                 return False
             if self.in_skill_on(screenshot):
-                if switch:
-                    self.switch_back_role(screenshot)
+                if switch and not self.switch_back_role(screenshot):
+                    return False
                 if enemy_pos is not None:
                     self.device_manager.click(*enemy_pos)
                     time.sleep(self.wait_time)
@@ -451,7 +464,8 @@ class Battle:
                         time.sleep(self.wait_time + self.wait_ui_time)
                     return True       
             
-    def cast_sp(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
+    def cast_sp(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, 
+                switch: bool = False, timeout:float = 10) -> bool:
         enemy_pos = None
         if index < 1 or index > 4:
             logger.error(f"[Battle] 角色索引错误，index: {index}")
@@ -462,7 +476,11 @@ class Battle:
         if x != 0 and y != 9:
             enemy_pos = [x, y]
         role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
+        start_time = time.time()
         while True:
+            if time.time() - start_time > timeout:
+                logger.info('[battle]cast_sp 超时')
+                return False
             screenshot = self.device_manager.get_screenshot()
             if self.in_round(screenshot):
                 logger.debug("[Battle] 选择角色")
@@ -472,8 +490,8 @@ class Battle:
             if not self.in_battle(screenshot):
                 return False
             if self.in_skill_on(screenshot):
-                if switch:
-                    self.switch_back_role(screenshot)
+                if switch and not self.switch_back_role(screenshot):
+                    return False
                 if enemy_pos is not None:
                     self.device_manager.click(*enemy_pos)
                     time.sleep(self.wait_time)
@@ -502,7 +520,8 @@ class Battle:
                             time.sleep(self.wait_time + self.wait_ui_time)
                         return True
 
-    def cast_skill(self, index: int = 1,skill: int = 1, bp: int = 0, role_id: int = 0,  x: int = 0, y: int = 0, switch: bool = False) -> bool:
+    def cast_skill(self, index: int = 1,skill: int = 1, bp: int = 0, role_id: int = 0,  x: int = 0, y: int = 0,
+                    switch: bool = False, timeout:int = 10) -> bool:
         """
         使用技能
         :param index: 角色索引
@@ -532,7 +551,11 @@ class Battle:
         role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
         skill_start = (self.skill_base_x[0], self.skill_base_y + (skill)*self.skill_base_y_offset)
         skill_end = (self.skill_base_x[bp], self.skill_base_y + (skill)*self.skill_base_y_offset)
+        start_time = time.time()
         while True:
+            if time.time() - start_time > timeout:
+                logger.info('[battle]cast_skill 超时')
+                return False
             screenshot = self.device_manager.get_screenshot()
             if self.in_round(screenshot):
                 logger.debug("[Battle] 选择角色")
@@ -543,8 +566,8 @@ class Battle:
                 return False
             if self.in_skill_on(screenshot):
                 logger.debug("[Battle] 在技能面板")
-                if switch:
-                    self.switch_back_role(screenshot)
+                if switch and not self.switch_back_role(screenshot):
+                       return False
                 if enemy_pos:
                     logger.debug(f"[Battle] 点击敌人坐标: {enemy_pos}")
                     self.device_manager.click(enemy_pos[0], enemy_pos[1])
@@ -562,12 +585,18 @@ class Battle:
                 time.sleep(self.wait_time + self.wait_ui_time)
                 return True
 
-    def attack(self):
+    def attack(self, timeout:float = 5):
         """
         执行攻击
         """
         is_done = False
+        # 设置超时时间为5秒
+        start_time = time.time()
         while True:
+            # 检查是否超时
+            if time.time() - start_time > timeout:
+                logger.info("[Battle] attack超时")
+                return False
             screenshot = self.device_manager.get_screenshot()
             if not is_done and self.in_round(screenshot):
                 self.device_manager.click(1100, 650)
@@ -577,24 +606,29 @@ class Battle:
                 return True
             time.sleep(self.wait_time)
 
-    def wait_done(self, callback:Callable[[Image.Image], bool]|None = None) -> bool:
+    def wait_done(self, callback:Callable[[Image.Image], str|None]|None = None, timeout:float = 60) -> str:
         """
         等待战斗结束
         """
+        start_time = time.time()
         while True:
+            if time.time() - start_time > timeout:
+                logger.info("[wait_done] wait_done超时")
+                return 'wait_done_timeout'
             screenshot = self.device_manager.get_screenshot()
             logger.debug(f"[wait_done] 等待战斗结束")
             if screenshot is None:
-                logger.error("[Battle] 无法获取截图")
-                return False
+                logger.error("[wait_done] 无法获取截图")
+                return 'exception'
             if self.in_round(screenshot):
-                logger.debug("[Battle] 新的回合中")
-                return False
+                logger.info("[wait_done] 新的回合中")
+                return 'new_turn'
             if not self.in_battle(screenshot):
-                return True
+                return 'not_in_battle'
             if callback:
-                if callback(screenshot):
-                    return True 
+                result = callback(screenshot)
+                if result is not None:
+                    return result
             time.sleep(self.wait_time)
             
     # ================== 战斗指令执行相关方法 ==================
@@ -670,11 +704,15 @@ class Battle:
         logger.debug(f"[Battle] 使用ex技能，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
         return self.cast_ex(index, bp, role_id, x, y, switch=True)
         
-    def cmd_boost(self) -> bool:
+    def cmd_boost(self, timeout:float = 5) -> bool:
         """
         全体加成
         """
+        start_time = time.time()
         while True:
+            if time.time() - start_time > timeout:
+                logger.info("[Battle] 全体加成超时")
+                return False
             screenshot = self.device_manager.get_screenshot()
             if self.in_boost_on(screenshot):
                 logger.debug("[Battle] 全体加成on")
@@ -694,11 +732,15 @@ class Battle:
         logger.debug("[Battle] 执行攻击（Attack）")
         return self.attack()
 
-    def cmd_switch_all(self) -> bool:
+    def cmd_switch_all(self, timeout:float = 5) -> bool:
         """
         全员交替
         """
+        start_time = time.time()
         while True:
+            if time.time() - start_time > timeout:
+                logger.info("[Battle] cmd_switch_all超时")
+                return False
             screenshot = self.device_manager.get_screenshot()
             if self.in_switch_on(screenshot):
                 logger.debug("[Battle] 全员交替on")

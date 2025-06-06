@@ -36,13 +36,20 @@ def main():
     print("[打包脚本] PyInstaller 打包完成！")
 
     # 2. 复制多个资源目录
-    src_dirs = ['config', 'assets']  # 可根据需要添加更多目录
+    src_dirs = ['config', 'assets']  # 目录列表
     for src_dir in src_dirs:
         dst_dir = os.path.join('dist', src_dir)
         if os.path.exists(dst_dir):
             shutil.rmtree(dst_dir)
         shutil.copytree(src_dir, dst_dir)
         print(f"[打包脚本] 已将 {src_dir} 目录完整复制到 {dst_dir}")
+    
+    src_files = ['更新说明.txt']  # 文件列表
+    # 复制单个文件
+    for src_file in src_files:
+        if os.path.exists(src_file):
+            shutil.copy2(src_file, 'dist')
+            print(f"[打包脚本] 已将 {src_file} 文件复制到 dist 目录")
 
     # 从gui_main.py获取version
     version = None

@@ -27,8 +27,9 @@ class Step(Enum):
     FINISH = 1
     COLLECT_JUNK = 2
     FIND_BOX = 3
-    FIGHT_BOSS = 4
-    BATTLE_FAIL = 5
+    FIND_BOSS = 4
+    FIGHT_BOSS = 5
+    BATTLE_FAIL = 6
 
 @dataclass
 class StateData:
@@ -162,7 +163,10 @@ class FengmoMode:
                 if result == 'vip_cure':
                     logger.info("[run]使用vip治疗")
                     self.wait_map()
-            self.world.go_fengmo(self.depth, self.entrance_pos)
+            while True:
+                self.world.go_fengmo(self.depth, self.entrance_pos)
+                if self.world.wait_in_fengmo_map():
+                    break
             self.state_data.turn_start()
             self.state_data.step = Step.COLLECT_JUNK
             self.state_data.done_cure = False
@@ -172,9 +176,11 @@ class FengmoMode:
             if self.state_data.step == Step.FIND_BOX:
                 self._find_box_phase()
             logger.info(f"[run]进入三阶段当前状态: {self.state_data.step}")
-            if self.state_data.step == Step.FIGHT_BOSS:
-                self._fight_boss_phase()
+            if self.state_data.step == Step.FIND_BOSS:
+                self._find_boss_phase()
             if self.state_data.step == Step.BATTLE_FAIL:
+                if self.world.wait_in_fengmo_map(timeout=4):
+                    self.world.exit_fengmo_map(self.entrance_pos)
                 self.state_data.turn_end(type='fail')
             if self.state_data.step == Step.FINISH:
                 self.state_data.turn_end(type='success')
@@ -203,6 +209,10 @@ class FengmoMode:
                             logger.info(f"[collect_junk_phase]在城镇中")
                         if in_world_or_battle["in_battle"]:
                             logger.info(f"[collect_junk_phase]遇敌战斗过")
+                        if not in_world_or_battle["is_battle_state"]:
+                            logger.info(f"[collect_junk_phase]战斗失败")
+                            self.state_data.step = Step.BATTLE_FAIL
+                            return
                     if self.check_state(Step.COLLECT_JUNK,check_point):
                         return
                     self.wait_map()
@@ -225,6 +235,10 @@ class FengmoMode:
                                 if in_world_or_battle["in_battle"]:
                                     logger.info(f"[collect_junk_phase]遇敌战斗过")
                                     time.sleep(self.wait_map_time)
+                                if not in_world_or_battle["is_battle_state"]:
+                                    logger.info(f"[collect_junk_phase]战斗失败")
+                                    self.state_data.step = Step.BATTLE_FAIL
+                                    return
                             if self.check_state(Step.COLLECT_JUNK,check_point):
                                 return
                     self.wait_map()
@@ -253,7 +267,11 @@ class FengmoMode:
         while True:
             logger.info(f"[find_box_phase]当前查找逢魔点: {self.state_data.current_point}")
             logger.info(f"[find_box_phase]是否等待在小镇中")
-            self.world.in_world_or_battle()
+            in_world_or_battle = self.world.in_world_or_battle()
+            if in_world_or_battle is not None and not in_world_or_battle["is_battle_state"]:
+                logger.info(f"[_find_box_phase]战斗失败")
+                self.state_data.step = Step.BATTLE_FAIL
+                return
             self.wait_map()
             if self.check_state(Step.FIND_BOX,self.state_data.current_point):
                 return
@@ -285,13 +303,21 @@ class FengmoMode:
             if in_world_or_in_battle and in_world_or_in_battle["in_battle"]:
                 logger.info(f"[find_box_phase]遇敌战斗过")
                 self.wait_map()
+            if in_world_or_battle is not None and not in_world_or_battle["is_battle_state"]:
+                logger.info(f"[_find_box_phase]战斗失败")
+                self.state_data.step = Step.BATTLE_FAIL
+                return
             if self.check_state(Step.FIND_BOX,self.state_data.current_point):
                 return
             logger.info(f"[find_box_phase]轮询配置的点位: {check_point.item_pos}")
             is_first = True
             for point in check_point.item_pos:
                 if not is_first:
-                    self.world.in_world_or_battle()
+                    in_world_or_battle = self.world.in_world_or_battle()
+                    if in_world_or_battle is not None and not in_world_or_battle["is_battle_state"]:
+                        logger.info(f"[_find_box_phase]战斗失败")
+                        self.state_data.step = Step.BATTLE_FAIL
+                        return
                     logger.info(f"[find_box_phase]in_world_or_battle")
                     self.wait_map()
                     if self.check_state(Step.FIND_BOX,self.state_data.current_point):
@@ -301,68 +327,54 @@ class FengmoMode:
                 self.device_manager.click(point.pos[0],point.pos[1])
                 self.wait_map()
 
-    def _fight_boss_phase(self):
+    def _find_boss_phase(self):
         """
         Boss战阶段：
         进入逢魔地图，打开小地图，查找Boss点并点击，等待Boss点确认，进入战斗。
         边界处理：如Boss点未找到、地图未进入等，抛出异常。
         """
-        logger.info(f"[fight_boss_phase]打开小地图")
+        logger.info(f"[find_boss_phase]打开小地图")
         while True:
-            in_world_or_in_battle = self.world.in_world_or_battle()
-            if in_world_or_in_battle and in_world_or_in_battle["in_battle"]:
-                logger.info(f"[fight_boss_phase]遇敌战斗过")
-                time.sleep(self.wait_map_time)
-                continue
-            self.wait_map()
-            if self.check_state(Step.FIGHT_BOSS,self.state_data.current_point):
+            if self.wait_check_boss() == 'in_world_fight_boss':
                 return
-            logger.info(f"[fight_boss_phase]打开小地图")
+            self.wait_map()
+            logger.info(f"[find_boss_phase]打开小地图")
             self.world.open_minimap()
-            in_minimap = sleep_until(self.world.in_minimap)
+            in_minimap = sleep_until(self.world.in_minimap,timeout=5)
             if not in_minimap:
-                logger.error("[fight_boss_phase]打开小地图失败")
+                logger.error("[find_boss_phase]打开小地图失败")
                 continue
-            logger.info(f"[fight_boss_phase]查找Boss点")
-            find_map_boss = sleep_until(self.world.find_map_boss)
+            logger.info(f"[find_boss_phase]查找Boss点")
+            find_map_boss = sleep_until(self.world.find_map_boss,timeout=6)
             if find_map_boss:
                 closest_point = self.find_closest_point(find_map_boss, self.check_points)
                 self.state_data.current_point = closest_point
             if self.state_data.current_point is None:
-                logger.error("[fight_boss_phase]出现异常,需要排查")
-                raise Exception("[fight_boss_phase]出现异常,需要排查")
-            logger.info(f"[fight_boss_phase]找到最近的Boss点: {closest_point}")
+                logger.error("[find_boss_phase]出现异常,需要排查")
+                raise Exception("[find_boss_phase]出现异常,需要排查")
+            logger.info(f"[find_boss_phase]找到最近的Boss点: {closest_point}")
             check_point = self.state_data.current_point
-            logger.info(f"[fight_boss_phase]点击小地图最近Boss的点: {check_point.pos}")
+            logger.info(f"[find_boss_phase]点击小地图最近Boss的点: {check_point.pos}")
             self.device_manager.click(*check_point.pos)
             self.wait_map()
-            logger.info(f"[fight_boss_phase]in_world_or_battle")
-            in_world_or_in_battle = self.world.in_world_or_battle()
-            if in_world_or_in_battle and in_world_or_in_battle["in_battle"]:
-                logger.info(f"[fight_boss_phase]遇敌战斗过")
-            self.wait_map()
-            if self.check_state(Step.FIGHT_BOSS,self.state_data.current_point):
+            if self.wait_check_boss() == 'in_world_fight_boss':
                 return
             while True:
                 point_pos = sleep_until(lambda: self.world.find_fengmo_point(current_point=check_point), self.find_point_wait_time)
-                logger.info(f"[fight_boss_phase]查找Boss逢魔点: {point_pos}")
+                logger.info(f"[find_boss_phase]查找Boss逢魔点: {point_pos}")
                 if point_pos is None:
+                    logger.info(f"[find_boss_phase]找不到boss感叹号,点击配置的点位")
                     for item_pos in self.state_data.current_point.item_pos:
-                        logger.info(f"[fight_boss_phase]点击Boss逢魔点: {item_pos.pos}")
+                        logger.info(f"[find_boss_phase]点击预设的坐标: {item_pos.pos}")
                         self.device_manager.click(item_pos.pos[0],item_pos.pos[1])
                     self.wait_map()
-                    in_world_or_in_battle = self.world.in_world_or_battle(enemyName="逢魔之主")
-                    if in_world_or_in_battle and in_world_or_in_battle["in_battle"]:
+                    if sleep_until(lambda: not self.world.in_world(),timeout=5,function_name="[find_boss_phase]点击预设坐标,not in world"):
                         break
                 else:
-                    logger.info(f"[fight_boss_phase]点击Boss逢魔点: {point_pos}")
+                    logger.info(f"[find_boss_phase]点击Boss逢魔点: {point_pos}")
                     self.device_manager.click(*point_pos[:2])
                 self.wait_map()
-                in_world_or_in_battle = self.world.in_world_or_battle(enemyName="逢魔之主")
-                if in_world_or_in_battle and in_world_or_in_battle["in_battle"]:
-                    self.state_data.step = Step.FINISH
-                    break
-                if self.check_state(Step.FIGHT_BOSS,self.state_data.current_point):
+                if self.wait_check_boss()=='in_world_fight_boss':
                     return
 
     def find_map_tag(self):
@@ -389,6 +401,24 @@ class FengmoMode:
             if closest_point_check_point:
                 return closest_point_check_point
         return None
+    
+    def wait_check_boss(self):
+        in_world_or_battle = self.world.in_world_or_battle()
+        if in_world_or_battle:
+            if not in_world_or_battle["is_battle_state"]:
+                logger.info(f"[_find_box_phase]战斗失败")
+                self.state_data.step = Step.BATTLE_FAIL
+                return
+            if in_world_or_battle["in_battle"] and self.state_data.step == Step.FIGHT_BOSS:
+                logger.info(f"[check_boss]遇敌战斗过")
+                if  self.state_data.step == Step.FIGHT_BOSS:
+                    logger.info(f"[check_boss]boss战斗")
+                    self.state_data.step = Step.FINISH
+                    return 'in_world_fight_boss'
+                else:
+                    logger.info(f"[check_boss]小怪战斗")
+                    return  'in_world_fight_monster'
+        return 'in_world'
 
     def check_info(self,shared: Dict[str, Any], stop_event: threading.Event, lock: Optional[threading.Lock] = None):
         try:
@@ -399,17 +429,14 @@ class FengmoMode:
             ocr_handler: OCRHandler = OCRHandler(device_manager)
             while not stop_event.is_set():
                 time.sleep(check_interval)
-                if state_data.step not in [Step.COLLECT_JUNK,Step.FIND_BOX,Step.FIGHT_BOSS]:
+                if state_data.step not in [Step.COLLECT_JUNK,Step.FIND_BOX,Step.FIND_BOSS,Step.FIGHT_BOSS]:
                     continue
                 screenshot = device_manager.get_cache_screenshot()
-                region = (0, 0, 1280, 720)
+                region = (80, 0, 1280, 720)
                 results = ocr_handler.recognize_text(region=region,image=screenshot)
+                in_mini_map = self.world.in_minimap(screenshot)
                 find_text = None
                 for r in results:
-                    if "战斗结算" in r['text']:
-                        find_text = "battle_end"
-                        self.world.click_tirm(6)
-                        break
                     if "获得道具" in r['text']:
                         find_text = "found_treasure"
                         break
@@ -420,10 +447,24 @@ class FengmoMode:
                     if "完全恢复了" in r['text']:
                         find_text = "found_cure"
                         break
-                    if "逢魔之主" in r['text']:
-                        state_data.step = Step.FIGHT_BOSS
+                    if "逢魔之主已在区域某处出现" in r['text']:
+                        state_data.step = Step.FIND_BOSS
                         find_text = "found_boss"
+                        break
+                    if "已发现逢魔之主" in r['text']:
+                        state_data.step = Step.FIGHT_BOSS
                         ocr_handler.match_click_text(["是"],region=region,image=screenshot)
+                        break
+                    if "提示" in r['text']:
+                        if in_mini_map:
+                            break
+                        ocr_handler.match_click_text(["是"],region=region,image=screenshot)
+                        logger.info("[check_info]提示，确认")
+                        break
+                    # 战斗中的信息判断
+                    if "战斗结算" in r['text']:
+                        find_text = "battle_end"
+                        self.world.click_tirm(6)
                         break
                     if "全灭" in r['text']:
                         ocr_handler.match_click_text(["是"],region=region,image=screenshot)
@@ -446,10 +487,6 @@ class FengmoMode:
                         state_data.step = Step.BATTLE_FAIL
                         find_text = "battle_fail"
                         break
-                    if "提示" in r['text']:
-                        ocr_handler.match_click_text(["是"],region=region,image=screenshot)
-                        logger.info("[check_info]提示，确认")
-                        break
                 if find_text:
                     logger.info(f"[check_info]找到文本: {find_text}")
                     ocr_handler.match_click_text(["确定"],region=region,image=screenshot)
@@ -467,15 +504,6 @@ class FengmoMode:
     
     def wait_map(self):
         time.sleep(self.wait_map_time)
-
-    def exit_battle(self):
-        """
-        退出战斗，调用Battle模块接口。
-        """
-        self.battle.exit_battle()
-    
-    def exit_fengmo(self,exit_pos:list[int], interval=1.0, max_retry=30):
-        raise Exception("[exit_fengmo]退出逢魔失败")
         
     def find_closest_point(self, target: list[int] | tuple[int, int], points: list[CheckPoint]) -> Optional[CheckPoint]:
         """

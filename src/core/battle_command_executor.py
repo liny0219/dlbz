@@ -41,6 +41,8 @@ class BattleCommandExecutor:
             "Click":       ["x", "y"],
             "Switch":      [],
             "Boost":       [],
+            "CheckDead":   [],
+            "NoCheckDead": [],
             # 其它指令可按需扩展
         }
 
@@ -91,21 +93,31 @@ class BattleCommandExecutor:
         顺序执行所有指令，遇到异常自动记录并继续
         """
         for idx, cmd in enumerate(self.commands):
+            check_dead_cmd = None
             try:
                 self.logger.info(f"执行第{idx+1}条指令: {cmd}")
                 result = self.execute_command(cmd)
-                if cmd.get('type') == 'CheckDead' and result and not self.battle.wait_done(lambda screenshot: self.world.in_world(screenshot)):
-                    self.logger.info(f"检测到角色死亡,战斗结束")
+                if not result:
+                    self.logger.info(f"指令执行异常:{cmd}")
                     self.battle.exit_battle()
-                    return
-                if cmd.get('type') == 'Attack' and self.battle.wait_done(lambda screenshot: self.world.in_world(screenshot)):
-                    self.logger.info(f"战斗结束")
-                    return
-                if cmd.get('type') == 'BattleEnd' and not self.battle.wait_done(lambda screenshot: self.world.in_world(screenshot)):
-                    self.logger.info(f"战斗结束")
-                    return
+                    return False
+                if cmd.get('type') == 'NoCheckDead':
+                    self.logger.info(f"取消队友阵亡检查:{cmd}")
+                    check_dead_cmd = None
+                if cmd.get('type') == 'CheckDead':
+                    self.logger.info(f"开启队友阵亡检查:{cmd}")
+                    check_dead_cmd = cmd
+                if cmd.get('type') == 'Attack':
+                    result = self.battle.wait_done(lambda screenshot: "in_world" if self.world.in_world(screenshot) else None)
+                    if result in ['wait_done_timeout', 'exception']:
+                        self.logger.info(f"回合异常:{cmd}{result}")
+                        return False
+                    if check_dead_cmd and self.battle.check_dead(cmd.get('params', {})['role_id']):
+                        self.logger.info(f"检查到队友阵亡:{cmd}")
+                        return False
             except Exception as e:
                 self.logger.error(f"执行指令失败: {cmd}, 错误: {e}")
+        return True
 
     def execute_command(self, cmd: Dict[str, Any]):
         """
@@ -116,42 +128,42 @@ class BattleCommandExecutor:
         params = cmd.get('params', {})
         if not cmd_type:
             self.logger.warning(f"指令缺少 type 字段: {cmd}")
-            return
+            return False
         # 指令类型与 Battle 方法映射（全部加 cmd_ 前缀）
         if cmd_type == "Role":
-            self.battle.cmd_role(**params)
+            return self.battle.cmd_role(**params)
         elif cmd_type == "XRole":
-            self.battle.cmd_xrole(**params)
+            return self.battle.cmd_xrole(**params)
         elif cmd_type == "Boost":
-            self.battle.cmd_boost(**params)
+            return self.battle.cmd_boost(**params)
         elif cmd_type == "Attack":
-            self.battle.cmd_attack(**params)
+            return self.battle.cmd_attack(**params)
         elif cmd_type == "Switch":
-            self.battle.cmd_switch_all(**params)
+            return self.battle.cmd_switch_all(**params)
         elif cmd_type == "SP":
-            self.battle.cmd_sp_skill(**params)
+            return self.battle.cmd_sp_skill(**params)
         elif cmd_type == "XSP":
-            self.battle.cmd_xsp_skill(**params)
+            return self.battle.cmd_xsp_skill(**params)
         elif cmd_type == "EX":
-            self.battle.cmd_ex(**params)
+            return self.battle.cmd_ex(**params)
         elif cmd_type == "XEX":
-            self.battle.cmd_xex(**params)
+            return self.battle.cmd_xex(**params)
         elif cmd_type == "Pet":
-            self.battle.cmd_pet(**params)
+            return self.battle.cmd_pet(**params)
         elif cmd_type == "XPet":
-            self.battle.cmd_xpet(**params)
+            return self.battle.cmd_xpet(**params)
         elif cmd_type == "Wait":
-            self.battle.cmd_wait(**params)
+            return self.battle.cmd_wait(**params)
         elif cmd_type == "Skip":
-            self.battle.cmd_skip(**params)
+            return self.battle.cmd_skip(**params)
         elif cmd_type == "Click":
-            self.battle.cmd_click(**params)
+            return self.battle.cmd_click(**params)
         elif cmd_type == "BattleStart":
-            self.battle.cmd_battle_start(**params)
+            return self.battle.cmd_battle_start(**params)
         elif cmd_type == "BattleEnd":
-            self.battle.cmd_battle_end(**params)
+            return self.battle.cmd_battle_end(**params)
         elif cmd_type == "CheckDead":
-            self.battle.cmd_check_dead(**params)
+            return self.battle.cmd_check_dead(**params)
         else:
             self.logger.warning(f"未知指令类型: {cmd_type}")
 
