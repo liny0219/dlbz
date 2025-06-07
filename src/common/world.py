@@ -274,7 +274,6 @@ class World:
         点击跳过按钮，count次
         """
         for _ in range(count):
-            logger.debug("点击跳过按钮")
             self.device_manager.click(1100,680)
             time.sleep(interval)
         
@@ -550,8 +549,8 @@ class World:
         loadConfig = self.battle_executor.load_commands_from_txt(self.default_battle_config)
         if not loadConfig:
             logger.info("没有默认战斗配置,使用委托战斗")
-            result = self.battle.auto_battle()
-            return { "type": "auto_battle", "success": result}
+            self.battle.auto_battle()
+            return { "type": "auto_battle", "success": True}
         else:
             logger.info("使用默认战斗配置")
             result = self.battle_executor.execute_all()
@@ -608,3 +607,12 @@ class World:
             if count >= max_count:
                 return None
 
+    def run_left(self):
+        device = self.device_manager.device
+        if device:
+            device.swipe(640, 350, 590, 350, 0.05)
+
+    def run_right(self):
+        device = self.device_manager.device
+        if device:
+            device.swipe(640, 350, 690, 350, 0.05)

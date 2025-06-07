@@ -10,6 +10,7 @@ import traceback
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
 from modes.fengmo import FengmoMode
+from modes.farming import FarmingMode
 from utils.mark_coord import mark_coord
 from utils.logger import setup_logger
 from gui.monster_editor import MonsterEditor
@@ -72,29 +73,31 @@ class MainWindow(tk.Tk):
     def _build_main_frame(self):
         self.main_frame = ttk.Frame(self)
         # 顶部按钮区
-        self.start_btn = ttk.Button(self.main_frame, text="开始玩法", command=self.on_start)
+        self.start_btn = ttk.Button(self.main_frame, text="开始逢魔", command=self.on_start)
         self.start_btn.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+        self.farming_btn = ttk.Button(self.main_frame, text="自动刷野", command=self.on_start_farming)
+        self.farming_btn.grid(row=0, column=1, padx=10, pady=10, sticky="w")
         self.stop_btn = ttk.Button(self.main_frame, text="停止玩法", command=self.on_stop, state=tk.DISABLED)
-        self.stop_btn.grid(row=0, column=1, padx=10, pady=10, sticky="w")
+        self.stop_btn.grid(row=0, column=2, padx=10, pady=10, sticky="w")
         self.coord_btn = ttk.Button(self.main_frame, text="标记坐标", command=self.on_mark_coord)
-        self.coord_btn.grid(row=0, column=2, padx=10, pady=10, sticky="w")
+        self.coord_btn.grid(row=0, column=3, padx=10, pady=10, sticky="w")
         self.status_label = ttk.Label(self.main_frame, text="状态: 等待启动")
-        self.status_label.grid(row=0, column=3, padx=10, pady=10, sticky="w")
-        ttk.Label(self.main_frame, text="日志级别:").grid(row=0, column=4, padx=5, sticky="e")
+        self.status_label.grid(row=0, column=4, padx=10, pady=10, sticky="w")
+        ttk.Label(self.main_frame, text="日志级别:").grid(row=0, column=5, padx=5, sticky="e")
         self.loglevel_combo = ttk.Combobox(self.main_frame, textvariable=self.log_level_var, values=LOG_LEVELS, width=10, state="readonly")
-        self.loglevel_combo.grid(row=0, column=5, padx=5, sticky="e")
+        self.loglevel_combo.grid(row=0, column=6, padx=5, sticky="e")
         # 玩法统计区块
         self.report_frame = ttk.LabelFrame(self.main_frame, text="玩法统计", padding=(5, 5))
-        self.report_frame.grid(row=1, column=0, columnspan=5, padx=10, pady=5, sticky="nsew")
+        self.report_frame.grid(row=1, column=0, columnspan=7, padx=10, pady=5, sticky="nsew")
         self.report_text = tk.Text(self.report_frame, height=7, width=120, state='disabled', font=("Consolas", 11))
         self.report_text.pack(fill=tk.BOTH, expand=True)
         # 日志区块
         self.log_text = scrolledtext.ScrolledText(self.main_frame, width=120, height=20, state='disabled', font=("Consolas", 10))
-        self.log_text.grid(row=2, column=0, columnspan=5, padx=10, pady=5, sticky="nsew")
+        self.log_text.grid(row=2, column=0, columnspan=7, padx=10, pady=5, sticky="nsew")
         # 拉伸自适应
         self.main_frame.rowconfigure(1, weight=0)  # 统计区块高度固定
         self.main_frame.rowconfigure(2, weight=1)  # 日志区块随窗体拉伸
-        for i in range(5):
+        for i in range(7):
             self.main_frame.columnconfigure(i, weight=1)
 
     def _build_settings_frame(self, config_files):
@@ -235,15 +238,36 @@ class MainWindow(tk.Tk):
             messagebox.showinfo("提示", "玩法已在运行中！")
             return
         self.start_btn.config(state=tk.DISABLED)
+        self.farming_btn.config(state=tk.DISABLED)
         self.stop_btn.config(state=tk.NORMAL)
         self.status_label.config(text="状态: 正在初始化...")
-        self.append_log("玩法进程启动中...")
+        self.append_log("逢魔玩法进程启动中...")
         self.update_report_data("")
         self.log_queue = multiprocessing.Queue()
         log_level = self.log_level_var.get()  # 获取最新日志级别
         self.fengmo_process = multiprocessing.Process(target=run_fengmo_main, args=(self.log_queue, log_level))
         self.fengmo_process.start()
-        self.status_label.config(text="状态: 玩法运行中... (点击停止可终止)")
+        self.status_label.config(text="状态: 逢魔玩法运行中... (点击停止可终止)")
+        self.after(100, self.poll_log_queue)
+
+    def on_start_farming(self):
+        """
+        启动刷野玩法
+        """
+        if self.fengmo_process and self.fengmo_process.is_alive():
+            messagebox.showinfo("提示", "玩法已在运行中！")
+            return
+        self.start_btn.config(state=tk.DISABLED)
+        self.farming_btn.config(state=tk.DISABLED)
+        self.stop_btn.config(state=tk.NORMAL)
+        self.status_label.config(text="状态: 正在初始化...")
+        self.append_log("刷野玩法进程启动中...")
+        self.update_report_data("")
+        self.log_queue = multiprocessing.Queue()
+        log_level = self.log_level_var.get()  # 获取最新日志级别
+        self.fengmo_process = multiprocessing.Process(target=run_farming_main, args=(self.log_queue, log_level))
+        self.fengmo_process.start()
+        self.status_label.config(text="状态: 刷野玩法运行中... (点击停止可终止)")
         self.after(100, self.poll_log_queue)
 
     def poll_log_queue(self):
@@ -270,12 +294,14 @@ class MainWindow(tk.Tk):
             self.fengmo_process.join()
             self.status_label.config(text="状态: 已停止")
             self.start_btn.config(state=tk.NORMAL)
+            self.farming_btn.config(state=tk.NORMAL)
             self.stop_btn.config(state=tk.DISABLED)
             self.logger.info("玩法进程已终止")
             self.append_log("玩法进程已终止")
         else:
             self.status_label.config(text="状态: 未运行")
             self.start_btn.config(state=tk.NORMAL)
+            self.farming_btn.config(state=tk.NORMAL)
             self.stop_btn.config(state=tk.DISABLED)
             self.append_log("玩法进程未运行")
 
@@ -422,23 +448,7 @@ def run_fengmo_main(log_queue, log_level):
         logger.info("Initializing OCR handler...")
         ocr_handler = OCRHandler(device_manager)
         logger.info("启动逢魔玩法模块 FengmoMode ...")
-        fengmo_mode = FengmoMode(device_manager, ocr_handler)
-        # monkeypatch report_data: 发送统计到主进程
-        def report_data_patch(self):
-            lines = [
-                f"当前轮数: {self.turn_count}",
-                f"当前轮次用时: {self.turn_time}分钟",
-                f"当前成功次数: {self.total_finished_count}",
-                f"当前成功用时: {self.total_finished_time}分钟",
-                f"当前失败次数: {self.total_fail_count}",
-                f"当前成功平均用时: {self.avg_finished_time}分钟",
-                f"当前失败平均用时: {self.avg_fail_time}分钟",
-            ]
-            report_str = '\n'.join(lines)
-            log_queue.put("REPORT_DATA__" + report_str)
-            logger.info("[report_data]" + report_str.replace("\n", " | "))
-        from modes.fengmo import StateData
-        StateData.report_data = report_data_patch
+        fengmo_mode = FengmoMode(device_manager, ocr_handler, log_queue)
         fengmo_mode.run()
     except Exception as e:
         import traceback
@@ -446,5 +456,71 @@ def run_fengmo_main(log_queue, log_level):
         try:
             if log_queue:
                 log_queue.put(f"[子进程异常] {e}\n{tb}")
+        except Exception as ee:
+            print(f"日志队列异常: {ee}\n{traceback.format_exc()}")
+
+def run_farming_main(log_queue, log_level):
+    """
+    刷野玩法主函数，在子进程中运行
+    负责初始化设备管理器、OCR处理器和刷野模式，并启动刷野主循环
+    
+    :param log_queue: 日志队列，用于向主进程发送日志消息
+    :param log_level: 日志级别
+    """
+    import logging
+    from common.config import config
+    fix_stdio_if_none()
+    
+    # 配置日志系统
+    root_logger = logging.getLogger()
+    for h in root_logger.handlers[:]:
+        root_logger.removeHandler(h)
+    
+    handler = QueueLogHandler(log_queue)
+    handler.setLevel(logging.NOTSET)
+    
+    log_format, datefmt = config.get_logging_format_and_datefmt(config.logging.format, getattr(config.logging, 'datefmt', None))
+    formatter = config.get_no_millisec_formatter(log_format, datefmt)
+    handler.setFormatter(formatter)
+    
+    level = getattr(logging, str(log_level).upper(), logging.INFO)
+    root_logger.setLevel(level)
+    root_logger.addHandler(handler)
+    
+    logger = logging.getLogger("dldbz")
+    logger.setLevel(level)
+    logger.handlers.clear()
+    logger.propagate = True
+    
+    try:
+        logger.info(f"[刷野子进程] 日志级别: {log_level}")
+        logger.info("刷野子进程已启动，等待业务执行...")
+        
+        # 初始化设备管理器
+        logger.info("初始化设备管理器...")
+        device_manager = DeviceManager()
+        if not device_manager.connect_device():
+            logger.error("设备连接失败")
+            if log_queue:
+                log_queue.put("设备连接失败")
+            return
+        
+        # 初始化OCR处理器
+        logger.info("初始化OCR处理器...")
+        ocr_handler = OCRHandler(device_manager)
+        
+        # 启动刷野模式
+        logger.info("启动刷野玩法模块 FarmingMode ...")
+        farming_mode = FarmingMode(device_manager, ocr_handler, log_queue)
+        
+        # 运行刷野模式
+        farming_mode.run()
+        
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        try:
+            if log_queue:
+                log_queue.put(f"[刷野子进程异常] {e}\n{tb}")
         except Exception as ee:
             print(f"日志队列异常: {ee}\n{traceback.format_exc()}") 

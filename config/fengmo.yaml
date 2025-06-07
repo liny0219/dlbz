@@ -1,5 +1,5 @@
 city: newdelsta
-depth: 3
+depth: 1
 find_point_wait_time: '3'
 rest_in_inn: true
 vip_cure: true

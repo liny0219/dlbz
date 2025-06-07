@@ -98,17 +98,19 @@ class FengmoMode:
     依赖设备管理、OCR识别、世界与战斗模块。
     """
 
-    def __init__(self, device_manager: DeviceManager, ocr_handler: OCRHandler) -> None:
+    def __init__(self, device_manager: DeviceManager, ocr_handler: OCRHandler, log_queue=None) -> None:
         """
         初始化逢魔模式
         :param device_manager: 设备管理器，负责点击、操作等
         :param ocr_handler: OCR识别处理器
+        :param log_queue: 日志队列，用于发送统计数据到主进程
         """
         self.device_manager = device_manager
         self.ocr_handler = ocr_handler
         self.app_manager = AppManager(device_manager)
         self.battle = Battle(device_manager, ocr_handler, self.app_manager)
         self.world = World(device_manager, ocr_handler, self.battle, self.app_manager)
+        self.log_queue = log_queue  # 添加日志队列属性
         self.fengmo_config = config.fengmo
         self.city_name = self.fengmo_config.city
         self.depth = self.fengmo_config.depth
@@ -125,6 +127,28 @@ class FengmoMode:
         self.find_point_wait_time = getattr(self.fengmo_config, 'find_point_wait_time', 2)
         self.wait_map_time = getattr(self.fengmo_config, 'wait_map_time', 0.5)
         self.state_data = StateData()
+
+    def report_data(self):
+        """发送统计数据到主进程GUI"""
+        self.state_data.report_data()  # 保持原有的日志输出
+        
+        # 如果有日志队列，发送统计数据到主进程
+        if self.log_queue is not None:
+            lines = [
+                f"逢魔玩法统计",
+                f"当前轮数: {self.state_data.turn_count}",
+                f"当前轮次用时: {self.state_data.turn_time}分钟",
+                f"当前成功次数: {self.state_data.total_finished_count}",
+                f"当前失败次数: {self.state_data.total_fail_count}",
+                f"当前成功用时: {self.state_data.total_finished_time}分钟",
+                f"当前成功平均用时: {self.state_data.avg_finished_time}分钟",
+                f"当前失败平均用时: {self.state_data.avg_fail_time}分钟",
+            ]
+            report_str = '\n'.join(lines)
+            try:
+                self.log_queue.put("REPORT_DATA__" + report_str)
+            except Exception as e:
+                logger.warning(f"发送统计数据失败: {e}")
 
     def run(self) -> None:
         """
@@ -156,7 +180,7 @@ class FengmoMode:
             self.world.set_monsters(monsters)
         self.state_data.step = Step.UN_START
         while True:
-            self.state_data.report_data()
+            self.report_data()
             if self.rest_in_inn:
                 logger.info("[run]休息检查")
                 result = self.world.rest_in_inn(self.inn_pos,self.vip_cure)
@@ -194,7 +218,9 @@ class FengmoMode:
         - 可能因状态变化提前 return，或因异常抛出。
         """
         while True:
-            for check_point in self.check_points:
+            point_index = 0
+            while point_index < len(self.check_points):
+                check_point = self.check_points[point_index]
                 next_point = False
                 reset_map = False
                 next_tag = False
@@ -209,6 +235,11 @@ class FengmoMode:
                             logger.info(f"[collect_junk_phase]在城镇中")
                         if in_world_or_battle["in_battle"]:
                             logger.info(f"[collect_junk_phase]遇敌战斗过")
+                        if in_world_or_battle["in_battle"]:
+                            # 如果遇到战斗,返回上一个检查点继续检查
+                            if point_index > 0:
+                                point_index -= 1
+                            next_point = True  # 设置为True跳出内层循环
                         if not in_world_or_battle["is_battle_state"]:
                             logger.info(f"[collect_junk_phase]战斗失败")
                             self.state_data.step = Step.BATTLE_FAIL
@@ -256,6 +287,10 @@ class FengmoMode:
                     reset_map = check_point.reset_map
                     next_point = check_point.next_point
                     next_tag = True
+                
+                # 如果next_point为True，则处理下一个检查点
+                if next_point:
+                    point_index += 1
 
     def _find_box_phase(self) -> None:
         """
@@ -333,11 +368,13 @@ class FengmoMode:
         进入逢魔地图，打开小地图，查找Boss点并点击，等待Boss点确认，进入战斗。
         边界处理：如Boss点未找到、地图未进入等，抛出异常。
         """
-        logger.info(f"[find_boss_phase]打开小地图")
+        first_loop = True
         while True:
-            if self.wait_check_boss() == 'in_world_fight_boss':
-                return
-            self.wait_map()
+            if first_loop:
+                first_loop = False
+                if self.wait_check_boss() == 'in_world_fight_boss':
+                    return
+                self.wait_map()
             logger.info(f"[find_boss_phase]打开小地图")
             self.world.open_minimap()
             in_minimap = sleep_until(self.world.in_minimap,timeout=5)
@@ -364,18 +401,20 @@ class FengmoMode:
                 logger.info(f"[find_boss_phase]查找Boss逢魔点: {point_pos}")
                 if point_pos is None:
                     logger.info(f"[find_boss_phase]找不到boss感叹号,点击配置的点位")
-                    for item_pos in self.state_data.current_point.item_pos:
-                        logger.info(f"[find_boss_phase]点击预设的坐标: {item_pos.pos}")
-                        self.device_manager.click(item_pos.pos[0],item_pos.pos[1])
-                    self.wait_map()
-                    if sleep_until(lambda: not self.world.in_world(),timeout=5,function_name="[find_boss_phase]点击预设坐标,not in world"):
-                        break
+                    item_pops = self.state_data.current_point.item_pos
+                    for item in item_pops:
+                        logger.info(f"[find_boss_phase]点击预设的坐标: {item.pos}")
+                        self.device_manager.click(item.pos[0],item.pos[1])
                 else:
                     logger.info(f"[find_boss_phase]点击Boss逢魔点: {point_pos}")
                     self.device_manager.click(*point_pos[:2])
                 self.wait_map()
-                if self.wait_check_boss()=='in_world_fight_boss':
+                result = self.wait_check_boss()
+                if result == 'in_world':
+                    break
+                if result == 'in_world_fight_boss':
                     return
+                    
 
     def find_map_tag(self):
         screenshot = self.device_manager.get_screenshot()
@@ -417,7 +456,7 @@ class FengmoMode:
                     return 'in_world_fight_boss'
                 else:
                     logger.info(f"[check_boss]小怪战斗")
-                    return  'in_world_fight_monster'
+                    return 'in_world_fight_monster'
         return 'in_world'
 
     def check_info(self,shared: Dict[str, Any], stop_event: threading.Event, lock: Optional[threading.Lock] = None):
