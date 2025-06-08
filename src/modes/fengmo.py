@@ -372,7 +372,8 @@ class FengmoMode:
         while True:
             if first_loop:
                 first_loop = False
-                if self.wait_check_boss() == 'in_world_fight_boss':
+                result = self.wait_check_boss()
+                if result == 'in_world_battle_fail' or result == 'in_world_fight_boss':
                     return
                 self.wait_map()
             logger.info(f"[find_boss_phase]打开小地图")
@@ -394,10 +395,12 @@ class FengmoMode:
             logger.info(f"[find_boss_phase]点击小地图最近Boss的点: {check_point.pos}")
             self.device_manager.click(*check_point.pos)
             self.wait_map()
-            if self.wait_check_boss() == 'in_world_fight_boss':
+            result = self.wait_check_boss()
+            if result == 'in_world_battle_fail' or result == 'in_world_fight_boss':
                 return
             while True:
-                point_pos = sleep_until(lambda: self.world.find_fengmo_point(current_point=check_point), self.find_point_wait_time)
+                point_pos = sleep_until(lambda: self.world.find_fengmo_point(current_point=check_point),
+                                         self.find_point_wait_time,function_name="find_fengmo_point")
                 logger.info(f"[find_boss_phase]查找Boss逢魔点: {point_pos}")
                 if point_pos is None:
                     logger.info(f"[find_boss_phase]找不到boss感叹号,点击配置的点位")
@@ -412,7 +415,7 @@ class FengmoMode:
                 result = self.wait_check_boss()
                 if result == 'in_world':
                     break
-                if result == 'in_world_fight_boss':
+                if result == 'in_world_fight_boss' or result == 'in_world_battle_fail':
                     return
                     
 
@@ -445,9 +448,9 @@ class FengmoMode:
         in_world_or_battle = self.world.in_world_or_battle()
         if in_world_or_battle:
             if not in_world_or_battle["is_battle_state"]:
-                logger.info(f"[_find_box_phase]战斗失败")
+                logger.info(f"[find_boss_phase]战斗失败")
                 self.state_data.step = Step.BATTLE_FAIL
-                return
+                return 'in_world_battle_fail'
             if in_world_or_battle["in_battle"] and self.state_data.step == Step.FIGHT_BOSS:
                 logger.info(f"[check_boss]遇敌战斗过")
                 if  self.state_data.step == Step.FIGHT_BOSS:
