@@ -1,7 +1,13 @@
+v1.1.4
+feature: 优化自动委托战斗逻辑
+feature: 支持自定义战斗设置多回合容错序列
+feature: 增加本地日志记录功能,保存在logs目录,超过10mb自动清理
+
 v1.1.3
 feature: 增加挂机刷野功能
 bugfix: 修复逢魔开小怪逻辑异常
 bugfix: 修复逢魔委托状态判断异常
+
 v1.1.2
 feature: 增加自定义战斗超时退出功能
 feature: 优化部分判断逻辑

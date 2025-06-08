@@ -98,9 +98,16 @@ class BattleCommandExecutor:
                 self.logger.info(f"执行第{idx+1}条指令: {cmd}")
                 result = self.execute_command(cmd)
                 if not result:
-                    self.logger.info(f"指令执行异常:{cmd}")
-                    self.battle.exit_battle()
-                    return False
+                    self.battle.reset_round()
+                    result = self.battle.wait_in_round_or_world(lambda screenshot:
+                                                    "in_world" if self.world.in_world(screenshot) else None, timeout=30)
+                    if result in ['in_round']:
+                        self.logger.info(f"指令执行异常:{cmd}")
+                        self.battle.exit_battle()
+                        return False
+                    if result in ['in_world']:
+                        self.logger.info(f"指令执行异常:{cmd}{result}.但是进入世界,默认为战斗提前结束")
+                        return True
                 if cmd.get('type') == 'NoCheckDead':
                     self.logger.info(f"取消队友阵亡检查:{cmd}")
                     check_dead_cmd = None

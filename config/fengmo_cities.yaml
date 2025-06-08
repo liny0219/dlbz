@@ -130,7 +130,7 @@ cities:
     - 645
     - 573
     monsters:
-    - battle_config: ''
+    - battle_config: D:/dldbz/config/battle_scripts/1.txt
       name: 逢魔精英怪
       points:
       - - 292
@@ -149,7 +149,7 @@ cities:
         - 447
         - 949E96
         - 6
-    - battle_config: ''
+    - battle_config: D:/dldbz/config/battle_scripts/1.txt
       name: 逢魔Boss
       points:
       - - 402

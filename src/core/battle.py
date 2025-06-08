@@ -264,7 +264,7 @@ class Battle:
             
 
     # ================== 战斗相关方法 ==================
-    def auto_battle(self, timeout:float = 10) -> bool:
+    def auto_battle(self, timeout:float = 20) -> bool:
         """
         自动战斗
         """
@@ -278,16 +278,19 @@ class Battle:
             if time.time() - start_time > timeout:
                 logger.info(f"[battle]auto_battle 超时")
                 return False
-            if self.in_auto_on(screenshot):
-                logger.debug("点击委托战斗开始")
-                self.device_manager.click(1104, 643)
-                return True
-            if not done and self.in_auto_off(screenshot):
-                logger.debug("点击委托")
-                self.device_manager.click(491, 654)
-                done = True
             time.sleep(0.2)
             screenshot = self.device_manager.get_screenshot()
+            if screenshot is None:
+                logger.error("[battle]auto_battle 无法获取截图")
+                return False
+            if self.in_round(screenshot) and self.in_auto_off(screenshot):
+                logger.info("点击委托")
+                self.device_manager.click(491, 654)
+                continue
+            if self.in_auto_on(screenshot):
+                logger.info("点击委托战斗开始")
+                self.device_manager.click(1104, 643)
+                return True
 
     def check_dead(self, role_id: int = 1, timeout:float = 3) -> bool:
         """
@@ -328,6 +331,19 @@ class Battle:
                 if results:
                     return True
             time.sleep(0.2)
+
+    def reset_round(self, timeout:float = 10) -> bool:
+        """
+        重置回合
+        """
+        start_time = time.time()
+        while not self.in_round():
+            if time.time() - start_time > timeout:
+                logger.info(f"[battle]reset_round 超时")
+                return False
+            self.device_manager.click(150,50)
+            time.sleep(0.1)
+        return True
             
     def exit_battle(self, timeout:float = 10) -> bool:
         """
@@ -605,6 +621,27 @@ class Battle:
             if is_done and not self.in_round(screenshot):
                 return True
             time.sleep(self.wait_time)
+    
+    def wait_in_round_or_world(self, callback:Callable[[Image.Image], str|None]|None = None, timeout:float = 5) -> str:
+        """
+        等待回合开始或进入世界
+        """
+        start_time = time.time()
+        while True:
+            if time.time() - start_time > timeout:
+                return 'wait_done_timeout'
+            screenshot = self.device_manager.get_screenshot()
+            if screenshot is None:
+                logger.error("[wait_in_round_or_world] 无法获取截图")
+                return 'exception'
+            if self.in_round(screenshot):
+                return 'in_round'
+            if callback:
+                result = callback(screenshot)
+                if result is not None:
+                    return result
+            time.sleep(self.wait_time)
+            
 
     def wait_done(self, callback:Callable[[Image.Image], str|None]|None = None, timeout:float = 60) -> str:
         """
@@ -621,8 +658,8 @@ class Battle:
                 logger.error("[wait_done] 无法获取截图")
                 return 'exception'
             if self.in_round(screenshot):
-                logger.info("[wait_done] 新的回合中")
-                return 'new_turn'
+                logger.info("[in_round] in_round")
+                return 'in_round'
             if not self.in_battle(screenshot):
                 return 'not_in_battle'
             if callback:

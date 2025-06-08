@@ -237,6 +237,11 @@ class MainWindow(tk.Tk):
         if self.fengmo_process and self.fengmo_process.is_alive():
             messagebox.showinfo("提示", "玩法已在运行中！")
             return
+        
+        # 在启动玩法前检查并清理日志目录
+        from utils.logger import cleanup_logs_dir
+        cleanup_logs_dir()
+        
         self.start_btn.config(state=tk.DISABLED)
         self.farming_btn.config(state=tk.DISABLED)
         self.stop_btn.config(state=tk.NORMAL)
@@ -257,6 +262,11 @@ class MainWindow(tk.Tk):
         if self.fengmo_process and self.fengmo_process.is_alive():
             messagebox.showinfo("提示", "玩法已在运行中！")
             return
+        
+        # 在启动玩法前检查并清理日志目录
+        from utils.logger import cleanup_logs_dir
+        cleanup_logs_dir()
+        
         self.start_btn.config(state=tk.DISABLED)
         self.farming_btn.config(state=tk.DISABLED)
         self.stop_btn.config(state=tk.NORMAL)
@@ -413,23 +423,38 @@ def fix_stdio_if_none():
 def run_fengmo_main(log_queue, log_level):
     import logging
     from common.config import config
+    from utils.logger import get_log_file_path
+    import os
+    import time
     fix_stdio_if_none()
+    
     # 先移除所有 root logger handler，防止默认 handler 的 stream 为 None
     root_logger = logging.getLogger()
     for h in root_logger.handlers[:]:
         root_logger.removeHandler(h)
-    # 配置自定义 handler
-    handler = QueueLogHandler(log_queue)
-    handler.setLevel(logging.NOTSET)
-
+    
     # 读取配置文件的日志格式，并转换，传入datefmt参数
     log_format, datefmt = config.get_logging_format_and_datefmt(config.logging.format, getattr(config.logging, 'datefmt', None))
     formatter = config.get_no_millisec_formatter(log_format, datefmt)
-    handler.setFormatter(formatter)
+    
+    # 配置队列handler（发送到主进程GUI）
+    queue_handler = QueueLogHandler(log_queue)
+    queue_handler.setLevel(logging.NOTSET)
+    queue_handler.setFormatter(formatter)
+    root_logger.addHandler(queue_handler)
+    
+    # 配置文件handler（写入本地日志文件）
+    logs_dir = "logs"
+    os.makedirs(logs_dir, exist_ok=True)
+    log_file_path = get_log_file_path(logs_dir, "fengmo")
+    file_handler = logging.FileHandler(log_file_path, encoding="utf-8")
+    file_handler.setFormatter(formatter)
+    root_logger.addHandler(file_handler)
+    
     # 日志级别
     level = getattr(logging, str(log_level).upper(), logging.INFO)
     root_logger.setLevel(level)
-    root_logger.addHandler(handler)
+    
     # 关键：同步dldbz logger的level和handler
     logger = logging.getLogger("dldbz")
     logger.setLevel(level)
@@ -469,6 +494,9 @@ def run_farming_main(log_queue, log_level):
     """
     import logging
     from common.config import config
+    from utils.logger import get_log_file_path
+    import os
+    import time
     fix_stdio_if_none()
     
     # 配置日志系统
@@ -476,16 +504,26 @@ def run_farming_main(log_queue, log_level):
     for h in root_logger.handlers[:]:
         root_logger.removeHandler(h)
     
-    handler = QueueLogHandler(log_queue)
-    handler.setLevel(logging.NOTSET)
-    
+    # 读取配置文件的日志格式，并转换，传入datefmt参数
     log_format, datefmt = config.get_logging_format_and_datefmt(config.logging.format, getattr(config.logging, 'datefmt', None))
     formatter = config.get_no_millisec_formatter(log_format, datefmt)
-    handler.setFormatter(formatter)
+    
+    # 配置队列handler（发送到主进程GUI）
+    queue_handler = QueueLogHandler(log_queue)
+    queue_handler.setLevel(logging.NOTSET)
+    queue_handler.setFormatter(formatter)
+    root_logger.addHandler(queue_handler)
+    
+    # 配置文件handler（写入本地日志文件）
+    logs_dir = "logs"
+    os.makedirs(logs_dir, exist_ok=True)
+    log_file_path = get_log_file_path(logs_dir, "farming")
+    file_handler = logging.FileHandler(log_file_path, encoding="utf-8")
+    file_handler.setFormatter(formatter)
+    root_logger.addHandler(file_handler)
     
     level = getattr(logging, str(log_level).upper(), logging.INFO)
     root_logger.setLevel(level)
-    root_logger.addHandler(handler)
     
     logger = logging.getLogger("dldbz")
     logger.setLevel(level)
