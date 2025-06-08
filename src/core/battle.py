@@ -537,7 +537,7 @@ class Battle:
                         return True
 
     def cast_skill(self, index: int = 1,skill: int = 1, bp: int = 0, role_id: int = 0,  x: int = 0, y: int = 0,
-                    switch: bool = False, timeout:int = 10) -> bool:
+                    switch: bool = False, timeout:int = 20) -> bool:
         """
         使用技能
         :param index: 角色索引
@@ -622,7 +622,7 @@ class Battle:
                 return True
             time.sleep(self.wait_time)
     
-    def wait_in_round_or_world(self, callback:Callable[[Image.Image], str|None]|None = None, timeout:float = 5) -> str:
+    def wait_in_round_or_world(self, callback:Callable[[Image.Image], str|None]|None = None, timeout:float = 10) -> str:
         """
         等待回合开始或进入世界
         """
@@ -643,7 +643,7 @@ class Battle:
             time.sleep(self.wait_time)
             
 
-    def wait_done(self, callback:Callable[[Image.Image], str|None]|None = None, timeout:float = 60) -> str:
+    def wait_done(self, callback:Callable[[Image.Image], str|None]|None = None, timeout:float = 90) -> str:
         """
         等待战斗结束
         """

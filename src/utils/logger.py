@@ -83,7 +83,7 @@ def get_log_file_path(logs_dir: str = "logs", prefix: str = "main") -> str:
     filename = f"{prefix}_{timestamp}.log"
     return os.path.join(logs_dir, filename)
 
-def setup_logger(append_log_func=None, log_format=None, datefmt=None, cleanup_on_start=True):
+def setup_logger(append_log_func=None, log_format=None, datefmt=None, cleanup_on_start=True, enable_file_log=True):
     """
     配置标准logging日志输出到控制台/文件，并可选注册GUI日志Handler
     
@@ -91,6 +91,7 @@ def setup_logger(append_log_func=None, log_format=None, datefmt=None, cleanup_on
     :param log_format: 日志格式
     :param datefmt: 日期格式
     :param cleanup_on_start: 是否在启动时检查并清理日志目录
+    :param enable_file_log: 是否启用文件日志写入，默认True
     """
     # 在设置日志前先检查并清理日志目录
     if cleanup_on_start:
@@ -114,13 +115,19 @@ def setup_logger(append_log_func=None, log_format=None, datefmt=None, cleanup_on
         handler.setFormatter(formatter)
         logger.addHandler(handler)
     
-    # 文件Handler - 始终写入本地日志文件
-    logs_dir = "logs"
-    os.makedirs(logs_dir, exist_ok=True)
-    log_file_path = get_log_file_path(logs_dir)
-    file_handler = logging.FileHandler(log_file_path, encoding="utf-8")
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+    # 文件Handler - 根据enable_file_log参数决定是否写入本地日志文件
+    if enable_file_log:
+        logs_dir = "logs"
+        os.makedirs(logs_dir, exist_ok=True)
+        log_file_path = get_log_file_path(logs_dir)
+        file_handler = logging.FileHandler(log_file_path, encoding="utf-8")
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        # 记录日志系统启动信息
+        logger.info(f"日志系统已启动，日志文件: {log_file_path}")
+    else:
+        # 不启用文件日志时，仅输出到控制台或GUI
+        log_file_path = None
     
     # 控制台Handler - 只在有stdout时添加
     if sys.stdout is not None:
@@ -134,10 +141,7 @@ def setup_logger(append_log_func=None, log_format=None, datefmt=None, cleanup_on
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logger.propagate = False
     
-    # 记录日志系统启动信息
-    logger.info(f"日志系统已启动，日志文件: {log_file_path}")
-    
     return logger
 
-# 默认logger不带GUI Handler
-logger = setup_logger() 
+# 默认logger不带GUI Handler，也不写入文件日志
+logger = setup_logger(enable_file_log=False) 

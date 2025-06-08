@@ -1,5 +1,6 @@
 - 最近重点：完善PyInstaller打包兼容性，确保loguru等第三方库完整打包，修复日志管道异常。
-- 主进程日志已不再重定向到GUI，仅显示子进程日志。
+- 主进程日志系统已优化：完全禁用文件写入，但确保所有主进程模块（包括设备管理器等）的日志都显示在GUI界面上。
+- 主进程使用双logger配置：MainWindow自身的logger + 重配置的默认logger，两者都有GUI Handler但无文件Handler。
 - 依赖已通过pip freeze自动生成requirements.txt。
 - pyi.spec已手动添加loguru到hiddenimports。
 - 玩法流程、设备管理、OCR、配置管理等模块已稳定，后续可考虑增加更多玩法模式与自动化细节。

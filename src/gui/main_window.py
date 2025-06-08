@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 import yaml
 import os
+import sys
 import multiprocessing
 import logging
 from utils import logger
@@ -35,8 +36,23 @@ class MainWindow(tk.Tk):
         self.geometry("800x600")
         self.minsize(700, 400)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
-        # 通过setup_logger注册GUI日志Handler
-        self.logger = setup_logger(self.append_log)
+        # 通过setup_logger注册GUI日志Handler，禁用主进程文件日志写入
+        self.logger = setup_logger(self.append_log, enable_file_log=False)
+        
+        # 同时配置默认logger，使其也使用GUI Handler（用于其他主进程模块）
+        from utils.logger import logger as default_logger
+        # 清除默认logger的所有handlers
+        default_logger.handlers.clear()
+        # 添加GUI Handler
+        gui_handler = GuiLogHandler(self.append_log)
+        gui_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+        default_logger.addHandler(gui_handler)
+        # 添加控制台Handler（如果有stdout）
+        if sys.stdout is not None:
+            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+            default_logger.addHandler(console_handler)
+        default_logger.setLevel(logging.INFO)
         self.fengmo_process = None
         self.log_queue = None
         self.log_level_var = tk.StringVar(value="INFO")
@@ -229,9 +245,18 @@ class MainWindow(tk.Tk):
     def on_log_level_change(self, event=None):
         """日志级别下拉框变更时，动态设置主进程logger级别，并同步所有Handler"""
         level = self.log_level_var.get().upper()
-        self.logger.setLevel(getattr(logging, level, logging.INFO))
+        log_level = getattr(logging, level, logging.INFO)
+        
+        # 更新主logger
+        self.logger.setLevel(log_level)
         for h in self.logger.handlers:
-            h.setLevel(getattr(logging, level, logging.INFO))
+            h.setLevel(log_level)
+            
+        # 同时更新默认logger（用于其他主进程模块）
+        from utils.logger import logger as default_logger
+        default_logger.setLevel(log_level)
+        for h in default_logger.handlers:
+            h.setLevel(log_level)
 
     def on_start(self):
         if self.fengmo_process and self.fengmo_process.is_alive():

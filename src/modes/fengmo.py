@@ -529,6 +529,10 @@ class FengmoMode:
                         state_data.step = Step.BATTLE_FAIL
                         find_text = "battle_fail"
                         break
+                    if "无法连接网络" in r['text']:
+                        ocr_handler.match_click_text(["重试"],region=region,image=screenshot)
+                        logger.info("网络断连重试")
+                        break
                 if find_text:
                     logger.info(f"[check_info]找到文本: {find_text}")
                     ocr_handler.match_click_text(["确定"],region=region,image=screenshot)
