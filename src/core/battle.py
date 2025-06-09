@@ -290,7 +290,7 @@ class Battle:
                 self.device_manager.click(1104, 643)
                 return True
 
-    def check_dead(self, role_id: int = 1, timeout:float = 1) -> bool:
+    def check_dead(self, role_id: int = 0, timeout:float = 1) -> bool:
         """
         判断当前是否死亡。
         :param image: 可选，外部传入截图
@@ -300,7 +300,7 @@ class Battle:
         start_time = time.time()
         while True:
             if time.time() - start_time > timeout:
-                logger.info(f"[battle]check_dead超时")
+                logger.info(f"[battle]check_dead没有检查到阵亡")
                 return False
             image = self.device_manager.get_screenshot()
             if image is None:
@@ -321,7 +321,7 @@ class Battle:
                 # 任意角色死亡判断
                 results = False
                 for idx, point in enumerate(points_colors):
-                    if self.ocr_handler.match_point_color(image, [point]):
+                    if self.ocr_handler.match_point_color(image, [point],ambiguity=1):
                         logger.info(f"[battle]检测到角色死亡:角色{idx+1}")
                         return True
             else:
@@ -337,7 +337,7 @@ class Battle:
         重置回合
         """
         start_time = time.time()
-        while not self.in_round():
+        while not self.in_round() and self.in_battle():
             if time.time() - start_time > timeout:
                 logger.info(f"[battle]reset_round 超时")
                 return False
