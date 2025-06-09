@@ -1,5 +1,4 @@
 from __future__ import annotations
-import yaml
 import logging
 from typing import List, Dict, Any
 from core.battle import Battle
@@ -92,10 +91,13 @@ class BattleCommandExecutor:
         """
         顺序执行所有指令，遇到异常自动记录并继续
         """
+        check_dead_cmd = None
         for idx, cmd in enumerate(self.commands):
-            check_dead_cmd = None
             try:
                 self.logger.info(f"执行第{idx+1}条指令: {cmd}")
+                if cmd.get('type') == 'CheckDead':
+                    self.logger.info(f"开启队友阵亡检查:{cmd}")
+                    check_dead_cmd = cmd
                 result = self.execute_command(cmd)
                 if not result:
                     self.battle.reset_round()
@@ -111,17 +113,16 @@ class BattleCommandExecutor:
                 if cmd.get('type') == 'NoCheckDead':
                     self.logger.info(f"取消队友阵亡检查:{cmd}")
                     check_dead_cmd = None
-                if cmd.get('type') == 'CheckDead':
-                    self.logger.info(f"开启队友阵亡检查:{cmd}")
-                    check_dead_cmd = cmd
                 if cmd.get('type') == 'Attack':
                     result = self.battle.wait_done(lambda screenshot: "in_world" if self.world.in_world(screenshot) else None)
                     if result in ['wait_done_timeout', 'exception']:
                         self.logger.info(f"回合异常:{cmd}{result}")
                         return False
-                    if check_dead_cmd and self.battle.check_dead(cmd.get('params', {})['role_id']):
+                    if result == 'in_round' and check_dead_cmd and self.battle.check_dead(cmd.get('params', {}).get('role_id', 0)):
                         self.logger.info(f"检查到队友阵亡:{cmd}")
-                        return False
+                        self.battle.reset_round()
+                        self.battle.exit_battle()
+                        return True
             except Exception as e:
                 self.logger.error(f"执行指令失败: {cmd}, 错误: {e}")
         return True
@@ -170,7 +171,7 @@ class BattleCommandExecutor:
         elif cmd_type == "BattleEnd":
             return self.battle.cmd_battle_end(**params)
         elif cmd_type == "CheckDead":
-            return self.battle.cmd_check_dead(**params)
+            return not self.battle.cmd_check_dead(**params)
         else:
             self.logger.warning(f"未知指令类型: {cmd_type}")
 

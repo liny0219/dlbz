@@ -1,34 +1,18 @@
 BattleStart
+CheckDead
 #第1回合
-Role,2,1,3
-Boost
 Attack
 
 #第2回合
-Switch
-Boost
 Attack
 
 #第3回合
-Switch
-XRole,1,1,3
-SP,2
-XRole,3,2,3
-Role,4,1,3
 Attack
 
 #第4回合
-XRole,1,2,0
-XRole,2,1,0
-XRole,3,2,0
-XRole,4,2,0
 Boost
 Attack
 
 #第5回合
-SP,1
-SP,2
-SP,3
-SP,4
 Attack
 BattleEnd 

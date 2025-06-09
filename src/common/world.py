@@ -494,7 +494,7 @@ class World:
             else:
                 logger.debug("[in_world_or_battle]没检查出来")  
                 return None
-        check_battle_command = False
+        check_battle_command_done = False
         is_battle_success = True
         has_battle = False
         while True:
@@ -507,7 +507,7 @@ class World:
                 if not check_battle:
                     continue
                 has_battle = True
-                if check_battle and not check_battle_command and self.battle.in_round():
+                if check_battle and not check_battle_command_done and self.battle.in_round():
                     logger.info("执行战斗场景")
                     monster = self.find_enemy(self.monsters)
                     if monster is None:
@@ -537,7 +537,9 @@ class World:
                         else:
                             logger.info("使用匹配敌人的战斗配置")
                             is_battle_success = self.battle_executor.execute_all()
-                    check_battle_command = True
+                    check_battle_command_done = True
+                if check_battle_command_done and self.battle.in_round():
+                    self.battle.auto_battle()
             else:
                 logger.debug("异常")
                 return None
@@ -583,12 +585,15 @@ class World:
                 closest = pt
         return closest
     # 识别敌人
-    def find_enemy(self, monsters:list[Monster],max_count:int=25, interval:float= 0.2 ) -> Monster | None:
+    def find_enemy(self, monsters:list[Monster], timeout:float=2.0 ) -> Monster | None:
         """
         识别敌人
         """
-        count = 0
+        start_time = time.time()
         while True:
+            if time.time() - start_time > timeout:
+                logger.info(f"超时{timeout}秒,没有识别到敌人")
+                return None
             screenshot = self.device_manager.get_screenshot()
             if screenshot is None:
                 return None
@@ -602,10 +607,7 @@ class World:
                 if self.ocr_handler.match_point_color(screenshot, monster.points,ambiguity=0.9):
                     logger.info(f"识别到敌人: {monster.name}")
                     return monster
-            count += 1
-            time.sleep(interval)
-            if count >= max_count:
-                return None
+            time.sleep(0.1)
 
     def run_left(self):
         device = self.device_manager.device
