@@ -72,9 +72,14 @@ class NoMillisecFormatter(logging.Formatter):
         return s
 
 class BattleConfig(BaseModel):
-    wait_time: float = 0.1
-    wait_drag_time: float = 0.4
-    wait_ui_time: float = 0.2
+    """
+    战斗配置类
+    管理战斗相关的时间参数和行为设置
+    """
+    wait_time: float = 0.1  # 基础等待时间
+    wait_drag_time: float = 0.4  # 拖拽操作等待时间
+    wait_ui_time: float = 0.2  # UI响应等待时间
+    battle_recognition_time: float = 4.0  # 战斗识别等待时间，用于检测战斗状态变化
 
 class Config:
     def __init__(self, config_dir=None):

@@ -6,7 +6,7 @@ from core.ocr_handler import OCRHandler
 from typing import Callable, Optional, Tuple
 from PIL import Image
 from utils.singleton import singleton
-from common.config import config
+from common.config import Monster, config
 
 @singleton
 class Battle:
@@ -32,6 +32,7 @@ class Battle:
         self.wait_time = config.battle.wait_time
         self.wait_ui_time = config.battle.wait_ui_time
         self.wait_drag_time = config.battle.wait_drag_time
+        self.battle_recognition_time = config.battle.battle_recognition_time
 
     # ================== 战斗状态判断相关方法 ==================
     def in_battle(self, image: Optional[Image.Image] = None, call_roll: bool = True,roll_count:int=2) -> bool:
@@ -262,7 +263,7 @@ class Battle:
             
 
     # ================== 战斗相关方法 ==================
-    def auto_battle(self, timeout:float = 20) -> bool:
+    def auto_battle(self, timeout:float = 10) -> bool:
         """
         自动战斗
         """
@@ -288,6 +289,8 @@ class Battle:
             if self.in_auto_on(screenshot):
                 logger.info("点击委托战斗开始")
                 self.device_manager.click(1104, 643)
+            if not self.in_auto_off(screenshot) and not self.in_auto_on(screenshot):
+                logger.info("委托成功")
                 return True
 
     def check_dead(self, role_id: int = 0, timeout:float = 1) -> bool:
@@ -345,7 +348,7 @@ class Battle:
             time.sleep(0.1)
         return True
             
-    def exit_battle(self, timeout:float = 10) -> bool:
+    def exit_battle(self, timeout:float = 20) -> bool:
         """
         退出战斗
         """
@@ -357,17 +360,25 @@ class Battle:
             self.device_manager.click(150,50)
             time.sleep(0.1)
         start_time = time.time()
+        logger.info(f"[battle]exit_battle in_round")
         while True: 
+            time.sleep(0.2)
             screenshot = self.device_manager.get_screenshot()
-            time.sleep(0.1)
             if time.time() - start_time > timeout:
                 logger.info(f"[battle]exit_battle 超时")
                 return False
-            self.ocr_handler.match_click_text(["放弃"],region=(30,580,1240,700),image=screenshot)
-            self.ocr_handler.match_click_text(["是"],region=(293,172,987,548),image=screenshot)
-            if not self.in_battle(screenshot):
+            # 顺序不能变,因为放弃会跟上面的确认战斗重叠
+            if self.ocr_handler.match_texts(["选择放弃的话"],region=(293,172,987,548),image=screenshot):
+                logger.info(f"[battle]exit_battle 选择放弃战斗")
+                self.device_manager.click(800, 485)
+                continue
+            if self.ocr_handler.match_texts(["将放弃战斗"],region=(293,172,987,548),image=screenshot):
+                logger.info(f"[battle]exit_battle 确认放弃战斗")
+                self.device_manager.click(800, 485)
                 return True
-            time.sleep(0.1)
+            if self.ocr_handler.match_click_text(["放弃"],region=(30,580,1240,700),image=screenshot):
+                logger.info(f"[battle]exit_battle 点击放弃战斗")
+                continue
 
     def switch_back_role(self, image: Optional[Image.Image] = None, timeout:float = 5) -> bool:
         """
@@ -858,3 +869,30 @@ class Battle:
         """
         logger.debug(f"[Battle] 检查角色是否死亡，role_id={role_id}")
         return self.check_dead(role_id)
+
+    # 识别敌人
+    def find_enemy(self, monsters:list[Monster], timeout:float=5.0 ) -> Monster | None:
+        """
+        识别敌人
+        """
+        start_time = time.time()
+        timeout = self.battle_recognition_time
+        logger.info(f"[Battle] 开始识别敌人,timeout={timeout}")
+        while True:
+            if time.time() - start_time > timeout:
+                logger.info(f"超时{timeout}秒,没有识别到敌人")
+                return None
+            screenshot = self.device_manager.get_screenshot()
+            if screenshot is None:
+                return None
+            if monsters is None or len(monsters) == 0:
+                logger.info("没有配置要识别的敌人")
+                return None
+            for monster in monsters:
+                if monster.points is None:
+                    logger.info(f"敌人{monster.name}没有配置点")
+                    continue
+                if self.ocr_handler.match_point_color(screenshot, monster.points,ambiguity=0.9):
+                    logger.info(f"识别到敌人: {monster.name}")
+                    return monster
+            time.sleep(0.1)

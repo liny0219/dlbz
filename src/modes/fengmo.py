@@ -469,10 +469,9 @@ class FengmoMode:
             logger: Logger = shared.get('logger', None)
             device_manager: DeviceManager = shared.get('device_manager', None)
             ocr_handler: OCRHandler = OCRHandler(device_manager)
+            is_dead = False
             while not stop_event.is_set():
                 time.sleep(check_interval)
-                if state_data.step not in [Step.COLLECT_JUNK,Step.FIND_BOX,Step.FIND_BOSS,Step.FIGHT_BOSS]:
-                    continue
                 screenshot = device_manager.get_cache_screenshot()
                 region = (80, 0, 1280, 720)
                 results = ocr_handler.recognize_text(region=region,image=screenshot)
@@ -511,22 +510,19 @@ class FengmoMode:
                     if "全灭" in r['text']:
                         ocr_handler.match_click_text(["是"],region=region,image=screenshot)
                         logger.info("[check_info]全灭，确认复活")
-                        count = 0
-                        max_count = 2
-                        while count < max_count:
-                            logger.info("[check_info]全灭，确认复活，尝试自动战斗")
-                            time.sleep(1)
-                            self.battle.auto_battle()
-                            count += 1
+                        logger.info("[check_info]全灭，确认复活，尝试自动战斗")
+                        self.battle.auto_battle()
                         break
                     if "消费以上内容即可继续" in r['text']:
                         ocr_handler.match_click_text(["否"],region=region,image=screenshot)
                         logger.info("[check_info]使用红宝石?，死了算了")
+                        is_dead = True
                         break
-                    if "选择放弃的话" in r['text']:
+                    if "选择放弃的话" in r['text'] and is_dead:
                         ocr_handler.match_click_text(["是"],region=region,image=screenshot)
                         logger.info("[check_info]确认，不复活了")
                         state_data.step = Step.BATTLE_FAIL
+                        is_dead = False
                         find_text = "battle_fail"
                         break
                     if "无法连接网络" in r['text']:

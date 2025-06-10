@@ -1,4 +1,3 @@
-from os import lseek
 import time
 from core.battle import Battle
 from common.config import CheckPoint, Monster
@@ -509,7 +508,7 @@ class World:
                 has_battle = True
                 if check_battle and not check_battle_command_done and self.battle.in_round():
                     logger.info("执行战斗场景")
-                    monster = self.find_enemy(self.monsters)
+                    monster = self.battle.find_enemy(self.monsters)
                     if monster is None:
                         logger.info("没有识别到敌人")
                         if enemyName:
@@ -584,30 +583,6 @@ class World:
                 min_dist = dist
                 closest = pt
         return closest
-    # 识别敌人
-    def find_enemy(self, monsters:list[Monster], timeout:float=2.0 ) -> Monster | None:
-        """
-        识别敌人
-        """
-        start_time = time.time()
-        while True:
-            if time.time() - start_time > timeout:
-                logger.info(f"超时{timeout}秒,没有识别到敌人")
-                return None
-            screenshot = self.device_manager.get_screenshot()
-            if screenshot is None:
-                return None
-            if monsters is None or len(monsters) == 0:
-                logger.info("没有配置要识别的敌人")
-                return None
-            for monster in monsters:
-                if monster.points is None:
-                    logger.info(f"敌人{monster.name}没有配置点")
-                    continue
-                if self.ocr_handler.match_point_color(screenshot, monster.points,ambiguity=0.9):
-                    logger.info(f"识别到敌人: {monster.name}")
-                    return monster
-            time.sleep(0.1)
 
     def run_left(self):
         device = self.device_manager.device

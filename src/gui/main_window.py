@@ -19,6 +19,7 @@ from gui.monster_editor import MonsterEditor
 CONFIG_FILES = [
     ("fengmo.yaml", "逢魔玩法"),
     ("device.yaml", "设备"),
+    ("battle.yaml", "战斗配置"),
     ("settings.yaml", "全局设置"),
     ("logging.yaml", "日志"),
     ("game.yaml", "游戏"),
@@ -191,17 +192,19 @@ class MainWindow(tk.Tk):
                     start_wait_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
                     vars_dict["wait_map_time"] = wait_map_time_var
                     row += 1
-                    # 新增：如果wait_ui_time未在data中，补充显示
-                    if "wait_ui_time" not in data:
-                        ttk.Label(frame, text="UI等待时间").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                        wait_ui_var = tk.StringVar(value="0.3")
-                        entry = ttk.Entry(frame, textvariable=wait_ui_var, width=40)
-                        entry.grid(row=row, column=1, padx=5, pady=3)
-                        vars_dict["wait_ui_time"] = wait_ui_var
-                        row += 1
+                    # UI等待时间配置项
+                    ui_wait_value = data.get("wait_ui_time", "0.3")
+                    ttk.Label(frame, text="UI等待时间", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+                    wait_ui_var = tk.StringVar(value=str(ui_wait_value))
+                    wait_ui_spin = tk.Spinbox(frame, from_=0.1, to=1.0, increment=0.1, 
+                                            textvariable=wait_ui_var, width=input_width, format="%.1f")
+                    wait_ui_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+                    vars_dict["wait_ui_time"] = wait_ui_var
+                    row += 1
+                    
                     # 其余字段
                     for k, v in data.items():
-                        if k in ("rest_in_inn", "vip_cure", "city", "depth", "find_point_wait_time", "wait_map_time"):
+                        if k in ("rest_in_inn", "vip_cure", "city", "depth", "find_point_wait_time", "wait_map_time", "wait_ui_time"):
                             continue
                         ttk.Label(frame, text=k, width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
                         var = tk.StringVar(value=str(v))
@@ -217,6 +220,57 @@ class MainWindow(tk.Tk):
                     frame.columnconfigure(1, weight=1)
                     vars_dict["monster_editor"] = monster_editor
                     row += 1
+                elif fname == "battle.yaml":
+                    # 战斗配置特殊处理
+                    label_width = 14
+                    input_width = 20
+                    
+                    # 配置项映射，提供中文显示名称和描述
+                    battle_config_mapping = {
+                        "wait_time": ("基础等待时间", "战斗中每步操作的基础等待时间(秒)"),
+                        "wait_drag_time": ("拖拽等待时间", "拖拽操作后的等待时间(秒)"),
+                        "wait_ui_time": ("UI等待时间", "UI响应等待时间(秒)"),
+                        "battle_recognition_time": ("战斗识别时间", "战斗状态识别等待时间(秒)")
+                    }
+                    
+                    for k, v in data.items():
+                        if k in battle_config_mapping:
+                            display_name, description = battle_config_mapping[k]
+                            # 创建标签
+                            label = ttk.Label(frame, text=display_name, width=label_width, anchor="w")
+                            label.grid(row=row, column=0, sticky='w', padx=5, pady=3)
+                            
+                            # 创建输入控件，根据配置类型选择合适的控件
+                            var = tk.StringVar(value=str(v))
+                            if k in ["wait_time", "wait_drag_time", "wait_ui_time", "battle_recognition_time"]:
+                                # 时间类配置使用Spinbox，允许小数
+                                if k == "battle_recognition_time":
+                                    spin = tk.Spinbox(frame, from_=1.0, to=10.0, increment=0.5, 
+                                                    textvariable=var, width=input_width, format="%.1f")
+                                else:
+                                    spin = tk.Spinbox(frame, from_=0.1, to=2.0, increment=0.1, 
+                                                    textvariable=var, width=input_width, format="%.1f")
+                                spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+                            else:
+                                # 其他配置使用普通输入框
+                                entry = ttk.Entry(frame, textvariable=var, width=input_width)
+                                entry.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+                            
+                            # 添加说明标签
+                            desc_label = ttk.Label(frame, text=description, font=("TkDefaultFont", 8), 
+                                                 foreground="gray")
+                            desc_label.grid(row=row, column=2, padx=5, pady=3, sticky='w')
+                            
+                            vars_dict[k] = var
+                            row += 1
+                        else:
+                            # 未知配置项使用默认处理
+                            ttk.Label(frame, text=k, width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+                            var = tk.StringVar(value=str(v))
+                            entry = ttk.Entry(frame, textvariable=var, width=input_width)
+                            entry.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+                            vars_dict[k] = var
+                            row += 1
                 else:
                     for k, v in data.items():
                         ttk.Label(frame, text=k).grid(row=row, column=0, sticky='w', padx=5, pady=3)
@@ -367,6 +421,25 @@ class MainWindow(tk.Tk):
                         v = str(v)
                     elif k == "vip_cure":
                         v = True if str(var.get()) == "是" else False
+                elif fname == "battle.yaml":
+                    # 战斗配置特殊处理
+                    if k in ["wait_time", "wait_drag_time", "wait_ui_time", "battle_recognition_time"]:
+                        try:
+                            v = float(v)
+                        except Exception:
+                            v = 0.1 if k != "battle_recognition_time" else 3.0
+                    else:
+                        # 其他配置项的通用处理
+                        if str(v).lower() in ("true", "false"):
+                            v = str(v).lower() == "true"
+                        else:
+                            try:
+                                if "." in str(v):
+                                    v = float(v)
+                                else:
+                                    v = int(v)
+                            except Exception:
+                                pass
                 else:
                     if v.lower() in ("true", "false"):
                         v = v.lower() == "true"
