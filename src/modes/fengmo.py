@@ -436,12 +436,13 @@ class FengmoMode:
             find_points.extend([cure])
         if self.state_data.current_point is None:
             return None
-        current_point = self.state_data.current_point.pos
-        closest_point_find_points = self.world.find_closest_point((current_point[0],current_point[1]), find_points)
-        if closest_point_find_points:
-            closest_point_check_point = self.find_closest_point(closest_point_find_points, self.check_points)
-            if closest_point_check_point:
-                return closest_point_check_point
+        closest_find_points = []
+        for find_point in find_points:
+            closest_find_points.append(self.find_closest_point((find_point[0],find_point[1]), self.check_points))
+        # 返回cloest_find_points id 最小的点
+        if closest_find_points and len(closest_find_points) > 0:
+            closest_find_points.sort(key=lambda x: x.id)
+            return closest_find_points[0]
         return None
     
     def wait_check_boss(self):

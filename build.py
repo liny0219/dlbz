@@ -114,7 +114,7 @@ def main():
     copy_start = time.time()
     
     # 复制多个资源目录
-    src_dirs = ['config', 'assets']  # 目录列表
+    src_dirs = ['config', 'assets','adb']  # 目录列表
     for src_dir in src_dirs:
         dir_copy_start = time.time()
         dst_dir = os.path.join('dist', src_dir)
