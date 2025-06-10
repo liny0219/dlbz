@@ -125,7 +125,7 @@ def main():
         dir_duration = format_duration(dir_copy_end - dir_copy_start)
         print(f"[打包脚本] 已将 {src_dir} 目录完整复制到 {dst_dir} (耗时: {dir_duration})")
     
-    src_files = ['更新说明.txt']  # 文件列表
+    src_files = ['更新说明.txt','旅馆休息站使用说明.docx']  # 文件列表
     # 复制单个文件
     for src_file in src_files:
         if os.path.exists(src_file):
