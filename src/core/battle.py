@@ -486,9 +486,10 @@ class Battle:
                     time.sleep(self.wait_time + self.wait_ui_time)
 
                     if role_id != 0:
-                        logger.info(f"[Battle] 点击配置角色{role_id}")
-                        role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
+                        role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (role_id-1)*self.rols_base_y_offset)
+                        time.sleep(0.5)
                         self.device_manager.click(*role_pos)
+                        logger.info(f"[Battle] 点击配置角色{role_id} {role_pos}")
                         time.sleep(self.wait_time + self.wait_ui_time)
                     return True       
             
@@ -544,9 +545,10 @@ class Battle:
                         time.sleep(self.wait_time + self.wait_ui_time)
                         screenshot = self.device_manager.get_screenshot()
                         if role_id != 0:
-                            logger.debug(f"[Battle] 点击配置角色{role_id}")
-                            role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
+                            role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (role_id-1)*self.rols_base_y_offset)
+                            time.sleep(0.5)
                             self.device_manager.click(*role_pos)
+                            logger.info(f"[Battle] 点击配置角色{role_id} {role_pos}")
                             time.sleep(self.wait_time + self.wait_ui_time)
                         return True
 
