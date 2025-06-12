@@ -30,7 +30,7 @@
 | Switch      | `Switch`                                                     | 全员交替，无参数                                                                               | `Switch`                                                     |
 | Boost       | `Boost`                                                      | 全体加成，无参数                                                                               | `Boost`                                                      |
 | CheckDead   | `CheckDead,技能对象角色[0~4]`                                 | 检测角色是否死亡，0为任意角色，1-4为具体角色，可选，默认0                                      | `CheckDead,0`                                                |
-
+| Run         | 无参数                                                        | 逃跑
 ---
 
 ## 详细参数说明

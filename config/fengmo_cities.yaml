@@ -168,6 +168,160 @@ cities:
         - 322
         - 9D030D
         - 6
-    reset_pos:
-    - 548
-    - 343
+  totohaha:
+    check_points:
+    - id: 1
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 522
+        - 312
+      next_point: true
+      pos:
+      - 773
+      - 234
+      reset_map: true
+    - id: 2
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 755
+        - 344
+      next_point: true
+      pos:
+      - 846
+      - 300
+      reset_map: true
+    - id: 3
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 887
+        - 326
+      - backup_pos: []
+        pos:
+        - 276
+        - 511
+      next_point: false
+      pos:
+      - 667
+      - 314
+      reset_map: true
+    - id: 4
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 802
+        - 377
+      next_point: true
+      pos:
+      - 583
+      - 391
+      reset_map: true
+    - id: 5
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 761
+        - 429
+      next_point: true
+      pos:
+      - 527
+      - 429
+      reset_map: true
+    - id: 6
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 629
+        - 351
+      next_point: true
+      pos:
+      - 292
+      - 223
+      reset_map: true
+    - id: 7
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 803
+        - 352
+      next_point: true
+      pos:
+      - 362
+      - 325
+      reset_map: true
+    - id: 8
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 527
+        - 360
+      next_point: true
+      pos:
+      - 363
+      - 418
+      reset_map: true
+    - id: 9
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 268
+        - 377
+      next_point: true
+      pos:
+      - 502
+      - 444
+      reset_map: true
+    - id: 10
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 358
+        - 333
+      - backup_pos: []
+        pos:
+        - 893
+        - 357
+      next_point: false
+      pos:
+      - 523
+      - 588
+      reset_map: true
+    entrance_pos:
+    - 736
+    - 304
+    inn_pos:
+    - 467
+    - 414
+    monsters:
+    - battle_config: ''
+      name: 逢魔精英怪
+      points:
+      - - 333
+        - 467
+        - D18D6A
+        - 3
+      - - 290
+        - 376
+        - '160013'
+        - 3
+      - - 375
+        - 538
+        - 34813D
+        - 6
+    - battle_config: ''
+      name: 逢魔Boss
+      points:
+      - - 407
+        - 319
+        - CAAEAD
+        - 3
+      - - 208
+        - 492
+        - 1B0310
+        - 3
+      - - 392
+        - 541
+        - 39823D
+        - 6

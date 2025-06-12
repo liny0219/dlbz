@@ -1,3 +1,8 @@
+v1.3.0
+feature: 新增逃跑指令Run
+feature: 支持托托哈哈岛逢魔
+feature: 优化等待逢魔点速度
+
 v1.2.1
 bugfix: 修复宠物技能与进化技能选择队友错误
 

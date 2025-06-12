@@ -31,7 +31,7 @@ class FengmoConfig(BaseModel):
     depth: int = 1
     rest_in_inn: bool = True
     city: str = "newdelsta"
-    find_point_wait_time: int = 2
+    find_point_wait_time: float = 1.5
     wait_start_time: float = 0.8
     default_battle_config: str = ""
     vip_cure: bool = False  # 月卡恢复
@@ -54,7 +54,6 @@ class Monster(BaseModel):
 
 class CityConfig(TypedDict):
     inn_pos: List[int]
-    reset_pos: List[int]
     entrance_pos: List[int]
     check_points: List[CheckPoint]
     monsters: List[Monster]

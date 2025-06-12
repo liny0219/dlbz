@@ -123,8 +123,7 @@ class FengmoMode:
         self.inn_pos = self.city_config.get("inn_pos", [])
         self.entrance_pos = self.city_config.get("entrance_pos", [])
         self.check_points = self.city_config.get("check_points", [])
-        self.reset_pos = self.city_config.get("reset_pos", [])
-        self.find_point_wait_time = getattr(self.fengmo_config, 'find_point_wait_time', 2)
+        self.find_point_wait_time = getattr(self.fengmo_config, 'find_point_wait_time', 1.5)
         self.wait_map_time = getattr(self.fengmo_config, 'wait_map_time', 0.5)
         self.state_data = StateData()
 
@@ -472,6 +471,9 @@ class FengmoMode:
             ocr_handler: OCRHandler = OCRHandler(device_manager)
             is_dead = False
             while not stop_event.is_set():
+                in_fengmo = False
+                if state_data.step in [Step.COLLECT_JUNK,Step.FIND_BOX,Step.FIND_BOSS,Step.FIGHT_BOSS]:
+                    in_fengmo = True
                 time.sleep(check_interval)
                 screenshot = device_manager.get_cache_screenshot()
                 region = (80, 0, 1280, 720)
@@ -486,7 +488,7 @@ class FengmoMode:
                         state_data.step = Step.FIND_BOX
                         find_text = "found_points"
                         break
-                    if "完全恢复了" in r['text']:
+                    if "完全恢复了" in r['text'] and in_fengmo:
                         find_text = "found_cure"
                         break
                     if "逢魔之主已在区域某处出现" in r['text']:

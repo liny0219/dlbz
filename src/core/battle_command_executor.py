@@ -42,6 +42,7 @@ class BattleCommandExecutor:
             "Boost":       [],
             "CheckDead":   [],
             "NoCheckDead": [],
+            "Run":         [],
             # 其它指令可按需扩展
         }
 
@@ -99,6 +100,8 @@ class BattleCommandExecutor:
                     self.logger.info(f"开启队友阵亡检查:{cmd}")
                     check_dead_cmd = cmd
                 result = self.execute_command(cmd)
+                if result and cmd.get('type') == 'Run':
+                    return False
                 if not result:
                     self.battle.reset_round()
                     result = self.battle.wait_in_round_or_world(lambda screenshot:
@@ -172,6 +175,8 @@ class BattleCommandExecutor:
             return self.battle.cmd_battle_end(**params)
         elif cmd_type == "CheckDead":
             return not self.battle.cmd_check_dead(**params)
+        elif cmd_type == "Run":
+            return self.battle.cmd_run(**params)
         else:
             self.logger.warning(f"未知指令类型: {cmd_type}")
 

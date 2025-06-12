@@ -872,6 +872,12 @@ class Battle:
         logger.debug(f"[Battle] 检查角色是否死亡，role_id={role_id}")
         return self.check_dead(role_id)
 
+    def cmd_run(self) -> bool:
+        """
+        逃跑
+        """
+        logger.debug("[Battle] 逃跑（Run）")
+        return self.exit_battle()
     # 识别敌人
     def find_enemy(self, monsters:list[Monster], timeout:float=5.0 ) -> Monster | None:
         """

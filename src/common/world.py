@@ -304,14 +304,9 @@ class World:
             else:
                 logger.debug("在小地图中")
                 break
-        if vip_cure and self.vip_cure_count > 0:
-            logger.debug("使用vip治疗")
-            self.device_manager.click(1238, 20)
-            sleep_until(self.in_world)
-            time.sleep(0.2)
-            self.vip_cure()
-            self.vip_cure_count -= 1
-            return 'vip_cure'
+        is_vip_cure = self.vip_cure(vip_cure)
+        if is_vip_cure is not None:
+            return is_vip_cure
         logger.debug("点击旅馆")
         self.device_manager.click(*inn_pos)
         logger.debug("等待旅馆")
@@ -321,8 +316,7 @@ class World:
             return 'not_in_inn'
         logger.debug("点击旅馆老板")
         self.device_manager.click(*in_inn)
-        logger.debug("等待欢迎光临")
-        sleep_until(lambda: self.ocr_handler.match_click_text(["欢迎光临"]),function_name="旅馆 欢迎光临")
+        time.sleep(1)
         logger.debug("点击跳过")
         self.click_tirm(3)
         logger.debug("点击是")
@@ -388,16 +382,24 @@ class World:
         sleep_until(lambda: self.ocr_handler.match_click_text(["涉入"],region=(760,465,835,499)),function_name="涉入")
         time.sleep(5)
 
-    def vip_cure(self):
+    def vip_cure(self,vip_cure:bool=False):
         """
         使用vip治疗
         """
+        if not vip_cure or self.vip_cure_count <= 0:
+            return None
+        logger.debug("使用vip治疗")
+        self.device_manager.click(1238, 20)
+        sleep_until(self.in_world)
+        time.sleep(0.2)
         logger.info(f"[vip_cure]使用vip治疗")
         self.device_manager.click(1222, 525)
         sleep_until(lambda: self.ocr_handler.match_click_text(["是"]),function_name="vip治疗 是")
         time.sleep(5)
         sleep_until(lambda: self.ocr_handler.match_click_text(["完全恢复了"]),function_name="vip治疗 完全恢复了")
         time.sleep(1)
+        self.vip_cure_count -= 1
+        return 'vip_cure'
 
     def select_fengmo_mode(self,depth:int):
         """
