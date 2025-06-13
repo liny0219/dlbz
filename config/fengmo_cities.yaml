@@ -1,4 +1,161 @@
 cities:
+  托托哈哈岛:
+    check_points:
+    - id: 1
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 522
+        - 312
+      next_point: true
+      pos:
+      - 773
+      - 234
+      reset_map: true
+    - id: 2
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 755
+        - 344
+      next_point: true
+      pos:
+      - 846
+      - 300
+      reset_map: true
+    - id: 3
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 852
+        - 278
+      - backup_pos: []
+        pos:
+        - 208
+        - 457
+      next_point: false
+      pos:
+      - 667
+      - 314
+      reset_map: true
+    - id: 4
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 802
+        - 377
+      next_point: true
+      pos:
+      - 583
+      - 391
+      reset_map: true
+    - id: 5
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 761
+        - 429
+      next_point: true
+      pos:
+      - 527
+      - 429
+      reset_map: true
+    - id: 6
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 629
+        - 351
+      next_point: true
+      pos:
+      - 292
+      - 223
+      reset_map: true
+    - id: 7
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 662
+        - 212
+      next_point: true
+      pos:
+      - 366
+      - 371
+      reset_map: true
+    - id: 8
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 515
+        - 372
+      next_point: true
+      pos:
+      - 363
+      - 393
+      reset_map: true
+    - id: 9
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 273
+        - 313
+      next_point: true
+      pos:
+      - 502
+      - 444
+      reset_map: true
+    - id: 10
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 358
+        - 333
+      - backup_pos: []
+        pos:
+        - 893
+        - 357
+      next_point: false
+      pos:
+      - 523
+      - 588
+      reset_map: true
+    entrance_pos:
+    - 736
+    - 304
+    inn_pos:
+    - 467
+    - 414
+    monsters:
+    - battle_config: D:/dldbz/config/battle_scripts/托托哈哈岛精英怪.txt
+      name: 逢魔精英怪
+      points:
+      - - 333
+        - 467
+        - D18D6A
+        - 3
+      - - 290
+        - 376
+        - '160013'
+        - 3
+      - - 375
+        - 538
+        - 34813D
+        - 6
+    - battle_config: D:/dldbz/config/battle_scripts/托托哈哈岛Boss.txt
+      name: 逢魔Boss
+      points:
+      - - 407
+        - 319
+        - CAAEAD
+        - 3
+      - - 208
+        - 492
+        - 1B0310
+        - 3
+      - - 392
+        - 541
+        - 39823D
+        - 6
   新德尔斯塔:
     check_points:
     - id: 1
@@ -167,161 +324,4 @@ cities:
       - - 302
         - 322
         - 9D030D
-        - 6
-  托托哈哈岛:
-    check_points:
-    - id: 1
-      item_pos:
-      - backup_pos: []
-        pos:
-        - 522
-        - 312
-      next_point: true
-      pos:
-      - 773
-      - 234
-      reset_map: true
-    - id: 2
-      item_pos:
-      - backup_pos: []
-        pos:
-        - 755
-        - 344
-      next_point: true
-      pos:
-      - 846
-      - 300
-      reset_map: true
-    - id: 3
-      item_pos:
-      - backup_pos: []
-        pos:
-        - 852
-        - 278
-      - backup_pos: []
-        pos:
-        - 208
-        - 457
-      next_point: false
-      pos:
-      - 667
-      - 314
-      reset_map: true
-    - id: 4
-      item_pos:
-      - backup_pos: []
-        pos:
-        - 802
-        - 377
-      next_point: true
-      pos:
-      - 583
-      - 391
-      reset_map: true
-    - id: 5
-      item_pos:
-      - backup_pos: []
-        pos:
-        - 761
-        - 429
-      next_point: true
-      pos:
-      - 527
-      - 429
-      reset_map: true
-    - id: 6
-      item_pos:
-      - backup_pos: []
-        pos:
-        - 629
-        - 351
-      next_point: true
-      pos:
-      - 292
-      - 223
-      reset_map: true
-    - id: 7
-      item_pos:
-      - backup_pos: []
-        pos:
-        - 662 
-        - 212
-      next_point: true
-      pos:
-      - 366
-      - 371
-      reset_map: true
-    - id: 8
-      item_pos:
-      - backup_pos: []
-        pos:
-        - 515
-        - 372
-      next_point: true
-      pos:
-      - 363
-      - 393
-      reset_map: true
-    - id: 9
-      item_pos:
-      - backup_pos: []
-        pos:
-        - 273
-        - 313
-      next_point: true
-      pos:
-      - 502
-      - 444
-      reset_map: true
-    - id: 10
-      item_pos:
-      - backup_pos: []
-        pos:
-        - 358
-        - 333
-      - backup_pos: []
-        pos:
-        - 893
-        - 357
-      next_point: false
-      pos:
-      - 523
-      - 588
-      reset_map: true
-    entrance_pos:
-    - 736
-    - 304
-    inn_pos:
-    - 467
-    - 414
-    monsters:
-    - battle_config: ''
-      name: 逢魔精英怪
-      points:
-      - - 333
-        - 467
-        - D18D6A
-        - 3
-      - - 290
-        - 376
-        - '160013'
-        - 3
-      - - 375
-        - 538
-        - 34813D
-        - 6
-    - battle_config: ''
-      name: 逢魔Boss
-      points:
-      - - 407
-        - 319
-        - CAAEAD
-        - 3
-      - - 208
-        - 492
-        - 1B0310
-        - 3
-      - - 392
-        - 541
-        - 39823D
         - 6

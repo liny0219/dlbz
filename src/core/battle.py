@@ -23,7 +23,7 @@ class Battle:
         self.device_manager = device_manager
         self.ocr_handler = ocr_handler
         self.extra_skill_bp_pos = (570, 305)
-        self.extra_bp_offset_x = [0, 778, 865, 948]
+        self.extra_bp_offset_x = [0, 778, 895, 982]
         self.role_base_pos = (1100, 80)
         self.rols_base_y_offset = 140
         self.skill_base_x = [800,1020,1100,1200]
@@ -467,11 +467,12 @@ class Battle:
                     time.sleep(self.wait_time + self.wait_ui_time)
                     screenshot = self.device_manager.get_screenshot()
                 if  self.in_sp_on(screenshot):
+                    logger.info("[Battle] 额外技能界面")
                     # 点击修正坐标1与修正坐标2,兼容必杀技\支炎兽\ex技能时点击必杀选项,切换到必杀选项
                     for pos in normalize_pos:
                         self.device_manager.click(pos[0], pos[1])
                     time.sleep(self.wait_time + self.wait_ui_time)
-
+                    logger.info("[Battle] 校正界面")
                     if bp > 0:
                         logger.info(f"[Battle] 拖动选择BP{bp}")
                         self.device_manager.press_and_drag_step(
@@ -494,7 +495,7 @@ class Battle:
                         time.sleep(self.wait_time + self.wait_ui_time)
                     return True       
 
-    def transform(self, index: int = 1, switch: bool = False) -> bool:
+    def transform(self, index: int = 1, switch: bool = False, timeout:float = 15) -> bool:
         """
         切换形态
         :param index: 角色索引
@@ -506,7 +507,7 @@ class Battle:
         role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
         start_time = time.time()
         while True:
-            if time.time() - start_time > 10:
+            if time.time() - start_time > timeout:
                 logger.info('[battle]transform 超时')
                 return False
             screenshot = self.device_manager.get_screenshot()
@@ -528,7 +529,9 @@ class Battle:
                     if self.in_skill_on(screenshot):
                         self.device_manager.click(135,25)
                         logger.info(f"[Battle] 点击收起技能栏")
-                        time.sleep(self.wait_time + self.wait_ui_time + 0.3)
+                        while not self.in_skill_on(screenshot):
+                            time.sleep(self.wait_time)
+                            screenshot = self.device_manager.get_screenshot()
                         return True
 
     def cast_sp(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, 
