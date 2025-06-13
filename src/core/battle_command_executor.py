@@ -127,7 +127,7 @@ class BattleCommandExecutor:
                         self.logger.info(f"检查到队友阵亡:{cmd}")
                         self.battle.reset_round()
                         self.battle.exit_battle()
-                        return True
+                        return False
             except Exception as e:
                 self.logger.error(f"执行指令失败: {cmd}, 错误: {e}")
         return True

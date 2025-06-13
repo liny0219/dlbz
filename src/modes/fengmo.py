@@ -116,11 +116,13 @@ class FengmoMode:
         self.depth = self.fengmo_config.depth
         self.rest_in_inn = self.fengmo_config.rest_in_inn
         self.vip_cure = self.fengmo_config.vip_cure
+        self.revive_on_all_dead = self.fengmo_config.revive_on_all_dead  # 添加全灭是否复活的配置
         fengmo_cities = config.fengmo_cities
         if self.city_name not in fengmo_cities:
             raise ValueError(f"未找到城市配置: {self.city_name}")
         self.city_config = fengmo_cities[self.city_name]
         self.inn_pos = self.city_config.get("inn_pos", [])
+        self.monsters = self.city_config.get("monsters", [])
         self.entrance_pos = self.city_config.get("entrance_pos", [])
         self.check_points = self.city_config.get("check_points", [])
         self.find_point_wait_time = getattr(self.fengmo_config, 'find_point_wait_time', 1.5)
@@ -174,9 +176,7 @@ class FengmoMode:
         }
         check_info_thread = ManagedThread(self.check_info, check_info_shared)
         check_info_thread.start()
-        monsters = self.city_config.get("monsters", [])
-        if monsters:
-            self.world.set_monsters(monsters)
+        self.world.set_monsters(self.monsters)
         self.state_data.step = Step.UN_START
         while True:
             self.report_data()
@@ -231,6 +231,10 @@ class FengmoMode:
                     logger.info(f"[collect_junk_phase]检查是否在城镇,是否在战斗中,执行战斗回调")
                     in_world_or_battle = self.world.in_world_or_battle()
                     if in_world_or_battle:
+                        if not in_world_or_battle["is_battle_state"]:
+                            logger.info(f"[collect_junk_phase]战斗失败")
+                            self.state_data.step = Step.BATTLE_FAIL
+                            return
                         if in_world_or_battle["in_world"]:
                             logger.info(f"[collect_junk_phase]在城镇中")
                         if in_world_or_battle["in_battle"]:
@@ -240,10 +244,6 @@ class FengmoMode:
                             if point_index > 0:
                                 point_index -= 1
                             next_point = True  # 设置为True跳出内层循环
-                        if not in_world_or_battle["is_battle_state"]:
-                            logger.info(f"[collect_junk_phase]战斗失败")
-                            self.state_data.step = Step.BATTLE_FAIL
-                            return
                     if self.check_state(Step.COLLECT_JUNK,check_point):
                         return
                     self.wait_map()
@@ -259,19 +259,20 @@ class FengmoMode:
                             self.device_manager.click(*check_point.pos)
                             self.wait_map()
                             in_world_or_battle = self.world.in_world_or_battle()
+                            if self.check_state(Step.COLLECT_JUNK,check_point):
+                                return
                             if in_world_or_battle:
+                                if not in_world_or_battle["is_battle_state"]:
+                                    logger.info(f"[collect_junk_phase]战斗失败")
+                                    self.state_data.step = Step.BATTLE_FAIL
+                                    return
                                 if in_world_or_battle["in_world"]:
                                     logger.info(f"[collect_junk_phase]在城镇中")
                                     break
                                 if in_world_or_battle["in_battle"]:
                                     logger.info(f"[collect_junk_phase]遇敌战斗过")
                                     time.sleep(self.wait_map_time)
-                                if not in_world_or_battle["is_battle_state"]:
-                                    logger.info(f"[collect_junk_phase]战斗失败")
-                                    self.state_data.step = Step.BATTLE_FAIL
-                                    return
-                            if self.check_state(Step.COLLECT_JUNK,check_point):
-                                return
+
                     self.wait_map()
                     #  当前查找逢魔点
                     logger.info(f"[collect_junk_phase]当前查找逢魔点: {check_point.id}")
@@ -447,6 +448,8 @@ class FengmoMode:
     
     def wait_check_boss(self):
         in_world_or_battle = self.world.in_world_or_battle()
+        if self.state_data == Step.BATTLE_FAIL:
+            return 'in_world_battle_fail'
         if in_world_or_battle:
             if not in_world_or_battle["is_battle_state"]:
                 logger.info(f"[find_boss_phase]战斗失败")
@@ -512,10 +515,15 @@ class FengmoMode:
                         self.world.click_tirm(6)
                         break
                     if "全灭" in r['text']:
-                        ocr_handler.match_click_text(["是"],region=region,image=screenshot)
-                        logger.info("[check_info]全灭，确认复活")
-                        logger.info("[check_info]全灭，确认复活，尝试自动战斗")
-                        self.battle.auto_battle()
+                        # 根据配置决定是否复活
+                        if self.revive_on_all_dead:
+                            ocr_handler.match_click_text(["是"],region=region,image=screenshot)
+                            logger.info("[check_info]全灭，确认复活，尝试自动战斗")
+                            self.battle.auto_battle()
+                        else:
+                            ocr_handler.match_click_text(["否"],region=region,image=screenshot)
+                            logger.info("[check_info]全灭，不复活")
+                            is_dead = True
                         break
                     if "消费以上内容即可继续" in r['text']:
                         ocr_handler.match_click_text(["否"],region=region,image=screenshot)
@@ -523,7 +531,7 @@ class FengmoMode:
                         is_dead = True
                         break
                     if "选择放弃的话" in r['text'] and is_dead:
-                        ocr_handler.match_click_text(["是"],region=region,image=screenshot)
+                        device_manager.click(800,485)
                         logger.info("[check_info]确认，不复活了")
                         state_data.step = Step.BATTLE_FAIL
                         is_dead = False

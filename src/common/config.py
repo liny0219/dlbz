@@ -34,6 +34,7 @@ class FengmoConfig(BaseModel):
     wait_start_time: float = 0.8
     default_battle_config: str = ""
     vip_cure: bool = False  # 月卡恢复
+    revive_on_all_dead: bool = False  # 全灭是否复活
 
 class ItemPos(BaseModel):
     pos: List[int]

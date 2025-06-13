@@ -1,3 +1,10 @@
+v1.3.6
+feature: 优化托托哈哈岛怪物识别精度
+feature: 打包ocr模型到本地
+feature: 增加全灭是否复活的选项,方便捡垃圾
+bugfix: 逢魔遇敌打不过小怪,状态异常
+bugfix: 逢魔遇敌打不过boss,状态异常
+
 v1.3.5
 feature: 优化部分战斗逻辑,增加日志
 

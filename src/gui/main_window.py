@@ -201,10 +201,20 @@ class MainWindow(tk.Tk):
                     wait_ui_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
                     vars_dict["wait_ui_time"] = wait_ui_var
                     row += 1
+                    # 全灭是否复活
+                    revive_val = data.get("revive_on_all_dead", False)
+                    if isinstance(revive_val, str):
+                        revive_val = revive_val.lower() == "true"
+                    revive_var = tk.StringVar(value="是" if revive_val else "否")
+                    ttk.Label(frame, text="全灭是否复活", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+                    revive_combo = ttk.Combobox(frame, textvariable=revive_var, values=["是", "否"], state="readonly", width=input_width)
+                    revive_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+                    vars_dict["revive_on_all_dead"] = revive_var
+                    row += 1
                     
                     # 其余字段
                     for k, v in data.items():
-                        if k in ("rest_in_inn", "vip_cure", "city", "depth", "find_point_wait_time", "wait_map_time", "wait_ui_time"):
+                        if k in ("rest_in_inn", "vip_cure", "city", "depth", "find_point_wait_time", "wait_map_time", "wait_ui_time", "revive_on_all_dead"):
                             continue
                         ttk.Label(frame, text=k, width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
                         var = tk.StringVar(value=str(v))
@@ -395,69 +405,55 @@ class MainWindow(tk.Tk):
             self.append_log("玩法进程未运行")
 
     def save_settings(self):
+        """保存所有配置到文件"""
         config_dir = get_config_dir()
-        # 调试：保存前打印控件值
-        if "fengmo.yaml" in self.config_vars:
-            print("保存时rest_in_inn控件值：", self.config_vars["fengmo.yaml"]["rest_in_inn"].get())
-            print("保存时vip_cure控件值：", self.config_vars["fengmo.yaml"]["vip_cure"].get())
-        for fname, vars_dict in self.config_vars.items():
+        for fname, _ in CONFIG_FILES:
+            if fname == "fengmo_cities.yaml":
+                continue
             fpath = os.path.join(config_dir, fname)
-            data = {}
-            for k, var in vars_dict.items():
-                # 跳过MonsterEditor等非tk.Variable对象
-                if not hasattr(var, 'get'):
-                    continue
-                v = var.get()
-                # 针对逢魔玩法特殊处理
-                if fname == "fengmo.yaml":
-                    if k == "rest_in_inn":
-                        v = True if str(v) == "是" else False
-                    elif k == "depth":
+            if fname in self.config_vars:
+                vars_dict = self.config_vars[fname]
+                data = {}
+                # 读取原始配置（用于类型还原）
+                orig_data = {}
+                if os.path.exists(fpath):
+                    with open(fpath, "r", encoding="utf-8") as f:
                         try:
-                            v = int(v)
+                            orig_data = yaml.safe_load(f) or {}
                         except Exception:
-                            v = 1
-                    elif k == "city":
-                        v = str(v)
-                    elif k == "vip_cure":
-                        v = True if str(var.get()) == "是" else False
-                elif fname == "battle.yaml":
-                    # 战斗配置特殊处理
-                    if k in ["wait_time", "wait_drag_time", "wait_ui_time", "battle_recognition_time"]:
-                        try:
-                            v = float(v)
-                        except Exception:
-                            v = 0.1 if k != "battle_recognition_time" else 3.0
-                    else:
-                        # 其他配置项的通用处理
-                        if str(v).lower() in ("true", "false"):
-                            v = str(v).lower() == "true"
+                            orig_data = {}
+                for key, var in vars_dict.items():
+                    if not hasattr(var, "get"):
+                        continue
+                    value = var.get()
+                    if fname == "fengmo.yaml":
+                        if key in ["rest_in_inn", "vip_cure", "revive_on_all_dead"]:
+                            data[key] = value == "是"
+                        elif key in ["depth"]:
+                            data[key] = int(value)
+                        elif key in ["find_point_wait_time", "wait_map_time", "wait_ui_time"]:
+                            data[key] = float(value)
                         else:
-                            try:
-                                if "." in str(v):
-                                    v = float(v)
-                                else:
-                                    v = int(v)
-                            except Exception:
-                                pass
-                else:
-                    if v.lower() in ("true", "false"):
-                        v = v.lower() == "true"
+                            data[key] = value
                     else:
-                        try:
-                            if "." in v:
-                                v = float(v)
-                            else:
-                                v = int(v)
-                        except Exception:
-                            pass
-                data[k] = v
-            try:
+                        orig_val = orig_data.get(key, None)
+                        if isinstance(orig_val, bool):
+                            data[key] = value == "True" or value == "是"
+                        elif isinstance(orig_val, int):
+                            try:
+                                data[key] = int(value)
+                            except Exception:
+                                data[key] = value
+                        elif isinstance(orig_val, float):
+                            try:
+                                data[key] = float(value)
+                            except Exception:
+                                data[key] = value
+                        else:
+                            data[key] = value
                 with open(fpath, 'w', encoding='utf-8') as f:
-                    yaml.dump(data, f, allow_unicode=True)
-                self.logger.info(f"已保存: {fname}")
-            except Exception as e:
-                self.logger.error(f"保存 {fname} 失败: {e}\n{traceback.format_exc()}")
+                    yaml.dump(data, f, allow_unicode=True, sort_keys=False)
+                logger.info(f"已保存配置: {fname}")
         messagebox.showinfo("提示", "所有设置已保存！")
         self.append_log("所有设置已保存！")
 

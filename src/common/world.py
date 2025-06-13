@@ -526,7 +526,7 @@ class World:
                                     is_battle_success = self.do_default_battle()['success']
                                 else:
                                     logger.info("使用硬编码映射敌人的战斗配置")
-                                    self.battle_executor.execute_all()
+                                    is_battle_success = self.battle_executor.execute_all()
                         else:
                             logger.info("没有识别到敌人,使用默认战斗配置")
                             is_battle_success = self.do_default_battle()['success']
@@ -557,7 +557,7 @@ class World:
         else:
             logger.info("使用默认战斗配置")
             result = self.battle_executor.execute_all()
-            return { "type": "battle_executor", "success": result}
+            return { "type": "battle_executor", "success": not result}
 
     def open_minimap(self):
         """
