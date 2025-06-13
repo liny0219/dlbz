@@ -123,7 +123,7 @@ class FarmingMode:
                     self.state_data.in_map = False
                     pre_state = 'in_battle'
                     self.battle.auto_battle()
-                time.sleep(0.2)
+                time.sleep(0.1)
         except Exception as e:
             logger.error(f"[刷野模式] 主循环异常: {e}")
             logger.error(f"{e.__traceback__}\n{traceback.format_exc()}")

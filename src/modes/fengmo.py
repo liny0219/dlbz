@@ -180,6 +180,7 @@ class FengmoMode:
         self.state_data.step = Step.UN_START
         while True:
             self.report_data()
+            logger.info(f"[run]当前配置的城市: {self.city_name} 深度: {self.depth}")
             if self.rest_in_inn:
                 logger.info("[run]休息检查")
                 result = self.world.rest_in_inn(self.inn_pos,self.vip_cure)

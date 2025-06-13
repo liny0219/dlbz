@@ -37,6 +37,8 @@ class BattleCommandExecutor:
             "XPet":        ["index", "bp", "role_id", "x", "y"],
             "Wait":        ["seconds"],
             "Skip":        ["seconds"],
+            "Transform":   ["index"],
+            "XTransform":  ["index"],
             "Click":       ["x", "y"],
             "Switch":      [],
             "Boost":       [],
@@ -163,6 +165,10 @@ class BattleCommandExecutor:
             return self.battle.cmd_pet(**params)
         elif cmd_type == "XPet":
             return self.battle.cmd_xpet(**params)
+        elif cmd_type == "Transform":
+            return self.battle.cmd_transform(**params)
+        elif cmd_type == "XTransform":
+            return self.battle.cmd_xtransform(**params)
         elif cmd_type == "Wait":
             return self.battle.cmd_wait(**params)
         elif cmd_type == "Skip":

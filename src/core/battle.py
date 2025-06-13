@@ -272,13 +272,13 @@ class Battle:
         if not self.in_round(screenshot):
             return False
         start_time = time.time()
+        is_auto_start = False
         while True: 
             if time.time() - start_time > timeout:
                 logger.info(f"[battle]auto_battle 超时")
                 return False
-            time.sleep(0.1)
+            time.sleep(0.4)
             screenshot = self.device_manager.get_screenshot()
-            time.sleep(0.2)
             if screenshot is None:
                 logger.error("[battle]auto_battle 无法获取截图")
                 return False
@@ -289,7 +289,8 @@ class Battle:
             if self.in_auto_on(screenshot):
                 logger.info("点击委托战斗开始")
                 self.device_manager.click(1104, 643)
-            if not self.in_auto_off(screenshot) and not self.in_auto_on(screenshot):
+                is_auto_start = True
+            if not self.in_auto_off(screenshot) and not self.in_auto_on(screenshot) and is_auto_start:
                 logger.info("委托成功")
                 return True
 
@@ -344,7 +345,7 @@ class Battle:
             if time.time() - start_time > timeout:
                 logger.info(f"[battle]reset_round 超时")
                 return False
-            self.device_manager.click(150,50)
+            self.device_manager.click(135,25)
             time.sleep(0.1)
         return True
             
@@ -357,7 +358,7 @@ class Battle:
             if time.time() - start_time > timeout:
                 logger.info(f"[battle]exit_battle in_round 超时")
                 return False
-            self.device_manager.click(150,50)
+            self.device_manager.click(135,25)
             time.sleep(0.1)
         start_time = time.time()
         logger.info(f"[battle]exit_battle in_round")
@@ -492,7 +493,44 @@ class Battle:
                         logger.info(f"[Battle] 点击配置角色{role_id} {role_pos}")
                         time.sleep(self.wait_time + self.wait_ui_time)
                     return True       
-            
+
+    def transform(self, index: int = 1, switch: bool = False) -> bool:
+        """
+        切换形态
+        :param index: 角色索引
+        :param switch: 是否切换角色
+        """
+        if index < 1 or index > 4:
+            logger.error(f"[Battle] 角色索引错误，index: {index}")
+            return False
+        role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
+        start_time = time.time()
+        while True:
+            if time.time() - start_time > 10:
+                logger.info('[battle]transform 超时')
+                return False
+            screenshot = self.device_manager.get_screenshot()
+            if self.in_round(screenshot):
+                self.device_manager.click(role_pos[0], role_pos[1])
+                time.sleep(self.wait_time + self.wait_ui_time)
+                continue
+            if not self.in_battle(screenshot):
+                return False
+            if self.in_skill_on(screenshot):
+                if switch and not self.switch_back_role(screenshot):
+                    return False
+                self.device_manager.click(960, 40)
+                logger.info(f"[Battle] 点击潜力切换按钮")
+                time.sleep(self.wait_ui_time)
+                while True:
+                    time.sleep(self.wait_time)
+                    screenshot = self.device_manager.get_screenshot()
+                    if self.in_skill_on(screenshot):
+                        self.device_manager.click(135,25)
+                        logger.info(f"[Battle] 点击收起技能栏")
+                        time.sleep(self.wait_time + self.wait_ui_time + 0.3)
+                        return True
+
     def cast_sp(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, 
                 switch: bool = False, timeout:float = 10) -> bool:
         enemy_pos = None
@@ -735,6 +773,22 @@ class Battle:
         logger.debug(f"[Battle] 切换并使用宠物，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
         return self.cmd_pet(index, bp, role_id, x, y)
     
+    def cmd_transform(self, index: int = 1) -> bool:
+        """
+        切换形态
+        :param index: 角色索引
+        """
+        logger.debug(f"[Battle] 切换形态，角色索引: {index}")
+        return self.transform(index)
+    
+    def cmd_xtransform(self, index: int = 1) -> bool:
+        """
+        切换形态
+        :param index: 角色索引
+        """
+        logger.debug(f"[Battle] 切换形态，角色索引: {index}")
+        return self.transform(index, switch=True)
+    
     def cmd_ex(self, index: int = 1, bp:int = 0, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
         """
         使用ex技能
@@ -757,7 +811,7 @@ class Battle:
         logger.debug(f"[Battle] 使用ex技能，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
         return self.cast_ex(index, bp, role_id, x, y, switch=True)
         
-    def cmd_boost(self, timeout:float = 5) -> bool:
+    def cmd_boost(self, timeout:float = 15) -> bool:
         """
         全体加成
         """

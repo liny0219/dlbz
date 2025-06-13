@@ -1,5 +1,5 @@
 cities:
-  newdelsta:
+  新德尔斯塔:
     check_points:
     - id: 1
       item_pos:
@@ -46,8 +46,8 @@ cities:
       item_pos:
       - backup_pos: []
         pos:
-        - 75
-        - 377
+        - 69
+        - 316
       next_point: true
       pos:
       - 557
@@ -168,7 +168,7 @@ cities:
         - 322
         - 9D030D
         - 6
-  totohaha:
+  托托哈哈岛:
     check_points:
     - id: 1
       item_pos:
@@ -196,12 +196,12 @@ cities:
       item_pos:
       - backup_pos: []
         pos:
-        - 887
-        - 326
+        - 852
+        - 278
       - backup_pos: []
         pos:
-        - 276
-        - 511
+        - 208
+        - 457
       next_point: false
       pos:
       - 667
@@ -244,30 +244,30 @@ cities:
       item_pos:
       - backup_pos: []
         pos:
-        - 803
-        - 352
+        - 662 
+        - 212
       next_point: true
       pos:
-      - 362
-      - 325
+      - 366
+      - 371
       reset_map: true
     - id: 8
       item_pos:
       - backup_pos: []
         pos:
-        - 527
-        - 360
+        - 515
+        - 372
       next_point: true
       pos:
       - 363
-      - 418
+      - 393
       reset_map: true
     - id: 9
       item_pos:
       - backup_pos: []
         pos:
-        - 268
-        - 377
+        - 273
+        - 313
       next_point: true
       pos:
       - 502
