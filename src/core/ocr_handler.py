@@ -15,15 +15,72 @@ import threading
 import concurrent.futures
 
 class OCRHandler:
-    def __init__(self, device_manager: DeviceManager) -> None:
-        # 初始化OCR
+    def __init__(self, device_manager: DeviceManager, model_dir: Optional[str] = None, show_logger:bool = False) -> None:
+        if model_dir is None:
+            # 获取项目根目录
+            root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            # 判断是否在开发环境（是否存在 src 目录）
+            if os.path.exists(os.path.join(root_dir, "src")):
+                # 开发环境：使用 src 平级的 ocr/model 目录
+                base_dir = os.path.join(root_dir, "ocr", "model")
+            else:
+                # 生产环境：使用相对路径 ocr/model 目录
+                base_dir = os.path.join("ocr", "model")
+            
+            # 为中文模型设置子目录
+            ch_det_model_dir = os.path.join(base_dir, "whl", "det", "ch", "ch_PP-OCRv4_det_infer")
+            ch_rec_model_dir = os.path.join(base_dir, "whl", "rec", "ch", "ch_PP-OCRv4_rec_infer")
+            ch_cls_model_dir = os.path.join(base_dir, "whl", "cls", "ch_ppocr_mobile_v2.0_cls_infer")
+            
+            # 为英文模型设置子目录
+            en_det_model_dir = os.path.join(base_dir, "whl", "det", "en", "en_PP-OCRv3_det_infer")
+            en_rec_model_dir = os.path.join(base_dir, "whl", "rec", "en", "en_PP-OCRv3_rec_infer")
+            en_cls_model_dir = os.path.join(base_dir, "whl", "cls", "ch_ppocr_mobile_v2.0_cls_infer")
+            
+            # 创建所有必要的目录
+            for dir_path in [ch_det_model_dir, ch_rec_model_dir, ch_cls_model_dir, 
+                           en_det_model_dir, en_rec_model_dir, en_cls_model_dir]:
+                os.makedirs(dir_path, exist_ok=True)
+        else:
+            # 如果提供了自定义路径，也使用相同的子目录结构
+            ch_det_model_dir = os.path.join(model_dir, "whl", "det", "ch", "ch_PP-OCRv4_det_infer")
+            ch_rec_model_dir = os.path.join(model_dir, "whl", "rec", "ch", "ch_PP-OCRv4_rec_infer")
+            ch_cls_model_dir = os.path.join(model_dir, "whl", "cls", "ch_ppocr_mobile_v2.0_cls_infer")
+            
+            en_det_model_dir = os.path.join(model_dir, "whl", "det", "en", "en_PP-OCRv3_det_infer")
+            en_rec_model_dir = os.path.join(model_dir, "whl", "rec", "en", "en_PP-OCRv3_rec_infer")
+            en_cls_model_dir = os.path.join(model_dir, "whl", "cls", "ch_ppocr_mobile_v2.0_cls_infer")
+
+        if show_logger:    
+            # 输出模型目录信息
+            logger.info("OCR模型目录配置:")
+            logger.info(f"中文模型:")
+            logger.info(f"  - 检测模型: {ch_det_model_dir}")
+            logger.info(f"  - 识别模型: {ch_rec_model_dir}")
+            logger.info(f"  - 分类模型: {ch_cls_model_dir}")
+            logger.info(f"英文模型:")
+            logger.info(f"  - 检测模型: {en_det_model_dir}")
+            logger.info(f"  - 识别模型: {en_rec_model_dir}")
+            logger.info(f"  - 分类模型: {en_cls_model_dir}")
+            
+        # 初始化中文OCR
         self.ocr = PaddleOCR(
             use_angle_cls=config.ocr.use_angle_cls,
             lang=config.ocr.lang,
-            show_log=False
+            show_log=False,
+            det_model_dir=ch_det_model_dir,
+            rec_model_dir=ch_rec_model_dir,
+            cls_model_dir=ch_cls_model_dir
         )
-        self.ocr_digit = PaddleOCR(rec_char_type='digit',use_angle_cls=config.ocr.use_angle_cls,lang='en')
-        self.threshold = config.ocr.threshold
+        # 初始化英文数字OCR
+        self.ocr_digit = PaddleOCR(
+            rec_char_type='digit',
+            use_angle_cls=config.ocr.use_angle_cls,
+            lang='en',
+            det_model_dir=en_det_model_dir,
+            rec_model_dir=en_rec_model_dir,
+            cls_model_dir=en_cls_model_dir
+        )
         self.device_manager = device_manager
         self.ocr_lock = threading.Lock()  # 新增：OCR推理锁
         logger.debug("OCR handler initialized")
@@ -225,7 +282,7 @@ class OCRHandler:
                     continue
                 for item in line:
                     confidence = item[1][1]
-                    if confidence >= self.threshold:
+                    if confidence >= 0.8:  # 使用固定阈值
                         # logger.debug(f"OCR识别文本: {item[1][0]}，置信度: {confidence:.2f}") 
                         processed_results.append({
                             'text': item[1][0],

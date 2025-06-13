@@ -569,7 +569,7 @@ def run_fengmo_main(log_queue, log_level):
                 log_queue.put("设备连接失败")
             return
         logger.info("Initializing OCR handler...")
-        ocr_handler = OCRHandler(device_manager)
+        ocr_handler = OCRHandler(device_manager,show_logger=True)
         logger.info("启动逢魔玩法模块 FengmoMode ...")
         fengmo_mode = FengmoMode(device_manager, ocr_handler, log_queue)
         fengmo_mode.run()
@@ -643,7 +643,7 @@ def run_farming_main(log_queue, log_level):
         
         # 初始化OCR处理器
         logger.info("初始化OCR处理器...")
-        ocr_handler = OCRHandler(device_manager)
+        ocr_handler = OCRHandler(device_manager,show_logger=True)
         
         # 启动刷野模式
         logger.info("启动刷野玩法模块 FarmingMode ...")

@@ -13,7 +13,6 @@ def get_config_dir():
 class OCRConfig(BaseModel):
     lang: str = "ch"
     use_angle_cls: bool = True
-    threshold: float = 0.5
 
 class DeviceConfig(BaseModel):
     connection_timeout: int = 30
