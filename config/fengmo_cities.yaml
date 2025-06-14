@@ -126,7 +126,7 @@ cities:
     - 467
     - 414
     monsters:
-    - battle_config: ''
+    - battle_config: D:/dldbz/config/battle_scripts/托托哈哈岛精英怪.txt
       name: 逢魔精英怪
       points:
       - - 333
@@ -141,7 +141,7 @@ cities:
         - 538
         - 34813D
         - 6
-    - battle_config: ''
+    - battle_config: D:/dldbz/config/battle_scripts/托托哈哈岛Boss.txt
       name: 逢魔Boss
       points:
       - - 407

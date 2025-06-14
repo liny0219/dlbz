@@ -29,7 +29,6 @@ class World:
         self.battle_executor = BattleCommandExecutor(battle,self)
         self.monsters = []
         self.default_battle_config = ""
-        self.vip_cure_count = 0
     
     def set_monsters(self,monsters:list[Monster],default_battle_config:str=""):
         self.monsters = monsters
@@ -167,7 +166,7 @@ class World:
                 image = self.device_manager.get_screenshot()
                 time.sleep(interval)
                 if self.ocr_handler.match_texts(["是否离开"],image):
-                    self.device_manager.click(800,480)
+                    self.click_confirm_pos()
                     continue
                 if not self.in_fengmo_map(image) and self.in_world(image):
                     return True
@@ -275,7 +274,7 @@ class World:
             self.device_manager.click(1100,680)
             time.sleep(interval)
         
-    def rest_in_inn(self,inn_pos:list[int], vip_cure:bool=False) -> str:
+    def rest_in_inn(self,inn_pos:list[int]) -> str:
         """
         自动完成旅馆休息流程：
         1. 判断是否在城镇，打开小地图
@@ -303,9 +302,6 @@ class World:
             else:
                 logger.debug("在小地图中")
                 break
-        is_vip_cure = self.vip_cure(vip_cure)
-        if is_vip_cure is not None:
-            return is_vip_cure
         logger.debug("点击旅馆")
         self.device_manager.click(*inn_pos)
         logger.debug("等待旅馆")
@@ -336,7 +332,6 @@ class World:
             return 'not_find_inn_door'
         logger.debug("点击旅馆门口")
         self.device_manager.click(*door_pos)
-        self.vip_cure_count = 3
         return 'rest_in_inn'
 
     def go_fengmo(self,depth:int,entrance_pos:list[int],wait_time:float=0.2):
@@ -385,7 +380,7 @@ class World:
         """
         使用vip治疗
         """
-        if not vip_cure or self.vip_cure_count <= 0:
+        if not vip_cure:
             return None
         logger.debug("使用vip治疗")
         self.device_manager.click(1238, 20)
@@ -393,12 +388,27 @@ class World:
         time.sleep(0.2)
         logger.info(f"[vip_cure]使用vip治疗")
         self.device_manager.click(1222, 525)
-        sleep_until(lambda: self.ocr_handler.match_click_text(["是"]),function_name="vip治疗 是")
+        def check_cure():
+            screenshot = self.device_manager.get_screenshot()
+            result = self.ocr_handler.recognize_text(screenshot)
+            for r in result:
+                if "将恢复旅团所有人的全部" in r['text']:
+                    logger.info('是否月卡恢复')
+                    time.sleep(1)
+                    self.click_confirm_pos()
+                    logger.info('点击确认')
+                    return 'confirm_cure'
+                if "已用完所有的全恢复次数" in r['text']:
+                    logger.info('已用完所有月卡恢复次数')
+                    self.click_confirm_pos()
+                    return 'none_cure'
+        result = sleep_until(check_cure,function_name="check_cure")
+        if result == 'none_cure':
+            return result
         time.sleep(5)
-        sleep_until(lambda: self.ocr_handler.match_click_text(["完全恢复了"]),function_name="vip治疗 完全恢复了")
+        sleep_until(lambda:self.ocr_handler.match_click_text(["完全恢复了"]),function_name="vip治疗 完全恢复了")
         time.sleep(1)
-        self.vip_cure_count -= 1
-        return 'vip_cure'
+        return 'finish_cure'
 
     def select_fengmo_mode(self,depth:int):
         """
@@ -594,6 +604,9 @@ class World:
         device = self.device_manager.device
         if device:
             device.swipe(640, 350, 690, 350, 0.05)
+
+    def click_confirm_pos(self):
+        self.device_manager.click(800,485)
     
     def click_confirm(self,image:Image.Image|None=None):
         if image is None:
@@ -607,3 +620,4 @@ class World:
             return True
         else:
             return False
+    

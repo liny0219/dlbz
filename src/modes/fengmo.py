@@ -183,10 +183,11 @@ class FengmoMode:
             logger.info(f"[run]当前配置的城市: {self.city_name} 深度: {self.depth}")
             if self.rest_in_inn:
                 logger.info("[run]休息检查")
-                result = self.world.rest_in_inn(self.inn_pos,self.vip_cure)
-                if result == 'vip_cure':
-                    logger.info("[run]使用vip治疗")
-                    self.wait_map()
+                need_inn = True
+                if self.world.vip_cure(self.vip_cure) == 'finish_cure':
+                    need_inn = False
+                if need_inn:
+                    self.world.rest_in_inn(self.inn_pos)
             while True:
                 self.world.go_fengmo(self.depth, self.entrance_pos)
                 if self.world.wait_in_fengmo_map():
@@ -531,7 +532,7 @@ class FengmoMode:
                         is_dead = True
                         break
                     if "选择放弃的话" in r['text'] and is_dead:
-                        device_manager.click(800,485)
+                        self.world.click_confirm_pos()
                         logger.info("[check_info]确认，不复活了")
                         state_data.step = Step.BATTLE_FAIL
                         is_dead = False
