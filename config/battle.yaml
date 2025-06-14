@@ -2,3 +2,16 @@ battle_recognition_time: 4.0
 wait_drag_time: 0.4
 wait_time: 0.1
 wait_ui_time: 0.2
+auto_battle_timeout: 10.0
+check_dead_timeout: 1.0
+reset_round_timeout: 10.0
+exit_battle_timeout: 20.0
+transform_timeout: 15.0
+cast_sp_timeout: 10.0
+cast_skill_timeout: 10.0
+attack_timeout: 5.0
+wait_in_round_timeout: 10.0
+wait_done_timeout: 90.0
+boost_timeout: 15.0
+switch_all_timeout: 5.0
+find_enemy_timeout: 5.0

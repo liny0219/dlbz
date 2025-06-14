@@ -126,20 +126,12 @@ cities:
     - 467
     - 414
     monsters:
-    - battle_config: D:/dldbz/config/battle_scripts/托托哈哈岛精英怪.txt
+    - battle_config: ''
       name: 逢魔精英怪
       points:
       - - 333
         - 467
         - D18D6A
-        - 3
-      - - 383
-        - 331
-        - 10001A
-        - 3
-      - - 392
-        - 349
-        - 2B0325
         - 3
       - - 290
         - 376
@@ -148,30 +140,22 @@ cities:
       - - 375
         - 538
         - 34813D
-        - 4
-    - battle_config: D:/dldbz/config/battle_scripts/托托哈哈岛Boss.txt
+        - 6
+    - battle_config: ''
       name: 逢魔Boss
       points:
-      - - 443
-        - 178
-        - 1B0217
-        - 2
-      - - 388
-        - 172
-        - 1D001D
-        - 2
       - - 407
         - 319
         - CAAEAD
-        - 2
+        - 3
       - - 208
         - 492
         - 1B0310
-        - 2
+        - 3
       - - 392
         - 541
         - 39823D
-        - 3
+        - 6
   新德尔斯塔:
     check_points:
     - id: 1

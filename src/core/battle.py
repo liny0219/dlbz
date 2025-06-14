@@ -33,6 +33,20 @@ class Battle:
         self.wait_ui_time = config.battle.wait_ui_time
         self.wait_drag_time = config.battle.wait_drag_time
         self.battle_recognition_time = config.battle.battle_recognition_time
+        # 战斗相关timeout配置
+        self.auto_battle_timeout = config.battle.auto_battle_timeout
+        self.check_dead_timeout = config.battle.check_dead_timeout
+        self.reset_round_timeout = config.battle.reset_round_timeout
+        self.exit_battle_timeout = config.battle.exit_battle_timeout
+        self.transform_timeout = config.battle.transform_timeout
+        self.cast_sp_timeout = config.battle.cast_sp_timeout
+        self.cast_skill_timeout = config.battle.cast_skill_timeout
+        self.attack_timeout = config.battle.attack_timeout
+        self.wait_in_round_timeout = config.battle.wait_in_round_timeout
+        self.wait_done_timeout = config.battle.wait_done_timeout
+        self.boost_timeout = config.battle.boost_timeout
+        self.switch_all_timeout = config.battle.switch_all_timeout
+        self.find_enemy_timeout = config.battle.find_enemy_timeout
 
     # ================== 战斗状态判断相关方法 ==================
     def in_battle(self, image: Optional[Image.Image] = None, call_roll: bool = True,roll_count:int=2) -> bool:
@@ -263,10 +277,12 @@ class Battle:
             
 
     # ================== 战斗相关方法 ==================
-    def auto_battle(self, timeout:float = 10) -> bool:
+    def auto_battle(self, timeout: Optional[float] = None) -> bool:
         """
         自动战斗
         """
+        if timeout is None:
+            timeout = self.auto_battle_timeout
         screenshot = self.device_manager.get_screenshot()
         logger.debug("auto_battle 战斗场景中,等待回合")
         if not self.in_round(screenshot):
@@ -294,13 +310,15 @@ class Battle:
                 logger.info("委托成功")
                 return True
 
-    def check_dead(self, role_id: int = 0, timeout:float = 1) -> bool:
+    def check_dead(self, role_id: int = 0, timeout: Optional[float] = None) -> bool:
         """
         判断当前是否死亡。
         :param image: 可选，外部传入截图
         :param role_id: 可选，角色id，默认0代表任意角色死亡判断,1-8代表具体角色死亡判断
         :return: bool
         """
+        if timeout is None:
+            timeout = self.check_dead_timeout
         start_time = time.time()
         while True:
             if time.time() - start_time > timeout:
@@ -336,10 +354,12 @@ class Battle:
                     return True
             time.sleep(0.2)
 
-    def reset_round(self, timeout:float = 10) -> bool:
+    def reset_round(self, timeout: Optional[float] = None) -> bool:
         """
         重置回合
         """
+        if timeout is None:
+            timeout = self.reset_round_timeout
         start_time = time.time()
         while not self.in_round() and self.in_battle():
             if time.time() - start_time > timeout:
@@ -349,10 +369,12 @@ class Battle:
             time.sleep(0.1)
         return True
             
-    def exit_battle(self, timeout:float = 20) -> bool:
+    def exit_battle(self, timeout: Optional[float] = None) -> bool:
         """
         退出战斗
         """
+        if timeout is None:
+            timeout = self.exit_battle_timeout
         start_time = time.time()
         while not self.in_round():
             if time.time() - start_time > timeout:
@@ -495,12 +517,14 @@ class Battle:
                         time.sleep(self.wait_time + self.wait_ui_time)
                     return True       
 
-    def transform(self, index: int = 1, switch: bool = False, timeout:float = 15) -> bool:
+    def transform(self, index: int = 1, switch: bool = False, timeout: Optional[float] = None) -> bool:
         """
         切换形态
         :param index: 角色索引
         :param switch: 是否切换角色
         """
+        if timeout is None:
+            timeout = self.transform_timeout
         if index < 1 or index > 4:
             logger.error(f"[Battle] 角色索引错误，index: {index}")
             return False
@@ -535,7 +559,9 @@ class Battle:
                         return True
 
     def cast_sp(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, 
-                switch: bool = False, timeout:float = 10) -> bool:
+                switch: bool = False, timeout: Optional[float] = None) -> bool:
+        if timeout is None:
+            timeout = self.cast_sp_timeout
         enemy_pos = None
         if index < 1 or index > 4:
             logger.error(f"[Battle] 角色索引错误，index: {index}")
@@ -594,7 +620,7 @@ class Battle:
                         return True
 
     def cast_skill(self, index: int = 1,skill: int = 1, bp: int = 0, role_id: int = 0,  x: int = 0, y: int = 0,
-                    switch: bool = False, timeout:int = 10) -> bool:
+                    switch: bool = False, timeout: Optional[float] = None) -> bool:
         """
         使用技能
         :param index: 角色索引
@@ -604,6 +630,8 @@ class Battle:
         :param y: 坐标y
         :param switch: 是否切换角色
         """
+        if timeout is None:
+            timeout = self.cast_skill_timeout
         logger.debug(f"[Battle] 选择角色，角色索引: {index},技能索引: {skill},倍率: {bp},坐标: ({x}, {y})")
         # 检查index 1-4
         # 检查skill 0-4
@@ -658,10 +686,12 @@ class Battle:
                 time.sleep(self.wait_time + self.wait_ui_time)
                 return True
 
-    def attack(self, timeout:float = 5):
+    def attack(self, timeout: Optional[float] = None):
         """
         执行攻击
         """
+        if timeout is None:
+            timeout = self.attack_timeout
         is_done = False
         # 设置超时时间为5秒
         start_time = time.time()
@@ -679,10 +709,12 @@ class Battle:
                 return True
             time.sleep(self.wait_time)
     
-    def wait_in_round_or_world(self, callback:Callable[[Image.Image], str|None]|None = None, timeout:float = 10) -> str:
+    def wait_in_round_or_world(self, callback:Callable[[Image.Image], str|None]|None = None, timeout: Optional[float] = None) -> str:
         """
         等待回合开始或进入世界
         """
+        if timeout is None:
+            timeout = self.wait_in_round_timeout
         start_time = time.time()
         while True:
             if time.time() - start_time > timeout:
@@ -700,10 +732,12 @@ class Battle:
             time.sleep(self.wait_time)
             
 
-    def wait_done(self, callback:Callable[[Image.Image], str|None]|None = None, timeout:float = 90) -> str:
+    def wait_done(self, callback:Callable[[Image.Image], str|None]|None = None, timeout: Optional[float] = None) -> str:
         """
         等待战斗结束
         """
+        if timeout is None:
+            timeout = self.wait_done_timeout
         start_time = time.time()
         while True:
             if time.time() - start_time > timeout:
@@ -814,10 +848,12 @@ class Battle:
         logger.debug(f"[Battle] 使用ex技能，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
         return self.cast_ex(index, bp, role_id, x, y, switch=True)
         
-    def cmd_boost(self, timeout:float = 15) -> bool:
+    def cmd_boost(self, timeout: Optional[float] = None) -> bool:
         """
         全体加成
         """
+        if timeout is None:
+            timeout = self.boost_timeout
         start_time = time.time()
         while True:
             if time.time() - start_time > timeout:
@@ -842,10 +878,12 @@ class Battle:
         logger.debug("[Battle] 执行攻击（Attack）")
         return self.attack()
 
-    def cmd_switch_all(self, timeout:float = 5) -> bool:
+    def cmd_switch_all(self, timeout: Optional[float] = None) -> bool:
         """
         全员交替
         """
+        if timeout is None:
+            timeout = self.switch_all_timeout
         start_time = time.time()
         while True:
             if time.time() - start_time > timeout:
@@ -936,12 +974,13 @@ class Battle:
         logger.debug("[Battle] 逃跑（Run）")
         return self.exit_battle()
     # 识别敌人
-    def find_enemy(self, monsters:list[Monster], timeout:float=5.0 ) -> Monster | None:
+    def find_enemy(self, monsters:list[Monster], timeout: Optional[float] = None ) -> Monster | None:
         """
         识别敌人
         """
+        if timeout is None:
+            timeout = self.find_enemy_timeout
         start_time = time.time()
-        timeout = self.battle_recognition_time
         logger.info(f"[Battle] 开始识别敌人,timeout={timeout}")
         while True:
             if time.time() - start_time > timeout:

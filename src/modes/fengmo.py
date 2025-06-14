@@ -506,7 +506,7 @@ class FengmoMode:
                     if "提示" in r['text']:
                         if in_mini_map:
                             break
-                        ocr_handler.match_click_text(["是"],region=region,image=screenshot)
+                        self.world.click_confirm(screenshot)
                         logger.info("[check_info]提示，确认")
                         break
                     # 战斗中的信息判断

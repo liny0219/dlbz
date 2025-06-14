@@ -79,6 +79,21 @@ class BattleConfig(BaseModel):
     wait_drag_time: float = 0.4  # 拖拽操作等待时间
     wait_ui_time: float = 0.2  # UI响应等待时间
     battle_recognition_time: float = 4.0  # 战斗识别等待时间，用于检测战斗状态变化
+    
+    # 战斗相关timeout配置
+    auto_battle_timeout: float = 10.0  # 自动战斗超时时间
+    check_dead_timeout: float = 1.0  # 检查死亡超时时间
+    reset_round_timeout: float = 10.0  # 重置回合超时时间
+    exit_battle_timeout: float = 20.0  # 退出战斗超时时间
+    transform_timeout: float = 15.0  # 切换形态超时时间
+    cast_sp_timeout: float = 10.0  # 释放SP技能超时时间
+    cast_skill_timeout: float = 10.0  # 释放技能超时时间
+    attack_timeout: float = 5.0  # 攻击超时时间
+    wait_in_round_timeout: float = 10.0  # 等待回合超时时间
+    wait_done_timeout: float = 90.0  # 等待战斗结束超时时间
+    boost_timeout: float = 15.0  # 全体加成超时时间
+    switch_all_timeout: float = 5.0  # 全员交替超时时间
+    find_enemy_timeout: float = 5.0  # 识别敌人超时时间
 
 class Config:
     def __init__(self, config_dir=None):

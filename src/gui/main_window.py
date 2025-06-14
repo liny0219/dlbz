@@ -235,36 +235,66 @@ class MainWindow(tk.Tk):
                     label_width = 14
                     input_width = 20
                     
-                    # 配置项映射，提供中文显示名称和描述
-                    battle_config_mapping = {
-                        "wait_time": ("基础等待时间", "战斗中每步操作的基础等待时间(秒)"),
-                        "wait_drag_time": ("拖拽等待时间", "拖拽操作后的等待时间(秒)"),
-                        "wait_ui_time": ("UI等待时间", "UI响应等待时间(秒)"),
-                        "battle_recognition_time": ("战斗识别时间", "战斗状态识别等待时间(秒)")
+                    # 配置项映射
+                    CONFIG_ITEMS = {
+                        # 基础配置
+                        'wait_time': {'display_name': '基础等待时间', 'description': '基础等待时间(秒)', 'step': 0.1},
+                        'wait_drag_time': {'display_name': '拖拽等待时间', 'description': '拖拽等待时间(秒)', 'step': 0.1},
+                        'wait_ui_time': {'display_name': 'UI等待时间', 'description': 'UI等待时间(秒)', 'step': 0.1},
+                        'battle_recognition_time': {'display_name': '战斗识别时间', 'description': '战斗识别时间(秒)', 'step': 0.5},
+                        
+                        # 战斗相关timeout配置
+                        'auto_battle_timeout': {'display_name': '自动战斗超时', 'description': '自动战斗超时时间(秒)', 'step': 1.0},
+                        'check_dead_timeout': {'display_name': '检查死亡超时', 'description': '检查角色死亡超时时间(秒)', 'step': 0.5},
+                        'reset_round_timeout': {'display_name': '重置回合超时', 'description': '重置回合超时时间(秒)', 'step': 1.0},
+                        'exit_battle_timeout': {'display_name': '退出战斗超时', 'description': '退出战斗超时时间(秒)', 'step': 1.0},
+                        'transform_timeout': {'display_name': '切换形态超时', 'description': '切换形态超时时间(秒)', 'step': 1.0},
+                        'cast_sp_timeout': {'display_name': 'SP技能超时', 'description': '释放SP技能超时时间(秒)', 'step': 1.0},
+                        'cast_skill_timeout': {'display_name': '技能超时', 'description': '释放技能超时时间(秒)', 'step': 1.0},
+                        'attack_timeout': {'display_name': '攻击超时', 'description': '攻击超时时间(秒)', 'step': 0.5},
+                        'wait_in_round_timeout': {'display_name': '等待回合超时', 'description': '等待回合超时时间(秒)', 'step': 1.0},
+                        'wait_done_timeout': {'display_name': '等待结束超时', 'description': '等待战斗结束超时时间(秒)', 'step': 5.0},
+                        'boost_timeout': {'display_name': '全体加成超时', 'description': '全体加成超时时间(秒)', 'step': 1.0},
+                        'switch_all_timeout': {'display_name': '全员交替超时', 'description': '全员交替超时时间(秒)', 'step': 0.5},
+                        'find_enemy_timeout': {'display_name': '识别敌人超时', 'description': '识别敌人超时时间(秒)', 'step': 0.5},
                     }
                     
                     for k, v in data.items():
-                        if k in battle_config_mapping:
-                            display_name, description = battle_config_mapping[k]
+                        if k in CONFIG_ITEMS:
+                            display_name, description = CONFIG_ITEMS[k]['display_name'], CONFIG_ITEMS[k]['description']
                             # 创建标签
                             label = ttk.Label(frame, text=display_name, width=label_width, anchor="w")
                             label.grid(row=row, column=0, sticky='w', padx=5, pady=3)
                             
-                            # 创建输入控件，根据配置类型选择合适的控件
-                            var = tk.StringVar(value=str(v))
-                            if k in ["wait_time", "wait_drag_time", "wait_ui_time", "battle_recognition_time"]:
-                                # 时间类配置使用Spinbox，允许小数
-                                if k == "battle_recognition_time":
-                                    spin = tk.Spinbox(frame, from_=1.0, to=10.0, increment=0.5, 
+                            # 创建输入框
+                            if isinstance(v, bool):
+                                # 布尔值使用Checkbutton
+                                var = tk.BooleanVar(value=v)
+                                check = ttk.Checkbutton(frame, variable=var)
+                                check.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+                            else:
+                                # 数值使用Spinbox
+                                var = tk.DoubleVar(value=v)
+                                # 根据配置项类型设置不同的步进值
+                                if k in CONFIG_ITEMS and 'step' in CONFIG_ITEMS[k]:
+                                    step = CONFIG_ITEMS[k]['step']
+                                    # 根据步进值设置合适的范围
+                                    if step >= 1.0:
+                                        from_ = 1.0
+                                        to = 100.0
+                                    elif step >= 0.5:
+                                        from_ = 0.5
+                                        to = 10.0
+                                    else:
+                                        from_ = 0.1
+                                        to = 2.0
+                                    spin = tk.Spinbox(frame, from_=from_, to=to, increment=step,
                                                     textvariable=var, width=input_width, format="%.1f")
                                 else:
-                                    spin = tk.Spinbox(frame, from_=0.1, to=2.0, increment=0.1, 
+                                    # 默认步进值
+                                    spin = tk.Spinbox(frame, from_=0.1, to=2.0, increment=0.1,
                                                     textvariable=var, width=input_width, format="%.1f")
                                 spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-                            else:
-                                # 其他配置使用普通输入框
-                                entry = ttk.Entry(frame, textvariable=var, width=input_width)
-                                entry.grid(row=row, column=1, padx=5, pady=3, sticky='w')
                             
                             # 添加说明标签
                             desc_label = ttk.Label(frame, text=description, font=("TkDefaultFont", 8), 

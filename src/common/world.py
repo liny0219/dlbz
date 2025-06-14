@@ -103,7 +103,6 @@ class World:
             logger.debug("不在逢魔地图中")
             return None
         
-        
     def in_inn(self, image: Optional[Image.Image] = None) -> Optional[Tuple[int, int]] | None:
         """
         判断当前是否在旅馆中。
@@ -595,3 +594,16 @@ class World:
         device = self.device_manager.device
         if device:
             device.swipe(640, 350, 690, 350, 0.05)
+    
+    def click_confirm(self,image:Image.Image|None=None):
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        find = self.ocr_handler.match_image(image, "assets/confirm.png")
+        if find:
+            logger.debug("检测到按钮-是")
+            self.device_manager.click(find[0],find[1])
+            time.sleep(0.2)
+            logger.debug("点击按钮-是")
+            return True
+        else:
+            return False
