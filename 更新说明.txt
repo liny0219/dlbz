@@ -1,5 +1,7 @@
 v1.4.0
 feature: 优化战斗相关逻辑,加快速度
+feature: 使用ocr识别敌人替代特征点识别.增加准确度与速度
+feature: 重构配置GUI
 
 v1.3.8
 bugfix: 修复月卡恢复逻辑

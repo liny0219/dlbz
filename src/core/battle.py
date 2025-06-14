@@ -33,7 +33,7 @@ class Battle:
         self.wait_time = config.battle.wait_time
         self.wait_ui_time = config.battle.wait_ui_time
         self.wait_drag_time = config.battle.wait_drag_time
-        self.battle_recognition_time = config.battle.battle_recognition_time
+        self.ocr_retry_count = config.battle.recognition_retry_count
         # 战斗相关timeout配置
         self.auto_battle_timeout = config.battle.auto_battle_timeout
         self.check_dead_timeout = config.battle.check_dead_timeout
@@ -957,44 +957,13 @@ class Battle:
         """
         logger.debug("[Battle] 逃跑（Run）")
         return self.exit_battle()
-    # 识别敌人
-    def find_enemy(self, monsters:list[Monster], timeout: Optional[float] = None ) -> Monster | None:
+
+    def find_enemy_ocr(self,monster_pos:list[tuple[int, int]],monsters:list[Monster],max_count: int | None = None) -> Monster | None:
         """
         识别敌人
         """
-        if timeout is None:
-            timeout = self.find_enemy_timeout
-        start_time = time.time()
-        logger.info(f"[Battle] 开始识别敌人,timeout={timeout}")
-        if monsters is None or len(monsters) == 0:
-            logger.info("没有配置要识别的敌人")
-            return None
-        while True:
-            if time.time() - start_time > timeout:
-                logger.info(f"超时{timeout}秒,没有识别到敌人")
-                return None
-            screenshot = self.device_manager.get_screenshot()
-            orc_text = self.ocr_handler.recognize_text(screenshot,(10,100,700,660))
-            for r in orc_text:
-                logger.info(f"[find_enemy]:{r["text"]}")
-            if screenshot is None:
-                return None
-            for monster in monsters:
-                if monster.points is None:
-                    logger.info(f"敌人{monster.name}没有配置点")
-                    continue
-                if self.ocr_handler.match_point_color(screenshot, monster.points,ambiguity=0.9):
-                    logger.info(f"识别到敌人: {monster.name}")
-                    return monster
-            time.sleep(0.1)
-
-    
-
-    def find_enemy_ocr(self,monster_pos:list[tuple[int, int]],monsters:list[Monster],max_count: int = 1) -> Monster | None:
-        """
-        识别敌人
-        """
-        logger.info(f"[Battle] 开始识别敌人,max_count={max_count}")
+        if max_count is None:
+            max_count = self.ocr_retry_count
         if monster_pos is None or len(monster_pos) == 0:
             logger.info("没有配置识别敌人位置")
             return None
@@ -1003,6 +972,7 @@ class Battle:
             return
         count = 0
         while count < max_count:
+            logger.info(f"[find_enemy_ocr] 开始识别敌人,count={count},max_count={max_count}")
             for pos in monster_pos:
                 self.device_manager.click(pos[0],pos[1])
                 time.sleep(0.1)
@@ -1013,6 +983,6 @@ class Battle:
                     logger.info(f"[find_enemy_ocr]:{text}")
                     for monster in monsters:
                         if monster.name == text:
-                            logger.info(f"识别到敌人: {monster.name}")
+                            logger.info(f"匹配到敌人: {monster.name}")
                             return monster
             count+=1

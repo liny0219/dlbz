@@ -43,19 +43,11 @@ class MonsterEditor(ttk.LabelFrame):
         self.monster_name_var = tk.StringVar()
         self.monster_name_entry = ttk.Entry(input_frame, textvariable=self.monster_name_var)
         self.monster_name_entry.grid(row=0, column=2, padx=5, pady=3, sticky='ew')
-        # 识别特征点
-        ttk.Label(input_frame, text="识别特征点(points)", width=label_width, anchor='w').grid(row=1, column=1, sticky='nw')
-        self.monster_points_text = tk.Text(input_frame)
-        self.monster_points_text.grid(row=1, column=2, padx=5, pady=3, sticky='nsew')
         # 战斗配置
-        ttk.Label(input_frame, text="战斗配置", width=20, anchor='w').grid(row=2, column=1, sticky='w')
+        ttk.Label(input_frame, text="战斗配置", width=20, anchor='w').grid(row=1, column=1, sticky='w')
         self.monster_battle_var = tk.StringVar()
         self.monster_battle_entry = ttk.Entry(input_frame, textvariable=self.monster_battle_var)
-        self.monster_battle_entry.grid(row=2, column=2, padx=5, pady=3, sticky='ew')
-        # 说明区（放到战斗配置下方）
-        points_tip = "一行一个点: x,y,color,range  例: 100,200,#FF0000,3"
-        points_tip_label = tk.Label(input_frame, text=points_tip, fg='gray', anchor='w', wraplength=400, justify='left')
-        points_tip_label.grid(row=3, column=2, columnspan=2, sticky='w', padx=5)
+        self.monster_battle_entry.grid(row=1, column=2, padx=5, pady=3, sticky='ew')
         # 按钮区
         btn_frame2 = ttk.Frame(self)
         btn_frame2.grid(row=2, column=0, columnspan=4, padx=5, pady=3, sticky='w')
@@ -80,8 +72,6 @@ class MonsterEditor(ttk.LabelFrame):
         self.monster_list.bind('<<ListboxSelect>>', self.on_select)
         self.monster_name_var.trace_add('write', self.on_edit)
         self.monster_battle_var.trace_add('write', self.on_edit)
-        self.monster_points_text.bind('<KeyRelease>', lambda e: self.on_edit())
-        self.monster_points_text.bind('<FocusIn>', self.restore_listbox_selection)
         self.monster_name_entry.bind('<FocusIn>', self.restore_listbox_selection)
         self.monster_battle_entry.bind('<FocusIn>', self.restore_listbox_selection)
 
@@ -111,15 +101,6 @@ class MonsterEditor(ttk.LabelFrame):
         self._last_selected_idx = idx[0]  # 记录上一次选中项
         m = self.monsters[idx[0]]
         self.monster_name_var.set(m.get("name", ""))
-        pts = m.get("points", [])
-        if not isinstance(pts, list):
-            pts = []
-        pts_strs = []
-        for pt in pts:
-            if isinstance(pt, (list, tuple)) and len(pt) == 4:
-                pts_strs.append(f"{pt[0]},{pt[1]},{pt[2]},{pt[3]}")
-        self.monster_points_text.delete(1.0, tk.END)
-        self.monster_points_text.insert(tk.END, "\n".join(pts_strs))
         battle_val = m.get("battle_config", "")
         if battle_val is None:
             battle_val = ""
@@ -127,21 +108,12 @@ class MonsterEditor(ttk.LabelFrame):
         self.selecting_monster = False
 
     def on_add(self):
-        logging.info(f"[MonsterEditor] on_add: name={self.monster_name_var.get()}, points={self.monster_points_text.get(1.0, tk.END).strip()}, battle_config={self.monster_battle_var.get()}")
+        logging.info(f"[MonsterEditor] on_add: name={self.monster_name_var.get()}, battle_config={self.monster_battle_var.get()}")
         # 读取当前编辑区内容
         name = self.monster_name_var.get()
-        pts_lines = self.monster_points_text.get(1.0, tk.END).strip().splitlines()
-        pts = []
-        for line in pts_lines:
-            try:
-                x, y, color, r = line.split(",")
-                pts.append([int(x), int(y), color.strip(), int(r)])
-            except Exception as e:
-                logging.warning(f"[MonsterEditor] on_add: 解析点失败: {line}, err={e}")
-                continue
         battle_config = self.monster_battle_var.get()
         # 构造新怪物
-        new_monster = {"name": name or "新怪物", "points": pts, "battle_config": battle_config}
+        new_monster = {"name": name or "新怪物", "battle_config": battle_config}
         self.monsters.append(new_monster)
         logging.info(f"[MonsterEditor] on_add: 新怪物已添加: {new_monster}")
         self.save_to_yaml()
@@ -158,7 +130,6 @@ class MonsterEditor(ttk.LabelFrame):
         self.monster_list.delete(i)
         self.monsters.pop(i)
         self.monster_name_var.set("")
-        self.monster_points_text.delete(1.0, tk.END)
         self.monster_battle_var.set("")
         self.save_to_yaml()
         self.refresh_monster_list()
@@ -182,18 +153,9 @@ class MonsterEditor(ttk.LabelFrame):
         i = idx[0]
         # 读取当前编辑区内容并同步到self.monsters[i]
         name = self.monster_name_var.get()
-        pts_lines = self.monster_points_text.get(1.0, tk.END).strip().splitlines()
-        pts = []
-        for line in pts_lines:
-            try:
-                x, y, color, r = line.split(",")
-                pts.append([int(x), int(y), color.strip(), int(r)])
-            except Exception as e:
-                logging.warning(f"[MonsterEditor] on_modify: 解析点失败: {line}, err={e}")
-                continue
         battle_config = self.monster_battle_var.get()
         before = self.monsters[i].copy()
-        self.monsters[i] = {"name": name, "points": pts, "battle_config": battle_config}
+        self.monsters[i] = {"name": name, "battle_config": battle_config}
         logging.info(f"[MonsterEditor] on_modify: 修改前: {before}, 修改后: {self.monsters[i]}")
         self.save_to_yaml()
         self.refresh_monster_list()
@@ -206,7 +168,6 @@ class MonsterEditor(ttk.LabelFrame):
         self.load_monsters(city)
         self.refresh_monster_list()
         self.monster_name_var.set("")
-        self.monster_points_text.delete(1.0, tk.END)
         self.monster_battle_var.set("")
 
     def on_edit_battle_file(self):

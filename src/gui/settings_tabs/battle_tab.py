@@ -16,7 +16,7 @@ class BattleSettingsTab(ttk.Frame):
             'wait_time': {'display_name': '基础等待时间', 'description': '基础等待时间(秒)', 'step': 0.1},
             'wait_drag_time': {'display_name': '拖拽等待时间', 'description': '拖拽等待时间(秒)', 'step': 0.1},
             'wait_ui_time': {'display_name': 'UI等待时间', 'description': 'UI等待时间(秒)', 'step': 0.1},
-            'battle_recognition_time': {'display_name': '战斗识别时间', 'description': '战斗识别时间(秒)', 'step': 0.5},
+            'recognition_retry_count': {'display_name': '识别重试次数', 'description': '每次战斗识别的最大重试次数', 'step': 1},
             'auto_battle_timeout': {'display_name': '自动战斗超时', 'description': '自动战斗超时时间(秒)', 'step': 1.0},
             'check_dead_timeout': {'display_name': '检查死亡超时', 'description': '检查角色死亡超时时间(秒)', 'step': 0.5},
             'reset_round_timeout': {'display_name': '重置回合超时', 'description': '重置回合超时时间(秒)', 'step': 1.0},

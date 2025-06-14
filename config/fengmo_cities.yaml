@@ -131,34 +131,8 @@ cities:
     monsters:
     - battle_config: D:/dldbz/config/battle_scripts/托托哈哈岛精英怪.txt
       name: 逢凶的岛国大巨蛙
-      points:
-      - - 333
-        - 467
-        - D18D6A
-        - 3
-      - - 290
-        - 376
-        - '160013'
-        - 3
-      - - 375
-        - 538
-        - 34813D
-        - 6
     - battle_config: D:/dldbz/config/battle_scripts/托托哈哈岛Boss.txt
       name: 逢虐的戴特摩尔
-      points:
-      - - 407
-        - 319
-        - CAAEAD
-        - 3
-      - - 208
-        - 492
-        - 1B0310
-        - 3
-      - - 392
-        - 541
-        - 39823D
-        - 6
   新德尔斯塔:
     check_points:
     - id: 1
@@ -295,39 +269,5 @@ cities:
     monsters:
     - battle_config: D:/dldbz/config/battle_scripts/1.txt
       name: 逢凶的城市大鼠人
-      points:
-      - - 292
-        - 457
-        - '170012'
-        - 3
-      - - 333
-        - 493
-        - 317E36
-        - 3
-      - - 415
-        - 493
-        - '348036'
-        - 6
-      - - 270
-        - 447
-        - 949E96
-        - 6
     - battle_config: D:/dldbz/config/battle_scripts/1.txt
       name: 逢虐的基加提亚斯
-      points:
-      - - 402
-        - 538
-        - 3B7B3E
-        - 3
-      - - 321
-        - 539
-        - 337F35
-        - 3
-      - - 556
-        - 325
-        - D7C3B8
-        - 6
-      - - 302
-        - 322
-        - 9D030D
-        - 6

@@ -48,7 +48,6 @@ class CheckPoint(BaseModel):
 
 class Monster(BaseModel):
     name: str
-    points: List[tuple[int, int, str, int]]
     battle_config: str
 
 class CityConfig(TypedDict):
@@ -79,7 +78,7 @@ class BattleConfig(BaseModel):
     wait_time: float = 0.1  # 基础等待时间
     wait_drag_time: float = 0.4  # 拖拽操作等待时间
     wait_ui_time: float = 0.2  # UI响应等待时间
-    battle_recognition_time: float = 4.0  # 战斗识别等待时间，用于检测战斗状态变化
+    recognition_retry_count: int = 1  # 战斗识别重试次数
     
     # 战斗相关timeout配置
     auto_battle_timeout: float = 10.0  # 自动战斗超时时间
