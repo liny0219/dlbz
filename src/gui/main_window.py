@@ -15,6 +15,7 @@ from modes.farming import FarmingMode
 from utils.mark_coord import mark_coord
 from utils.logger import setup_logger
 from gui.monster_editor import MonsterEditor
+from gui.settings_panel import SettingsPanel
 
 CONFIG_FILES = [
     ("fengmo.yaml", "逢魔玩法"),
@@ -62,7 +63,7 @@ class MainWindow(tk.Tk):
         self.device_manager.connect_device()
         self._build_menu()
         self._build_main_frame()
-        self._build_settings_frame(config_files)
+        self.settings_panel = SettingsPanel(self, config_files, self.save_settings)
         self.show_main()
         # 绑定日志级别下拉框事件
         self.loglevel_combo.bind("<<ComboboxSelected>>", self.on_log_level_change)
@@ -118,223 +119,16 @@ class MainWindow(tk.Tk):
             self.main_frame.columnconfigure(i, weight=1)
 
     def _build_settings_frame(self, config_files):
-        self.settings_frame = ttk.Frame(self)
-        self.settings_notebook = ttk.Notebook(self.settings_frame)
-        self.settings_notebook.pack(fill=tk.BOTH, expand=True)
-        self.config_vars = {}
-        config_dir = get_config_dir()
-        for fname, label in config_files:
-            if fname == "fengmo_cities.yaml":
-                continue
-            fpath = os.path.join(config_dir, fname)
-            frame = ttk.Frame(self.settings_notebook)
-            self.settings_notebook.add(frame, text=label)
-            vars_dict = {}
-            if os.path.exists(fpath):
-                with open(fpath, 'r', encoding='utf-8') as f:
-                    try:
-                        data = yaml.safe_load(f) or {}
-                    except Exception as e:
-                        data = {}
-                row = 0
-                # 针对逢魔玩法特殊处理
-                if fname == "fengmo.yaml":
-                    label_width = 14  # 增大标签宽度
-                    input_width = 20  # 输入控件宽度
-                    # rest_in_inn
-                    rest_val = data.get("rest_in_inn", False)
-                    if isinstance(rest_val, str):
-                        rest_val = rest_val.lower() == "true"
-                    rest_var = tk.StringVar(value="是" if rest_val else "否")
-                    ttk.Label(frame, text="旅馆休息", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                    rest_combo = ttk.Combobox(frame, textvariable=rest_var, values=["是", "否"], state="readonly", width=input_width)
-                    rest_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-                    vars_dict["rest_in_inn"] = rest_var
-                    row += 1
-                    # vip_cure
-                    vip_cure_val = data.get("vip_cure", False)
-                    if isinstance(vip_cure_val, str):
-                        vip_cure_val = vip_cure_val.lower() == "true"
-                    vip_cure_var = tk.StringVar(value="是" if vip_cure_val else "否")
-                    ttk.Label(frame, text="月卡恢复", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                    vip_cure_combo = ttk.Combobox(frame, textvariable=vip_cure_var, values=["是", "否"], state="readonly", width=input_width)
-                    vip_cure_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-                    vars_dict["vip_cure"] = vip_cure_var
-                    row += 1
-                    # city
-                    from common.config import config
-                    city_keys = list(config.fengmo_cities.keys())
-                    city_display = city_keys  # 如需中英文映射可在此处理
-                    ttk.Label(frame, text="城市", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                    city_var = tk.StringVar(value=data.get("city", city_keys[0]))
-                    city_combo = ttk.Combobox(frame, textvariable=city_var, values=city_display, state="readonly", width=input_width)
-                    city_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-                    vars_dict["city"] = city_var
-                    row += 1
-                    # depth
-                    ttk.Label(frame, text="深度", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                    depth_var = tk.StringVar(value=str(data.get("depth", 1)))
-                    depth_spin = tk.Spinbox(frame, from_=1, to=10, textvariable=depth_var, width=input_width)
-                    depth_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-                    vars_dict["depth"] = depth_var
-                    row += 1
-                    # 逢魔点等待时间
-                    ttk.Label(frame, text="逢魔点等待时间", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                    wait_var = tk.StringVar(value=str(data.get("find_point_wait_time", 1.5)))
-                    wait_spin = tk.Spinbox(frame, from_=0.5, to=5, increment=0.1, textvariable=wait_var, width=input_width)
-                    wait_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-                    vars_dict["find_point_wait_time"] = wait_var
-                    row += 1
-                    # 起步等待时间
-                    ttk.Label(frame, text="起步等待时间", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                    wait_map_time_var = tk.StringVar(value=str(data.get("wait_map_time", 0.5)))
-                    start_wait_spin = tk.Spinbox(frame, from_=0.5, to=1.5, increment=0.1, textvariable=wait_map_time_var, width=input_width)
-                    start_wait_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-                    vars_dict["wait_map_time"] = wait_map_time_var
-                    row += 1
-                    # UI等待时间配置项
-                    ui_wait_value = data.get("wait_ui_time", "0.3")
-                    ttk.Label(frame, text="UI等待时间", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                    wait_ui_var = tk.StringVar(value=str(ui_wait_value))
-                    wait_ui_spin = tk.Spinbox(frame, from_=0.1, to=1.0, increment=0.1, 
-                                            textvariable=wait_ui_var, width=input_width, format="%.1f")
-                    wait_ui_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-                    vars_dict["wait_ui_time"] = wait_ui_var
-                    row += 1
-                    # 全灭是否复活
-                    revive_val = data.get("revive_on_all_dead", False)
-                    if isinstance(revive_val, str):
-                        revive_val = revive_val.lower() == "true"
-                    revive_var = tk.StringVar(value="是" if revive_val else "否")
-                    ttk.Label(frame, text="全灭是否复活", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                    revive_combo = ttk.Combobox(frame, textvariable=revive_var, values=["是", "否"], state="readonly", width=input_width)
-                    revive_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-                    vars_dict["revive_on_all_dead"] = revive_var
-                    row += 1
-                    
-                    # 其余字段
-                    for k, v in data.items():
-                        if k in ("rest_in_inn", "vip_cure", "city", "depth", "find_point_wait_time", "wait_map_time", "wait_ui_time", "revive_on_all_dead"):
-                            continue
-                        ttk.Label(frame, text=k, width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                        var = tk.StringVar(value=str(v))
-                        entry = ttk.Entry(frame, textvariable=var, width=input_width)
-                        entry.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-                        vars_dict[k] = var
-                        row += 1
-                    # 怪物配置区块放在最底部
-                    monster_editor = MonsterEditor(frame, city_var)
-                    monster_editor.grid(row=row, column=0, columnspan=2, sticky='nsew', padx=5, pady=10)
-                    frame.rowconfigure(row, weight=1)
-                    frame.columnconfigure(0, weight=1)
-                    frame.columnconfigure(1, weight=1)
-                    vars_dict["monster_editor"] = monster_editor
-                    row += 1
-                elif fname == "battle.yaml":
-                    # 战斗配置特殊处理
-                    label_width = 14
-                    input_width = 20
-                    
-                    # 配置项映射
-                    CONFIG_ITEMS = {
-                        # 基础配置
-                        'wait_time': {'display_name': '基础等待时间', 'description': '基础等待时间(秒)', 'step': 0.1},
-                        'wait_drag_time': {'display_name': '拖拽等待时间', 'description': '拖拽等待时间(秒)', 'step': 0.1},
-                        'wait_ui_time': {'display_name': 'UI等待时间', 'description': 'UI等待时间(秒)', 'step': 0.1},
-                        'battle_recognition_time': {'display_name': '战斗识别时间', 'description': '战斗识别时间(秒)', 'step': 0.5},
-                        
-                        # 战斗相关timeout配置
-                        'auto_battle_timeout': {'display_name': '自动战斗超时', 'description': '自动战斗超时时间(秒)', 'step': 1.0},
-                        'check_dead_timeout': {'display_name': '检查死亡超时', 'description': '检查角色死亡超时时间(秒)', 'step': 0.5},
-                        'reset_round_timeout': {'display_name': '重置回合超时', 'description': '重置回合超时时间(秒)', 'step': 1.0},
-                        'exit_battle_timeout': {'display_name': '退出战斗超时', 'description': '退出战斗超时时间(秒)', 'step': 1.0},
-                        'transform_timeout': {'display_name': '切换形态超时', 'description': '切换形态超时时间(秒)', 'step': 1.0},
-                        'cast_sp_timeout': {'display_name': 'SP技能超时', 'description': '释放SP技能超时时间(秒)', 'step': 1.0},
-                        'cast_skill_timeout': {'display_name': '技能超时', 'description': '释放技能超时时间(秒)', 'step': 1.0},
-                        'attack_timeout': {'display_name': '攻击超时', 'description': '攻击超时时间(秒)', 'step': 0.5},
-                        'wait_in_round_timeout': {'display_name': '等待回合超时', 'description': '等待回合超时时间(秒)', 'step': 1.0},
-                        'wait_done_timeout': {'display_name': '等待结束超时', 'description': '等待战斗结束超时时间(秒)', 'step': 5.0},
-                        'boost_timeout': {'display_name': '全体加成超时', 'description': '全体加成超时时间(秒)', 'step': 1.0},
-                        'switch_all_timeout': {'display_name': '全员交替超时', 'description': '全员交替超时时间(秒)', 'step': 0.5},
-                        'find_enemy_timeout': {'display_name': '识别敌人超时', 'description': '识别敌人超时时间(秒)', 'step': 0.5},
-                    }
-                    
-                    for k, v in data.items():
-                        if k in CONFIG_ITEMS:
-                            display_name, description = CONFIG_ITEMS[k]['display_name'], CONFIG_ITEMS[k]['description']
-                            # 创建标签
-                            label = ttk.Label(frame, text=display_name, width=label_width, anchor="w")
-                            label.grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                            
-                            # 创建输入框
-                            if isinstance(v, bool):
-                                # 布尔值使用Checkbutton
-                                var = tk.BooleanVar(value=v)
-                                check = ttk.Checkbutton(frame, variable=var)
-                                check.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-                            else:
-                                # 数值使用Spinbox
-                                var = tk.DoubleVar(value=v)
-                                # 根据配置项类型设置不同的步进值
-                                if k in CONFIG_ITEMS and 'step' in CONFIG_ITEMS[k]:
-                                    step = CONFIG_ITEMS[k]['step']
-                                    # 根据步进值设置合适的范围
-                                    if step >= 1.0:
-                                        from_ = 1.0
-                                        to = 100.0
-                                    elif step >= 0.5:
-                                        from_ = 0.5
-                                        to = 10.0
-                                    else:
-                                        from_ = 0.1
-                                        to = 2.0
-                                    spin = tk.Spinbox(frame, from_=from_, to=to, increment=step,
-                                                    textvariable=var, width=input_width, format="%.1f")
-                                else:
-                                    # 默认步进值
-                                    spin = tk.Spinbox(frame, from_=0.1, to=2.0, increment=0.1,
-                                                    textvariable=var, width=input_width, format="%.1f")
-                                spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-                            
-                            # 添加说明标签
-                            desc_label = ttk.Label(frame, text=description, font=("TkDefaultFont", 8), 
-                                                 foreground="gray")
-                            desc_label.grid(row=row, column=2, padx=5, pady=3, sticky='w')
-                            
-                            vars_dict[k] = var
-                            row += 1
-                        else:
-                            # 未知配置项使用默认处理
-                            ttk.Label(frame, text=k, width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                            var = tk.StringVar(value=str(v))
-                            entry = ttk.Entry(frame, textvariable=var, width=input_width)
-                            entry.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-                            vars_dict[k] = var
-                            row += 1
-                else:
-                    for k, v in data.items():
-                        ttk.Label(frame, text=k).grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                        var = tk.StringVar(value=str(v))
-                        entry = ttk.Entry(frame, textvariable=var, width=40)
-                        entry.grid(row=row, column=1, padx=5, pady=3)
-                        vars_dict[k] = var
-                        row += 1
-            self.config_vars[fname] = vars_dict
-        save_btn = ttk.Button(self.settings_frame, text="保存设置", command=self.save_settings)
-        save_btn.pack(pady=10)
-        self.settings_notebook.select(0)
-        # 调试：打印控件对象和id
-        if "fengmo.yaml" in self.config_vars:
-            print("rest_in_inn控件对象：", self.config_vars["fengmo.yaml"].get("rest_in_inn"), id(self.config_vars["fengmo.yaml"].get("rest_in_inn")))
-            print("vip_cure控件对象：", self.config_vars["fengmo.yaml"].get("vip_cure"), id(self.config_vars["fengmo.yaml"].get("vip_cure")))
+        pass  # 已迁移到SettingsPanel
 
     def show_main(self):
-        self.settings_frame.pack_forget()
+        if hasattr(self, 'settings_panel'):
+            self.settings_panel.pack_forget()
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
     def show_settings(self):
         self.main_frame.pack_forget()
-        self.settings_frame.pack(fill=tk.BOTH, expand=True)
+        self.settings_panel.pack(fill=tk.BOTH, expand=True)
 
     def on_log_level_change(self, event=None):
         """日志级别下拉框变更时，动态设置主进程logger级别，并同步所有Handler"""
@@ -441,49 +235,8 @@ class MainWindow(tk.Tk):
             if fname == "fengmo_cities.yaml":
                 continue
             fpath = os.path.join(config_dir, fname)
-            if fname in self.config_vars:
-                vars_dict = self.config_vars[fname]
-                data = {}
-                # 读取原始配置（用于类型还原）
-                orig_data = {}
-                if os.path.exists(fpath):
-                    with open(fpath, "r", encoding="utf-8") as f:
-                        try:
-                            orig_data = yaml.safe_load(f) or {}
-                        except Exception:
-                            orig_data = {}
-                for key, var in vars_dict.items():
-                    if not hasattr(var, "get"):
-                        continue
-                    value = var.get()
-                    if fname == "fengmo.yaml":
-                        if key in ["rest_in_inn", "vip_cure", "revive_on_all_dead"]:
-                            data[key] = value == "是"
-                        elif key in ["depth"]:
-                            data[key] = int(value)
-                        elif key in ["find_point_wait_time", "wait_map_time", "wait_ui_time"]:
-                            data[key] = float(value)
-                        else:
-                            data[key] = value
-                    else:
-                        orig_val = orig_data.get(key, None)
-                        if isinstance(orig_val, bool):
-                            data[key] = value == "True" or value == "是"
-                        elif isinstance(orig_val, int):
-                            try:
-                                data[key] = int(value)
-                            except Exception:
-                                data[key] = value
-                        elif isinstance(orig_val, float):
-                            try:
-                                data[key] = float(value)
-                            except Exception:
-                                data[key] = value
-                        else:
-                            data[key] = value
-                with open(fpath, 'w', encoding='utf-8') as f:
-                    yaml.dump(data, f, allow_unicode=True, sort_keys=False)
-                logger.info(f"已保存配置: {fname}")
+            # 迁移后：应从SettingsPanel/tabs获取数据并保存
+            pass
         messagebox.showinfo("提示", "所有设置已保存！")
         self.append_log("所有设置已保存！")
 

@@ -1,9 +1,8 @@
-from calendar import c
 import os
 import yaml
 from pydantic import BaseModel
 from utils.get_asset_path import get_asset_path
-from typing import Dict, List, TypedDict, Optional
+from typing import Dict, List, TypedDict, Optional, Union
 import logging
 
 # 兼容旧接口，返回config目录绝对路径
@@ -57,6 +56,8 @@ class CityConfig(TypedDict):
     entrance_pos: List[int]
     check_points: List[CheckPoint]
     monsters: List[Monster]
+    monster_pos: List[tuple[int, int]]
+
 class FengmoCityConfig(BaseModel):
     cities: Dict[str, CityConfig]
 

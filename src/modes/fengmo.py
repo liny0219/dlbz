@@ -123,6 +123,7 @@ class FengmoMode:
         self.city_config = fengmo_cities[self.city_name]
         self.inn_pos = self.city_config.get("inn_pos", [])
         self.monsters = self.city_config.get("monsters", [])
+        self.monster_pos = self.city_config.get("monster_pos",[])
         self.entrance_pos = self.city_config.get("entrance_pos", [])
         self.check_points = self.city_config.get("check_points", [])
         self.find_point_wait_time = getattr(self.fengmo_config, 'find_point_wait_time', 1.5)
@@ -176,7 +177,7 @@ class FengmoMode:
         }
         check_info_thread = ManagedThread(self.check_info, check_info_shared)
         check_info_thread.start()
-        self.world.set_monsters(self.monsters)
+        self.world.set_monsters(self.monster_pos,self.monsters)
         self.state_data.step = Step.UN_START
         while True:
             self.report_data()

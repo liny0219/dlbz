@@ -1,0 +1,140 @@
+from sys import maxsize
+import tkinter as tk
+from tkinter import ttk, messagebox
+import os
+from common.config import get_config_dir
+from utils.yaml_helper import save_yaml_with_type
+from gui.monster_editor import MonsterEditor
+from gui.monster_pos_editor import MonsterPosEditor
+from common.config import config
+
+class FengmoSettingsTab(ttk.Frame):
+    def __init__(self, master, config_data, config_filename):
+        super().__init__(master)
+        self.config_filename = config_filename
+        label_width = 14
+        input_width = 20
+        row = 0
+
+        # 常规配置区
+        config_frame = ttk.Frame(self)
+        config_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        # 旅馆休息
+        rest_val = config_data.get("rest_in_inn", False)
+        if isinstance(rest_val, str):
+            rest_val = rest_val.lower() == "true"
+        self.rest_var = tk.StringVar(value="是" if rest_val else "否")
+        ttk.Label(config_frame, text="旅馆休息", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+        rest_combo = ttk.Combobox(config_frame, textvariable=self.rest_var, values=["是", "否"], state="readonly", width=input_width)
+        rest_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+        row += 1
+
+        # 月卡恢复
+        vip_cure_val = config_data.get("vip_cure", False)
+        if isinstance(vip_cure_val, str):
+            vip_cure_val = vip_cure_val.lower() == "true"
+        self.vip_cure_var = tk.StringVar(value="是" if vip_cure_val else "否")
+        ttk.Label(config_frame, text="月卡恢复", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+        vip_cure_combo = ttk.Combobox(config_frame, textvariable=self.vip_cure_var, values=["是", "否"], state="readonly", width=input_width)
+        vip_cure_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+        row += 1
+
+        # 城市
+        city_keys = list(config.fengmo_cities.keys())
+        city_display = city_keys
+        self.city_var = tk.StringVar(value=config_data.get("city", city_keys[0]))
+        ttk.Label(config_frame, text="城市", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+        city_combo = ttk.Combobox(config_frame, textvariable=self.city_var, values=city_display, state="readonly", width=input_width)
+        city_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+        row += 1
+
+        # 深度
+        self.depth_var = tk.StringVar(value=str(config_data.get("depth", 1)))
+        ttk.Label(config_frame, text="深度", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+        depth_spin = tk.Spinbox(config_frame, from_=1, to=10, textvariable=self.depth_var, width=input_width)
+        depth_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+        row += 1
+
+        # 逢魔点等待时间
+        self.wait_var = tk.StringVar(value=str(config_data.get("find_point_wait_time", 1.5)))
+        ttk.Label(config_frame, text="逢魔点等待时间", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+        wait_spin = tk.Spinbox(config_frame, from_=0.5, to=5, increment=0.1, textvariable=self.wait_var, width=input_width)
+        wait_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+        row += 1
+
+        # 起步等待时间
+        self.wait_map_time_var = tk.StringVar(value=str(config_data.get("wait_map_time", 0.5)))
+        ttk.Label(config_frame, text="起步等待时间", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+        start_wait_spin = tk.Spinbox(config_frame, from_=0.5, to=1.5, increment=0.1, textvariable=self.wait_map_time_var, width=input_width)
+        start_wait_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+        row += 1
+
+        # UI等待时间
+        self.wait_ui_var = tk.StringVar(value=str(config_data.get("wait_ui_time", "0.3")))
+        ttk.Label(config_frame, text="UI等待时间", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+        wait_ui_spin = tk.Spinbox(config_frame, from_=0.1, to=1.0, increment=0.1, textvariable=self.wait_ui_var, width=input_width, format="%.1f")
+        wait_ui_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+        row += 1
+
+        # 全灭是否复活
+        revive_val = config_data.get("revive_on_all_dead", False)
+        if isinstance(revive_val, str):
+            revive_val = revive_val.lower() == "true"
+        self.revive_var = tk.StringVar(value="是" if revive_val else "否")
+        ttk.Label(config_frame, text="全灭是否复活", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+        revive_combo = ttk.Combobox(config_frame, textvariable=self.revive_var, values=["是", "否"], state="readonly", width=input_width)
+        revive_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+        row += 1
+
+        # 其余字段
+        self.extra_vars = {}
+        for k, v in config_data.items():
+            if k in ("rest_in_inn", "vip_cure", "city", "depth", "find_point_wait_time", "wait_map_time", "wait_ui_time", "revive_on_all_dead"):
+                continue
+            var = tk.StringVar(value=str(v))
+            ttk.Label(config_frame, text=k, width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+            entry = ttk.Entry(config_frame, textvariable=var, width=input_width)
+            entry.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+            self.extra_vars[k] = var
+            row += 1
+
+        # 保存按钮
+        save_btn = ttk.Button(self, text="保存设置", command=self.save_settings)
+        save_btn.pack(pady=10)
+
+        # 怪物设置
+        monster_frame = ttk.LabelFrame(self, text="怪物设置")
+        monster_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        monster_frame.columnconfigure(0, weight=5,minsize = 180)  # 怪物点坐标区最小
+        monster_frame.columnconfigure(1, weight=1)  # 怪物配置区最大
+        monster_frame.rowconfigure(0, weight=1)
+        self.monster_pos_editor = MonsterPosEditor(monster_frame, self.city_var)
+        self.monster_pos_editor.grid(row=0, column=0, sticky="nsew", padx=(5, 2), pady=5)
+        self.monster_editor = MonsterEditor(monster_frame, self.city_var)
+        self.monster_editor.grid(row=0, column=1, sticky="nsew", padx=(2, 5), pady=5)
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
+
+    def get_config_data(self):
+        data = {
+            "rest_in_inn": self.rest_var.get(),
+            "vip_cure": self.vip_cure_var.get(),
+            "city": self.city_var.get(),
+            "depth": self.depth_var.get(),
+            "find_point_wait_time": self.wait_var.get(),
+            "wait_map_time": self.wait_map_time_var.get(),
+            "wait_ui_time": self.wait_ui_var.get(),
+            "revive_on_all_dead": self.revive_var.get(),
+        }
+        for k, var in self.extra_vars.items():
+            data[k] = var.get()
+        # 怪物设置可扩展
+        return data
+
+    def save_settings(self):
+        config_dir = get_config_dir()
+        fpath = os.path.join(config_dir, self.config_filename)
+        raw_data = self.get_config_data()
+        save_yaml_with_type(fpath, raw_data)
+        messagebox.showinfo("提示", "设置已保存！") 

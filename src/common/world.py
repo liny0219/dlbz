@@ -28,9 +28,11 @@ class World:
         self.battle = battle
         self.battle_executor = BattleCommandExecutor(battle,self)
         self.monsters = []
+        self.monster_pos = []
         self.default_battle_config = ""
     
-    def set_monsters(self,monsters:list[Monster],default_battle_config:str=""):
+    def set_monsters(self,monster_pos:list[tuple[int, int]],monsters:list[Monster],default_battle_config:str=""):
+        self.monster_pos= monster_pos
         self.monsters = monsters
         self.default_battle_config = default_battle_config
 
@@ -519,7 +521,7 @@ class World:
                 has_battle = True
                 if check_battle and not check_battle_command_done and self.battle.in_round():
                     logger.info("执行战斗场景")
-                    monster = self.battle.find_enemy(self.monsters)
+                    monster = self.battle.find_enemy_ocr(self.monster_pos, self.monsters)
                     if monster is None:
                         logger.info("没有识别到敌人")
                         if enemyName:

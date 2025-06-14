@@ -125,9 +125,12 @@ cities:
     inn_pos:
     - 467
     - 414
+    monster_pos:
+    - - 369
+      - 422
     monsters:
     - battle_config: D:/dldbz/config/battle_scripts/托托哈哈岛精英怪.txt
-      name: 逢魔精英怪
+      name: 逢凶的岛国大巨蛙
       points:
       - - 333
         - 467
@@ -142,7 +145,7 @@ cities:
         - 34813D
         - 6
     - battle_config: D:/dldbz/config/battle_scripts/托托哈哈岛Boss.txt
-      name: 逢魔Boss
+      name: 逢虐的戴特摩尔
       points:
       - - 407
         - 319
@@ -286,9 +289,12 @@ cities:
     inn_pos:
     - 645
     - 573
+    monster_pos:
+    - - 344
+      - 433
     monsters:
     - battle_config: D:/dldbz/config/battle_scripts/1.txt
-      name: 逢魔精英怪
+      name: 逢凶的城市大鼠人
       points:
       - - 292
         - 457
@@ -307,7 +313,7 @@ cities:
         - 949E96
         - 6
     - battle_config: D:/dldbz/config/battle_scripts/1.txt
-      name: 逢魔Boss
+      name: 逢虐的基加提亚斯
       points:
       - - 402
         - 538

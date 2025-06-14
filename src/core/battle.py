@@ -987,3 +987,32 @@ class Battle:
                     logger.info(f"识别到敌人: {monster.name}")
                     return monster
             time.sleep(0.1)
+
+    
+
+    def find_enemy_ocr(self,monster_pos:list[tuple[int, int]],monsters:list[Monster],max_count: int = 1) -> Monster | None:
+        """
+        识别敌人
+        """
+        logger.info(f"[Battle] 开始识别敌人,max_count={max_count}")
+        if monster_pos is None or len(monster_pos) == 0:
+            logger.info("没有配置识别敌人位置")
+            return None
+        if monsters is None or len(monsters) == 0:
+            logger.info("没有配置识别敌人")
+            return
+        count = 0
+        while count < max_count:
+            for pos in monster_pos:
+                self.device_manager.click(pos[0],pos[1])
+                time.sleep(0.1)
+                screenshot = self.device_manager.get_screenshot()
+                result = self.ocr_handler.recognize_text(screenshot,(20,100,700,600))
+                for r in result:
+                    text = r["text"]
+                    logger.info(f"[find_enemy_ocr]:{text}")
+                    for monster in monsters:
+                        if monster.name == text:
+                            logger.info(f"识别到敌人: {monster.name}")
+                            return monster
+            count+=1
