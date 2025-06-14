@@ -181,7 +181,7 @@ class MainWindow(tk.Tk):
                     # 逢魔点等待时间
                     ttk.Label(frame, text="逢魔点等待时间", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
                     wait_var = tk.StringVar(value=str(data.get("find_point_wait_time", 1.5)))
-                    wait_spin = tk.Spinbox(frame, from_=1, to=5, increment=0.1, textvariable=wait_var, width=input_width)
+                    wait_spin = tk.Spinbox(frame, from_=0.5, to=5, increment=0.1, textvariable=wait_var, width=input_width)
                     wait_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
                     vars_dict["find_point_wait_time"] = wait_var
                     row += 1

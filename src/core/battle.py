@@ -7,6 +7,7 @@ from typing import Callable, Optional, Tuple
 from PIL import Image
 from utils.singleton import singleton
 from common.config import Monster, config
+from utils.sleep_utils import sleep_until
 
 @singleton
 class Battle:
@@ -454,6 +455,7 @@ class Battle:
         使用ex技能
         """
         enemy_pos = None
+        timeout = self.cast_skill_timeout
         if index < 1 or index > 4:
             logger.error(f"[Battle] 角色索引错误，index: {index}")
             return False
@@ -466,56 +468,52 @@ class Battle:
         if x != 0 and y != 9:
             enemy_pos = [x, y]
         role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
-        while True:
-            screenshot = self.device_manager.get_screenshot()
-            if self.in_round(screenshot):
-                logger.info("[Battle] 战斗回合中, 选择角色")
-                self.device_manager.click(role_pos[0], role_pos[1])
-                time.sleep(self.wait_time)
-                screenshot = self.device_manager.get_screenshot()
-                continue
-            if not self.in_battle(screenshot):
-                return False
-            if self.in_skill_on(screenshot):
-                if switch and not self.switch_back_role(screenshot):
-                    return False
-                if enemy_pos is not None:
-                    self.device_manager.click(*enemy_pos)
-                    logger.info(f"[Battle] 点击敌人坐标: {enemy_pos}")
-                    time.sleep(self.wait_time)
-                if  not self.in_sp_on(screenshot):
-                    logger.info("[Battle] 技能界面中,切换额外技能界面")
-                    self.device_manager.click(696, 96)
-                    time.sleep(self.wait_time + self.wait_ui_time)
-                    screenshot = self.device_manager.get_screenshot()
-                if  self.in_sp_on(screenshot):
-                    logger.info("[Battle] 额外技能界面")
-                    # 点击修正坐标1与修正坐标2,兼容必杀技\支炎兽\ex技能时点击必杀选项,切换到必杀选项
-                    for pos in normalize_pos:
-                        self.device_manager.click(pos[0], pos[1])
-                    time.sleep(self.wait_time + self.wait_ui_time)
-                    logger.info("[Battle] 校正界面")
-                    if bp > 0:
-                        logger.info(f"[Battle] 拖动选择BP{bp}")
-                        self.device_manager.press_and_drag_step(
-                            self.extra_skill_bp_pos,
-                            (self.extra_bp_offset_x[bp], self.extra_skill_bp_pos[1]),
-                            duration=0.5
-                        )
-                        time.sleep(self.wait_time + self.wait_ui_time)
-                    # 点击发动按钮,兼容必杀技\支炎兽\ex技能时点击必杀发动选项
-                    for pos in click_pos:
-                        self.device_manager.click(pos[0], pos[1])
-                    logger.info(f"[Battle] 点击发动按钮")
-                    time.sleep(self.wait_time + self.wait_ui_time)
-
-                    if role_id != 0:
-                        role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (role_id-1)*self.rols_base_y_offset)
-                        time.sleep(0.5)
-                        self.device_manager.click(*role_pos)
-                        logger.info(f"[Battle] 点击配置角色{role_id} {role_pos}")
-                        time.sleep(self.wait_time + self.wait_ui_time)
-                    return True       
+        if not sleep_until(self.in_round,timeout=timeout):
+            logger.info("[Battle] 不在回合中超时")
+            return False
+        self.device_manager.click(role_pos[0], role_pos[1])
+        time.sleep(self.wait_time + self.wait_ui_time)
+        if not sleep_until(self.in_skill_on,timeout=timeout):
+            logger.info("[Battle] 不在技能面板超时")
+            return False
+        if switch and not self.switch_back_role():
+            logger.info("[Battle] 切换后排超时")
+        if enemy_pos is not None:
+            self.device_manager.click(*enemy_pos)
+            logger.info(f"[Battle] 点击敌人坐标: {enemy_pos}")
+            time.sleep(self.wait_time)
+        logger.info("[Battle] 技能界面中,切换额外技能界面")
+        self.device_manager.click(696, 96)
+        time.sleep(self.wait_time + self.wait_ui_time)
+        if not sleep_until(self.in_sp_on,timeout=timeout):
+            logger.info("[Battle] 不在技能面板超时")
+            return False
+        logger.info("[Battle] 额外技能界面")
+        # 点击修正坐标1与修正坐标2,兼容必杀技\支炎兽\ex技能时点击必杀选项,切换到必杀选项
+        for pos in normalize_pos:
+            self.device_manager.click(pos[0], pos[1])
+        time.sleep(self.wait_time + self.wait_ui_time)
+        logger.info("[Battle] 校正界面")
+        if bp > 0:
+            logger.info(f"[Battle] 拖动选择BP{bp}")
+            self.device_manager.press_and_drag_step(
+                self.extra_skill_bp_pos,
+                (self.extra_bp_offset_x[bp], self.extra_skill_bp_pos[1]),
+                duration=self.wait_drag_time
+            )
+        # 点击发动按钮,兼容必杀技\支炎兽\ex技能时点击必杀发动选项
+        for pos in click_pos:
+            self.device_manager.click(pos[0], pos[1])
+        logger.info(f"[Battle] 点击发动按钮")
+        time.sleep(self.wait_time + self.wait_ui_time)
+        if role_id != 0:
+            role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (role_id-1)*self.rols_base_y_offset)
+            time.sleep(0.5)
+            self.device_manager.click(*role_pos)
+            logger.info(f"[Battle] 点击配置角色{role_id} {role_pos}")
+            time.sleep(self.wait_time + self.wait_ui_time)
+        return True     
+                      
 
     def transform(self, index: int = 1, switch: bool = False, timeout: Optional[float] = None) -> bool:
         """
@@ -529,34 +527,32 @@ class Battle:
             logger.error(f"[Battle] 角色索引错误，index: {index}")
             return False
         role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
+        if not sleep_until(self.in_round,timeout=timeout):
+            logger.info("[Battle] 不在回合中超时")
+            return False
+        self.device_manager.click(role_pos[0], role_pos[1])
+        time.sleep(self.wait_time + self.wait_ui_time)
+        if not sleep_until(self.in_skill_on,timeout=timeout):
+            logger.info("[Battle] 不在技能面板超时")
+            return False
+        if switch and not self.switch_back_role():
+            logger.info("[Battle] 切换后排超时")
+            return False
+        self.device_manager.click(960, 40)
+        logger.info(f"[Battle] 点击潜力切换按钮")
+        time.sleep(self.wait_time + self.wait_ui_time)
+        if not sleep_until(self.in_skill_on,timeout=timeout):
+            logger.info("[Battle] 不在技能面板超时")
+            return False
         start_time = time.time()
-        while True:
+        while not self.in_round():
             if time.time() - start_time > timeout:
-                logger.info('[battle]transform 超时')
+                logger.info("[Battle] 收起技能栏超时")
                 return False
-            screenshot = self.device_manager.get_screenshot()
-            if self.in_round(screenshot):
-                self.device_manager.click(role_pos[0], role_pos[1])
-                time.sleep(self.wait_time + self.wait_ui_time)
-                continue
-            if not self.in_battle(screenshot):
-                return False
-            if self.in_skill_on(screenshot):
-                if switch and not self.switch_back_role(screenshot):
-                    return False
-                self.device_manager.click(960, 40)
-                logger.info(f"[Battle] 点击潜力切换按钮")
-                time.sleep(self.wait_ui_time)
-                while True:
-                    time.sleep(self.wait_time)
-                    screenshot = self.device_manager.get_screenshot()
-                    if self.in_skill_on(screenshot):
-                        self.device_manager.click(135,25)
-                        logger.info(f"[Battle] 点击收起技能栏")
-                        while not self.in_skill_on(screenshot):
-                            time.sleep(self.wait_time)
-                            screenshot = self.device_manager.get_screenshot()
-                        return True
+            logger.info(f"[Battle] 点击收起技能栏")
+            self.device_manager.click(135,25)
+            time.sleep(self.wait_time)
+        return True
 
     def cast_sp(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, 
                 switch: bool = False, timeout: Optional[float] = None) -> bool:
@@ -572,52 +568,44 @@ class Battle:
         if x != 0 and y != 9:
             enemy_pos = [x, y]
         role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
-        start_time = time.time()
-        while True:
-            if time.time() - start_time > timeout:
-                logger.info('[battle]cast_sp 超时')
-                return False
-            screenshot = self.device_manager.get_screenshot()
-            if self.in_round(screenshot):
-                logger.info("[Battle] 选择角色")
-                self.device_manager.click(role_pos[0], role_pos[1])
-                time.sleep(self.wait_time + self.wait_ui_time)
-                continue
-            if not self.in_battle(screenshot):
-                return False
-            if self.in_skill_on(screenshot):
-                if switch and not self.switch_back_role(screenshot):
-                    return False
-                if enemy_pos is not None:
-                    self.device_manager.click(*enemy_pos)
-                    logger.info(f"[Battle] 点击敌人坐标: {enemy_pos}")
-                    time.sleep(self.wait_time)
-                if not self.in_sp_on(screenshot):
-                    logger.info("[Battle] 技能界面中,切换额外技能界面")
-                    self.device_manager.click(696, 96)
-                    time.sleep(self.wait_time + self.wait_ui_time)
-                    screenshot = self.device_manager.get_screenshot()
-                    if self.in_sp_on(screenshot):
-                        # 点击修正坐标1与修正坐标2,兼容必杀技\支炎兽\ex技能时点击必杀选项,切换到必杀选项
-                        normalize_pos = [(560, 210),(680, 210)]
-                        for pos in normalize_pos:
-                            self.device_manager.click(pos[0], pos[1])
-                        time.sleep(self.wait_time + self.wait_ui_time)
-                        screenshot = self.device_manager.get_screenshot()
-                        # 点击发动按钮,兼容必杀技\支炎兽\ex技能时点击必杀发动选项
-                        normalize_pos = [(941, 525),(942, 464)]
-                        for pos in normalize_pos:
-                            self.device_manager.click(pos[0], pos[1])
-                        logger.info(f"[Battle] 点击发动按钮")
-                        time.sleep(self.wait_time + self.wait_ui_time)
-                        screenshot = self.device_manager.get_screenshot()
-                        if role_id != 0:
-                            role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (role_id-1)*self.rols_base_y_offset)
-                            time.sleep(0.5)
-                            self.device_manager.click(*role_pos)
-                            logger.info(f"[Battle] 点击配置角色{role_id} {role_pos}")
-                            time.sleep(self.wait_time + self.wait_ui_time)
-                        return True
+        if not sleep_until(self.in_round,timeout=timeout):
+            logger.info("[Battle] 不在回合中超时")
+            return False
+        self.device_manager.click(role_pos[0], role_pos[1])
+        if not sleep_until(self.in_skill_on,timeout=timeout):
+            logger.info("[Battle] 不在技能面板超时")
+            return False
+        if switch and not self.switch_back_role(timeout=timeout):
+            logger.info("[Battle] 切换后排超时")
+            return False
+        if enemy_pos is not None:
+            self.device_manager.click(*enemy_pos)
+            logger.info(f"[Battle] 点击敌人坐标: {enemy_pos}")
+            time.sleep(self.wait_time)
+        logger.info("[Battle] 技能界面中,切换额外技能界面")
+        self.device_manager.click(696, 96)
+        time.sleep(self.wait_time + self.wait_ui_time)
+        if not sleep_until(self.in_sp_on,timeout=timeout):
+            logger.info("[Battle] 不在技能面板超时")
+            return False
+        # 点击修正坐标1与修正坐标2,兼容必杀技\支炎兽\ex技能时点击必杀选项,切换到必杀选项
+        normalize_pos = [(560, 210),(680, 210)]
+        for pos in normalize_pos:
+            self.device_manager.click(pos[0], pos[1])
+        time.sleep(self.wait_time + self.wait_ui_time)
+        # 点击发动按钮,兼容必杀技\支炎兽\ex技能时点击必杀发动选项
+        normalize_pos = [(941, 525),(942, 464)]
+        for pos in normalize_pos:
+            self.device_manager.click(pos[0], pos[1])
+        logger.info(f"[Battle] 点击发动按钮")
+        time.sleep(self.wait_time + self.wait_ui_time)
+        if role_id != 0:
+            role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (role_id-1)*self.rols_base_y_offset)
+            time.sleep(0.5)
+            self.device_manager.click(*role_pos)
+            logger.info(f"[Battle] 点击配置角色{role_id} {role_pos}")
+            time.sleep(self.wait_time + self.wait_ui_time)
+        return True
 
     def cast_skill(self, index: int = 1,skill: int = 1, bp: int = 0, role_id: int = 0,  x: int = 0, y: int = 0,
                     switch: bool = False, timeout: Optional[float] = None) -> bool:
@@ -645,46 +633,42 @@ class Battle:
         if bp < 0 or bp > 3:
             logger.error(f"[Battle] 倍率错误，bp: {bp}")
             return False
-
         enemy_pos = None
         if x != 0 and y != 0:
             enemy_pos = (x,y)
         role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
         skill_start = (self.skill_base_x[0], self.skill_base_y + (skill)*self.skill_base_y_offset)
         skill_end = (self.skill_base_x[bp], self.skill_base_y + (skill)*self.skill_base_y_offset)
-        start_time = time.time()
-        while True:
-            if time.time() - start_time > timeout:
-                logger.info('[battle]cast_skill 超时')
-                return False
-            screenshot = self.device_manager.get_screenshot()
-            if self.in_round(screenshot):
-                logger.info("[Battle] 选择角色")
-                self.device_manager.click(role_pos[0], role_pos[1])
-                time.sleep(self.wait_time + self.wait_ui_time)
-                continue
-            if not self.in_battle(screenshot):
-                return False
-            if self.in_skill_on(screenshot):
-                logger.info("[Battle] 在技能面板")
-                if switch and not self.switch_back_role(screenshot):
-                       return False
-                if enemy_pos:
-                    logger.info(f"[Battle] 点击敌人坐标: {enemy_pos}")
-                    self.device_manager.click(enemy_pos[0], enemy_pos[1])
-                    time.sleep(self.wait_time + self.wait_ui_time)
-                if bp == 0:
-                    logger.info(f"[Battle] 点击选择技能")
-                    self.device_manager.click(skill_start[0], skill_start[1])
-                else:
-                    logger.info(f"[Battle] 拖动选择技能")
-                    self.device_manager.press_and_drag_step(skill_start, skill_end, self.wait_drag_time)
-                if role_id != 0:
-                    logger.info(f"[Battle] 点击配置角色{role_id}")
-                    skill_role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (role_id-1)*self.rols_base_y_offset)
-                    self.device_manager.click(skill_role_pos[0], skill_role_pos[1])
-                time.sleep(self.wait_time + self.wait_ui_time)
-                return True
+        if not sleep_until(self.in_round,timeout=timeout):
+            logger.info("[Battle] 不在回合中超时")
+            return False
+        logger.info("[Battle] 选择角色")
+        self.device_manager.click(role_pos[0], role_pos[1])
+        time.sleep(self.wait_time + self.wait_ui_time)
+        if not sleep_until(self.in_skill_on,timeout=timeout):
+            logger.info("[Battle] 不在技能面板超时")
+            return False
+        logger.info("[Battle] 在技能面板")
+        if switch and not self.switch_back_role():
+            logger.info("[Battle 切换后排超时]")    
+            return False
+        if enemy_pos:
+            logger.info(f"[Battle] 点击敌人坐标: {enemy_pos}")
+            self.device_manager.click(enemy_pos[0], enemy_pos[1])
+            time.sleep(self.wait_time + self.wait_ui_time)
+        if bp == 0:
+            logger.info(f"[Battle] 点击选择技能")
+            self.device_manager.click(skill_start[0], skill_start[1])
+        else:
+            logger.info(f"[Battle] 拖动选择技能")
+            self.device_manager.press_and_drag_step(skill_start, skill_end, self.wait_drag_time)
+        if role_id != 0:
+            logger.info(f"[Battle] 点击配置角色{role_id}")
+            skill_role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (role_id-1)*self.rols_base_y_offset)
+            self.device_manager.click(skill_role_pos[0], skill_role_pos[1])
+        time.sleep(self.wait_time + self.wait_ui_time)
+        return True
+                
 
     def attack(self, timeout: Optional[float] = None):
         """
@@ -982,15 +966,18 @@ class Battle:
             timeout = self.find_enemy_timeout
         start_time = time.time()
         logger.info(f"[Battle] 开始识别敌人,timeout={timeout}")
+        if monsters is None or len(monsters) == 0:
+            logger.info("没有配置要识别的敌人")
+            return None
         while True:
             if time.time() - start_time > timeout:
                 logger.info(f"超时{timeout}秒,没有识别到敌人")
                 return None
             screenshot = self.device_manager.get_screenshot()
+            orc_text = self.ocr_handler.recognize_text(screenshot,(10,100,700,660))
+            for r in orc_text:
+                logger.info(f"[find_enemy]:{r["text"]}")
             if screenshot is None:
-                return None
-            if monsters is None or len(monsters) == 0:
-                logger.info("没有配置要识别的敌人")
                 return None
             for monster in monsters:
                 if monster.points is None:

@@ -1,8 +1,8 @@
-rest_in_inn: true
+rest_in_inn: false
 vip_cure: true
 city: 托托哈哈岛
 depth: 3
-find_point_wait_time: 1.5
+find_point_wait_time: 0.5
 wait_map_time: 0.5
 wait_ui_time: 0.3
 revive_on_all_dead: false
