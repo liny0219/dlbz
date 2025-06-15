@@ -402,6 +402,7 @@ class FengmoMode:
             if result == 'in_world_battle_fail' or result == 'in_world_fight_boss':
                 return
             while True:
+                self.wait_map()
                 point_pos = sleep_until(lambda: self.world.find_fengmo_point(current_point=check_point),
                                          self.find_point_wait_time,function_name="find_fengmo_point")
                 logger.info(f"[find_boss_phase]查找Boss逢魔点: {point_pos}")
