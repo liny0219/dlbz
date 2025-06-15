@@ -15,7 +15,7 @@ class MonsterPosEditor(ttk.LabelFrame):
         self.refresh_editor()
 
     def _build_widgets(self):
-        self.editor = tk.Text(self)
+        self.editor = tk.Text(self, width=10)
         self.editor.grid(row=0, column=0, padx=5, pady=3, sticky='nsew')
         self.editor.insert(tk.END, "请输入坐标，格式为：x,y\n每行一个坐标")
         self.editor.bind('<FocusIn>', self.on_focus_in)

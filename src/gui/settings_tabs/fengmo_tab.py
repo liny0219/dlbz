@@ -106,8 +106,8 @@ class FengmoSettingsTab(ttk.Frame):
         # 怪物设置
         monster_frame = ttk.LabelFrame(self, text="怪物设置")
         monster_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        monster_frame.columnconfigure(0, weight=5,minsize = 180)  # 怪物点坐标区最小
-        monster_frame.columnconfigure(1, weight=1)  # 怪物配置区最大
+        monster_frame.columnconfigure(0, weight=1, minsize=30)  # 怪物点坐标区 1/4
+        monster_frame.columnconfigure(1, weight=3, minsize=120)  # 怪物配置区 3/4
         monster_frame.rowconfigure(0, weight=1)
         self.monster_pos_editor = MonsterPosEditor(monster_frame, self.city_var)
         self.monster_pos_editor.grid(row=0, column=0, sticky="nsew", padx=(5, 2), pady=5)
