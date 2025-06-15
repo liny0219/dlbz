@@ -1,3 +1,7 @@
+v1.4.2
+feature: 移除Transform潜力指令,新增RoleEx指令合并Transform与Role指令功能,提高效率
+feature: 配置新增技能拖动时间配置
+
 v1.4.1
 bugfix: 修复boss阶段遇小怪后,可能找错到入口
 

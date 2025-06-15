@@ -37,8 +37,8 @@ class BattleCommandExecutor:
             "XPet":        ["index", "bp", "role_id", "x", "y"],
             "Wait":        ["seconds"],
             "Skip":        ["seconds"],
-            "Transform":   ["index"],
-            "XTransform":  ["index"],
+            "RoleEx":      ["index", "skill", "bp", "role_id", "x", "y"],
+            "XRoleEx":     ["index", "skill", "bp", "role_id", "x", "y"],
             "Click":       ["x", "y"],
             "Switch":      [],
             "Boost":       [],
@@ -106,8 +106,8 @@ class BattleCommandExecutor:
                     return False
                 if not result:
                     self.battle.reset_round()
-                    result = self.battle.wait_in_round_or_world(lambda screenshot:
-                                                    "in_world" if self.world.in_world(screenshot) else None, timeout=30)
+                    result = self.battle.wait_in_round_or_world(lambda screenshot:"in_world" if self.world.in_world(screenshot) else None, 
+                                                                timeout=30)
                     if result in ['in_round']:
                         self.logger.info(f"指令执行异常:{cmd}")
                         self.battle.exit_battle()
@@ -165,10 +165,10 @@ class BattleCommandExecutor:
             return self.battle.cmd_pet(**params)
         elif cmd_type == "XPet":
             return self.battle.cmd_xpet(**params)
-        elif cmd_type == "Transform":
-            return self.battle.cmd_transform(**params)
-        elif cmd_type == "XTransform":
-            return self.battle.cmd_xtransform(**params)
+        elif cmd_type == "RoleEx":
+            return self.battle.cmd_role_ex(**params)
+        elif cmd_type == "XRoleEx":
+            return self.battle.cmd_xrole_ex(**params)
         elif cmd_type == "Wait":
             return self.battle.cmd_wait(**params)
         elif cmd_type == "Skip":

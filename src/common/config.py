@@ -76,7 +76,9 @@ class BattleConfig(BaseModel):
     管理战斗相关的时间参数和行为设置
     """
     wait_time: float = 0.1  # 基础等待时间
-    wait_drag_time: float = 0.4  # 拖拽操作等待时间
+    drag_press_time: float = 0.1  # 拖拽按下等待时间
+    drag_release_time: float = 0.1  # 拖拽松开等待时间
+    drag_wait_time: float = 0.4  # 拖拽操作等待时间
     wait_ui_time: float = 0.2  # UI响应等待时间
     recognition_retry_count: int = 1  # 战斗识别重试次数
     

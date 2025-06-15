@@ -11,8 +11,7 @@ Attack
 SP,1
 Role,2,2,0
 Pet,3,1,0
-Transform,3
-Role,3,3,0
+RoleEx,3,3,0
 Role,4,2,0
 Boost
 Attack

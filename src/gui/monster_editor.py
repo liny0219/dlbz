@@ -27,6 +27,7 @@ class MonsterEditor(ttk.LabelFrame):
         self.rowconfigure(0, weight=1)  # 主输入区纵向拉伸
         self.rowconfigure(1, weight=0)  # 说明
         self.rowconfigure(2, weight=0)  # 按钮区
+        self.rowconfigure(3, weight=0)  # 按钮区
         # 主输入区Frame
         input_frame = ttk.Frame(self)
         input_frame.grid(row=0, column=0, columnspan=4, sticky='nsew')
@@ -37,20 +38,31 @@ class MonsterEditor(ttk.LabelFrame):
         # Listbox
         self.monster_list = tk.Listbox(input_frame, exportselection=0)
         self.monster_list.grid(row=0, column=0, rowspan=3, padx=5, pady=3, sticky='nsew')
-        label_width = 20
+
         # 名称
-        ttk.Label(input_frame, text="名称", width=label_width, anchor='w').grid(row=0, column=1, sticky='w')
+        ttk.Label(input_frame, text="名称", width=10, anchor='w').grid(row=0, column=1, sticky='w')
         self.monster_name_var = tk.StringVar()
         self.monster_name_entry = ttk.Entry(input_frame, textvariable=self.monster_name_var)
         self.monster_name_entry.grid(row=0, column=2, padx=5, pady=3, sticky='ew')
         # 战斗配置
-        ttk.Label(input_frame, text="战斗配置", width=20, anchor='w').grid(row=1, column=1, sticky='w')
+        ttk.Label(input_frame, text="战斗配置", width=10, anchor='w').grid(row=1, column=1, sticky='w')
         self.monster_battle_var = tk.StringVar()
         self.monster_battle_entry = ttk.Entry(input_frame, textvariable=self.monster_battle_var)
         self.monster_battle_entry.grid(row=1, column=2, padx=5, pady=3, sticky='ew')
+
+        # 编辑/说明/设置按钮区单独放在右下角
+        btn_frame = ttk.Frame(input_frame)
+        btn_frame.grid(row=2, column=1, columnspan=2, padx=5, pady=3, sticky='ew')
+        edit_btn = ttk.Button(btn_frame, text="编辑", width=6, command=self.on_edit_battle_file)
+        edit_btn.pack(side=tk.LEFT, padx=(0, 2))
+        help_btn = ttk.Button(btn_frame, text="说明", width=6, command=self.on_battle_help)
+        help_btn.pack(side=tk.LEFT, padx=(0, 2))
+        set_btn = ttk.Button(btn_frame, text="设置", width=6, command=self.on_set_battle_file)
+        set_btn.pack(side=tk.LEFT)
+
         # 按钮区
         btn_frame2 = ttk.Frame(self)
-        btn_frame2.grid(row=2, column=0, columnspan=4, padx=5, pady=3, sticky='w')
+        btn_frame2.grid(row=3, column=0, columnspan=4, padx=5, pady=3, sticky='w')
         self.add_btn = ttk.Button(btn_frame2, text="添加", width=8, command=self.on_add)
         self.add_btn.pack(side=tk.LEFT, padx=(0, 8))
         self.del_btn = ttk.Button(btn_frame2, text="删除", width=8, command=self.on_del)
@@ -59,15 +71,7 @@ class MonsterEditor(ttk.LabelFrame):
         self.modify_btn.pack(side=tk.LEFT)
         self.modify_tip_label = tk.Label(btn_frame2, text="路径点击保存生效", fg="gray", anchor="w")
         self.modify_tip_label.pack(side=tk.LEFT, padx=(8, 0))
-        # 编辑/说明/设置按钮区单独放在右下角
-        btn_frame = ttk.Frame(input_frame)
-        btn_frame.grid(row=5, column=2, sticky='e', padx=5, pady=(8, 3))
-        edit_btn = ttk.Button(btn_frame, text="编辑", width=6, command=self.on_edit_battle_file)
-        edit_btn.pack(side=tk.LEFT, padx=(0, 2))
-        help_btn = ttk.Button(btn_frame, text="说明", width=6, command=self.on_battle_help)
-        help_btn.pack(side=tk.LEFT, padx=(0, 2))
-        set_btn = ttk.Button(btn_frame, text="设置", width=6, command=self.on_set_battle_file)
-        set_btn.pack(side=tk.LEFT)
+
         # 事件绑定
         self.monster_list.bind('<<ListboxSelect>>', self.on_select)
         self.monster_name_var.trace_add('write', self.on_edit)

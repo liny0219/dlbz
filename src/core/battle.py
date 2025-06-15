@@ -32,7 +32,9 @@ class Battle:
         self.skill_base_y_offset = 105
         self.wait_time = config.battle.wait_time
         self.wait_ui_time = config.battle.wait_ui_time
-        self.wait_drag_time = config.battle.wait_drag_time
+        self.drag_press_time = config.battle.drag_press_time
+        self.drag_wait_time = config.battle.drag_wait_time
+        self.drag_release_time = config.battle.drag_release_time
         self.ocr_retry_count = config.battle.recognition_retry_count
         # 战斗相关timeout配置
         self.auto_battle_timeout = config.battle.auto_battle_timeout
@@ -499,7 +501,8 @@ class Battle:
             self.device_manager.press_and_drag_step(
                 self.extra_skill_bp_pos,
                 (self.extra_bp_offset_x[bp], self.extra_skill_bp_pos[1]),
-                duration=self.wait_drag_time
+                drag_press_time=self.drag_press_time,
+                drag_wait_time=self.drag_wait_time
             )
         # 点击发动按钮,兼容必杀技\支炎兽\ex技能时点击必杀发动选项
         for pos in click_pos:
@@ -515,18 +518,22 @@ class Battle:
         return True     
                       
 
-    def transform(self, index: int = 1, switch: bool = False, timeout: Optional[float] = None) -> bool:
+    def cast_skill_ex(self, index: int = 1, skill: int = 1, bp: int = 1, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = True) -> bool:
         """
         切换形态
         :param index: 角色索引
         :param switch: 是否切换角色
         """
-        if timeout is None:
-            timeout = self.transform_timeout
+        timeout = self.transform_timeout
         if index < 1 or index > 4:
             logger.error(f"[Battle] 角色索引错误，index: {index}")
             return False
+        enemy_pos = None
+        if x != 0 and y != 0:
+            enemy_pos = (x,y)
         role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (index-1)*self.rols_base_y_offset)
+        skill_start = (self.skill_base_x[0], self.skill_base_y + (skill)*self.skill_base_y_offset)
+        skill_end = (self.skill_base_x[bp], self.skill_base_y + (skill)*self.skill_base_y_offset)
         if not sleep_until(self.in_round,timeout=timeout):
             logger.info("[Battle] 不在回合中超时")
             return False
@@ -544,14 +551,21 @@ class Battle:
         if not sleep_until(self.in_skill_on,timeout=timeout):
             logger.info("[Battle] 不在技能面板超时")
             return False
-        start_time = time.time()
-        while not self.in_round():
-            if time.time() - start_time > timeout:
-                logger.info("[Battle] 收起技能栏超时")
-                return False
-            logger.info(f"[Battle] 点击收起技能栏")
-            self.device_manager.click(135,25)
-            time.sleep(self.wait_time)
+        if enemy_pos:
+            logger.info(f"[Battle] 点击敌人坐标: {enemy_pos}")
+            self.device_manager.click(enemy_pos[0], enemy_pos[1])
+            time.sleep(self.wait_time + self.wait_ui_time)
+        if bp == 0:
+            logger.info(f"[Battle] 点击选择技能")
+            self.device_manager.click(skill_start[0], skill_start[1])
+        else:
+            logger.info(f"[Battle] 拖动选择技能")
+            self.device_manager.press_and_drag_step(skill_start, skill_end, self.drag_press_time, self.drag_wait_time)
+        if role_id != 0:
+            logger.info(f"[Battle] 点击配置角色{role_id}")
+            skill_role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (role_id-1)*self.rols_base_y_offset)
+            self.device_manager.click(skill_role_pos[0], skill_role_pos[1])
+        time.sleep(self.wait_time + self.wait_ui_time)
         return True
 
     def cast_sp(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, 
@@ -661,7 +675,7 @@ class Battle:
             self.device_manager.click(skill_start[0], skill_start[1])
         else:
             logger.info(f"[Battle] 拖动选择技能")
-            self.device_manager.press_and_drag_step(skill_start, skill_end, self.wait_drag_time)
+            self.device_manager.press_and_drag_step(skill_start, skill_end, self.drag_press_time, self.drag_wait_time)
         if role_id != 0:
             logger.info(f"[Battle] 点击配置角色{role_id}")
             skill_role_pos = (self.role_base_pos[0], self.role_base_pos[1] + (role_id-1)*self.rols_base_y_offset)
@@ -794,21 +808,21 @@ class Battle:
         logger.debug(f"[Battle] 切换并使用宠物，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
         return self.cmd_pet(index, bp, role_id, x, y)
     
-    def cmd_transform(self, index: int = 1) -> bool:
+    def cmd_role_ex(self, index: int = 1, skill: int = 1, bp: int = 1, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
         """
         切换形态
         :param index: 角色索引
         """
         logger.debug(f"[Battle] 切换形态，角色索引: {index}")
-        return self.transform(index)
+        return self.cast_skill_ex(index, skill, bp, role_id, x, y, switch)
     
-    def cmd_xtransform(self, index: int = 1) -> bool:
+    def cmd_xrole_ex(self, index: int = 1, skill: int = 1, bp: int = 1, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = True) -> bool:
         """
         切换形态
         :param index: 角色索引
         """
         logger.debug(f"[Battle] 切换形态，角色索引: {index}")
-        return self.transform(index, switch=True)
+        return self.cast_skill_ex(index, skill, bp, role_id, x, y, switch)
     
     def cmd_ex(self, index: int = 1, bp:int = 0, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
         """

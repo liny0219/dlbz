@@ -148,24 +148,26 @@ class DeviceManager:
         self.device.long_click(x, y, duration)
     
     
-    def press_and_drag_step(self, start:tuple, end:tuple, duration:float=0.5):
+    def press_and_drag_step(self, start:tuple, end:tuple,drag_press_time:float=0.1,drag_wait_time:float=0.3):
         """
         长按和拖动指定坐标
         :param start: 起始坐标 (x, y)
         :param end: 结束坐标 (x, y)
-        :param duration: 长按和拖动时间 (秒)
+        :param drag_press_time: 长按时间 (秒)
+        :param drag_wait_time: 拖动时间 (秒)
+        :param duration: 拖动时间 (秒)
         """
         if not self.device:
             logger.error("设备未连接，无法长按和拖动")
             return
         start_x, start_y = start
         end_x, end_y = end
-        logger.debug(f"长按: {duration} 秒")
+        logger.debug(f"长按: {drag_press_time} 秒")
         self.device.touch.down(start_x, start_y)
-        time.sleep(duration)
-        logger.debug(f"拖动: {start} -> {end} {duration} 秒")
+        time.sleep(drag_press_time)
+        logger.debug(f"拖动: {start} -> {end} {drag_wait_time} 秒")
         self.device.touch.move(end_x, end_y)
-        time.sleep(duration)
+        time.sleep(drag_wait_time)
         self.device.touch.up(end_x, end_y)
 
     def save_screenshot(self, img_or_path: Union[Image.Image, str], save_path: Optional[str] = None) -> None:

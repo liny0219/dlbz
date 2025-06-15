@@ -14,7 +14,9 @@ class BattleSettingsTab(ttk.Frame):
         self.vars = {}
         CONFIG_ITEMS = {
             'wait_time': {'display_name': '基础等待时间', 'description': '基础等待时间(秒)', 'step': 0.1},
-            'wait_drag_time': {'display_name': '拖拽等待时间', 'description': '拖拽等待时间(秒)', 'step': 0.1},
+            'drag_press_time': {'display_name': '拖拽按下时间', 'description': '拖拽按下等待时间(秒)', 'step': 0.1},
+            'drag_wait_time': {'display_name': '拖拽等待时间', 'description': '拖拽等待时间(秒)', 'step': 0.1},
+            'drag_release_time': {'display_name': '拖拽松开时间', 'description': '拖拽松开等待时间(秒)', 'step': 0.1},
             'wait_ui_time': {'display_name': 'UI等待时间', 'description': 'UI等待时间(秒)', 'step': 0.1},
             'recognition_retry_count': {'display_name': '识别重试次数', 'description': '每次战斗识别的最大重试次数', 'step': 1},
             'auto_battle_timeout': {'display_name': '自动战斗超时', 'description': '自动战斗超时时间(秒)', 'step': 1.0},

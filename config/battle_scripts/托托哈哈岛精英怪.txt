@@ -10,8 +10,7 @@ Attack
 #第2回合
 SP,1
 Pet,3,1,0
-Transform,3
-Role,3,3,0
+RoleEx,3,3,0
 Boost
 Attack
 

@@ -1,5 +1,7 @@
 recognition_retry_count: 2
-wait_drag_time: 0.4
+drag_press_time: 0.1
+drag_wait_time: 0.3
+drag_release_time: 0.1
 wait_time: 0.1
 wait_ui_time: 0.2
 auto_battle_timeout: 10.0
