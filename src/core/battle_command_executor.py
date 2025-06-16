@@ -45,6 +45,8 @@ class BattleCommandExecutor:
             "CheckDead":   [],
             "NoCheckDead": [],
             "Run":         [],
+            "WaitInRound": [],
+            "ExitApp":     [],
             # 其它指令可按需扩展
         }
 
@@ -90,7 +92,7 @@ class BattleCommandExecutor:
             self.logger.error(f"加载TXT战斗指令配置失败: {e}")
             return False
 
-    def execute_all(self):
+    def execute_all(self) -> dict[str,bool|str]:
         """
         顺序执行所有指令，遇到异常自动记录并继续
         """
@@ -103,7 +105,9 @@ class BattleCommandExecutor:
                     check_dead_cmd = cmd
                 result = self.execute_command(cmd)
                 if result and cmd.get('type') == 'Run':
-                    return False
+                    return { 'success': False,"state":'run'}
+                if result and cmd.get('type') == 'ExitApp':
+                    return { 'success': False,"state":'exit_app'}
                 if not result:
                     self.battle.reset_round()
                     result = self.battle.wait_in_round_or_world(lambda screenshot:"in_world" if self.world.in_world(screenshot) else None, 
@@ -111,10 +115,10 @@ class BattleCommandExecutor:
                     if result in ['in_round']:
                         self.logger.info(f"指令执行异常:{cmd}")
                         self.battle.exit_battle()
-                        return False
+                        return { 'success': False,"state":'exception'}
                     if result in ['in_world']:
                         self.logger.info(f"指令执行异常:{cmd}{result}.但是进入世界,默认为战斗提前结束")
-                        return True
+                        return { 'success': False,"state":'normal'}
                 if cmd.get('type') == 'NoCheckDead':
                     self.logger.info(f"取消队友阵亡检查:{cmd}")
                     check_dead_cmd = None
@@ -122,15 +126,16 @@ class BattleCommandExecutor:
                     result = self.battle.wait_done(lambda screenshot: "in_world" if self.world.in_world(screenshot) else None)
                     if result in ['wait_done_timeout', 'exception']:
                         self.logger.info(f"回合异常:{cmd}{result}")
-                        return False
+                        return { 'success': False,"state":'exception'}
                     if result == 'in_round' and check_dead_cmd and self.battle.check_dead(cmd.get('params', {}).get('role_id', 0)):
                         self.logger.info(f"检查到队友阵亡:{cmd}")
                         self.battle.reset_round()
                         self.battle.exit_battle()
-                        return False
+                        return { 'success': False,"state":'dead'}
             except Exception as e:
                 self.logger.error(f"执行指令失败: {cmd}, 错误: {e}")
-        return True
+                return { 'success': False,"state":'exception'}
+        return { 'success': True,"state":'normal'}
 
     def execute_command(self, cmd: Dict[str, Any]):
         """
@@ -183,6 +188,10 @@ class BattleCommandExecutor:
             return not self.battle.cmd_check_dead(**params)
         elif cmd_type == "Run":
             return self.battle.cmd_run(**params)
+        elif cmd_type == "WaitInRound":
+            return self.battle.cmd_wait_in_round(**params)
+        elif cmd_type == "ExitApp":
+            return self.battle.cmd_exit_app(**params)
         else:
             self.logger.warning(f"未知指令类型: {cmd_type}")
 

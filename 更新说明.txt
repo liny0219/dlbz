@@ -1,3 +1,10 @@
+v1.4.3
+feature: 增加遇敌默认战斗指令设置
+feature: 优化遇敌识别,增加更多的识别参数设置
+feature: 增加ExitApp战斗指令
+feature: 增加默认捡垃圾逃跑.txt
+feature: 增加默认捡垃圾重启.txt
+
 v1.4.2
 feature: 移除Transform潜力指令,新增RoleEx指令合并Transform与Role指令功能,提高效率
 feature: 配置新增技能拖动时间配置

@@ -1,0 +1,3 @@
+BattleStart
+ExitApp
+BattleEnd 

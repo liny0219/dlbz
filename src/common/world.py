@@ -6,10 +6,10 @@ from utils import logger
 from common.app import AppManager
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 from PIL import Image
 from utils.singleton import singleton
-from utils.sleep_utils import sleep_until
+from utils.sleep_utils import sleep_until, sleep_until_app_running
 
 @singleton
 class World:
@@ -35,6 +35,40 @@ class World:
         self.monster_pos= monster_pos
         self.monsters = monsters
         self.default_battle_config = default_battle_config
+
+    def restart_wait_in_world(self):
+        logger.info(f"[wait_in_world]重启开始的等待")
+        max_count = 3
+        count = 0
+        while True:
+            while count < max_count:
+                time.sleep(1)
+                if self.in_world():
+                    count += 1
+                else:
+                    count = 0
+                self.app_manager.start_app()
+                self.device_manager.click(100,100)
+            if self.in_fengmo_map():
+                logger.info(f"[wait_in_world]在逢魔地图中")
+                time.sleep(2)
+                self.open_minimap()
+                sleep_until(self.in_minimap)
+                if self.find_map_boss() is not None:
+                    logger.info(f"[wait_in_world]识别到三阶段")
+                    self.closeUI()
+                    return 'boss'
+                if self.find_map_treasure() is not None or self.find_map_cure() is not None or self.find_map_monster() is not None:
+                    logger.info(f"[wait_in_world]识别到二阶段")
+                    self.closeUI()
+                    return 'box'
+                logger.info(f"[wait_in_world]识别到一阶段")
+                self.closeUI()
+                return 'collect'
+            logger.info(f"[wait_in_world]在城镇中")
+            self.closeUI()
+            return 'in_world'
+          
 
     def in_world(self, image: Optional[Image.Image] = None) -> bool:
         """
@@ -336,7 +370,7 @@ class World:
         self.device_manager.click(*door_pos)
         return 'rest_in_inn'
 
-    def go_fengmo(self,depth:int,entrance_pos:list[int],wait_time:float=0.2):
+    def go_fengmo(self,depth:int,entrance_pos:list[int],wait_time:float=0.2,callback:Callable[[], str|None]|None = None) -> bool:
         """
         前往逢魔
         """
@@ -345,7 +379,7 @@ class World:
         in_world = sleep_until(self.in_world)
         if not in_world:
             logger.debug("不在城镇中")
-            return
+            return False
         while True:
             time.sleep(0.2)
             logger.debug("打开小地图")
@@ -360,7 +394,7 @@ class World:
         self.open_minimap()
         in_minimap = sleep_until(self.in_minimap)
         if not in_minimap:
-            return
+            return False
         logger.info(f"[go_fengmo]点击小地图: {entrance_pos}")
         self.device_manager.click(*entrance_pos)
         self.in_world_or_battle()
@@ -368,15 +402,18 @@ class World:
         # 寻找逢魔入口
         fengmo_pos = sleep_until(self.find_fengmo_point,function_name=f"go_fengmo 寻找逢魔入口 {entrance_pos}")
         if fengmo_pos is None:
-            return
+            return False
         logger.info(f"[go_fengmo]点击逢魔入口: {fengmo_pos}")
         self.device_manager.click(*fengmo_pos[:2])
         logger.info(f"[go_fengmo]选择逢魔模式: {depth}")
-        self.select_fengmo_mode(depth)
+        result = self.select_fengmo_mode(depth,callback=callback)
+        if result != 'success':
+            return False
         # 涉入
         logger.info(f"[go_fengmo]涉入")
         sleep_until(lambda: self.ocr_handler.match_click_text(["涉入"],region=(760,465,835,499)),function_name="涉入")
         time.sleep(5)
+        return True
 
     def vip_cure(self,vip_cure:bool=False):
         """
@@ -412,7 +449,7 @@ class World:
         time.sleep(1)
         return 'finish_cure'
 
-    def select_fengmo_mode(self,depth:int):
+    def select_fengmo_mode(self,depth:int,callback:Callable[[], str|None]|None = None):
         """
         选择逢魔模式
         """
@@ -428,6 +465,10 @@ class World:
                 break
             if current_depth is None:
                 logger.info(f"[select_fengmo_mode]读取深度失败")
+                if callback is not None:
+                   result = callback()
+                   if result is not None:
+                       return result
                 continue
             if current_depth < depth:
                 logger.info(f"[select_fengmo_mode]当前深度: {current_depth} 目标深度: {depth} 增加深度")
@@ -435,6 +476,7 @@ class World:
             else:
                 logger.info(f"[select_fengmo_mode]当前深度: {current_depth} 目标深度: {depth} 减少深度")
                 self.do_fengmo_depth("sub")
+        return 'success'
     
     def find_map_treasure(self, image: Optional[Image.Image] = None) -> Optional[list[tuple[int, int]]]:
         """
@@ -492,7 +534,7 @@ class World:
             logger.debug("未发现地图Boss点")
             return None
         
-    def in_world_or_battle(self, enemyName:str='', check_battle:bool=True)-> dict[str,bool]|None:
+    def in_world_or_battle(self, enemyName:str='', check_app_alive:bool=False, check_battle:bool=True)-> dict[str,bool|str]|None:
         logger.debug("[in_world_or_battle]开始检查")
         def check_in_world_or_battle():
             screenshot = self.device_manager.get_screenshot()
@@ -507,13 +549,15 @@ class World:
                 logger.debug("[in_world_or_battle]没检查出来")  
                 return None
         check_battle_command_done = False
-        is_battle_success = True
+        is_battle_success = 'normal'
         has_battle = False
         while True:
-            check_in_world = sleep_until(check_in_world_or_battle)
+            check_in_world = sleep_until_app_running(check_in_world_or_battle,app_manager=self.app_manager)
+            if check_in_world == 'app_not_running':
+                return { "in_world":False, "in_battle":False,"app_alive":False, 'is_battle_success':False}
             if check_in_world == "in_world":
                 logger.debug("在城镇中")
-                return { "in_world":True, "in_battle":has_battle, 'is_battle_state':is_battle_success }
+                return { "in_world":True, "in_battle":has_battle,"app_alive":True, 'is_battle_success':is_battle_success }
             elif check_in_world == "in_battle":
                 logger.debug("战斗场景中")
                 if not check_battle:
@@ -529,26 +573,26 @@ class World:
                             monster = next((x for x in self.monsters if x.name == enemyName), None)
                             if monster is None:
                                 logger.info(f"没有找到硬编码的映射敌人配置{enemyName}")
-                                is_battle_success = self.do_default_battle()['success']
+                                is_battle_success = self.do_default_battle()['result']
                             else:
                                 loadConfig = self.battle_executor.load_commands_from_txt(monster.battle_config)
                                 if not loadConfig:
                                     logger.info(f"没有找到硬编码映射敌人的战斗配置{enemyName}")
-                                    is_battle_success = self.do_default_battle()['success']
+                                    is_battle_success = self.do_default_battle()['result']
                                 else:
                                     logger.info("使用硬编码映射敌人的战斗配置")
-                                    is_battle_success = self.battle_executor.execute_all()
+                                    is_battle_success = self.battle_executor.execute_all()['success']
                         else:
                             logger.info("没有识别到敌人,使用默认战斗配置")
-                            is_battle_success = self.do_default_battle()['success']
+                            is_battle_success = self.do_default_battle()['result']
                     if monster:
                         loadConfig = self.battle_executor.load_commands_from_txt(monster.battle_config)
                         if not loadConfig:
                             logger.info("没有找到匹配敌人的战斗配置")
-                            is_battle_success = self.do_default_battle()['success']
+                            is_battle_success = self.do_default_battle()['result']
                         else:
                             logger.info("使用匹配敌人的战斗配置")
-                            is_battle_success = self.battle_executor.execute_all()
+                            is_battle_success = self.battle_executor.execute_all()['success']
                     check_battle_command_done = True
                 if check_battle_command_done and self.battle.in_round():
                     self.battle.auto_battle()
@@ -564,11 +608,11 @@ class World:
         if not loadConfig:
             logger.info("没有默认战斗配置,使用委托战斗")
             self.battle.auto_battle()
-            return { "type": "auto_battle", "success": True}
+            return { "type": "auto_battle", "result": 'normal'}
         else:
             logger.info("使用默认战斗配置")
-            result = self.battle_executor.execute_all()
-            return { "type": "battle_executor", "success": not result}
+            result = self.battle_executor.execute_all()['success']
+            return { "type": "battle_executor", "result": result}
 
     def open_minimap(self):
         """
@@ -576,6 +620,10 @@ class World:
         """
         time.sleep(0.2)
         self.device_manager.click(1060,100)
+        time.sleep(0.2)
+    
+    def closeUI(self):
+        self.device_manager.click(1235, 25)
         time.sleep(0.2)
 
     def find_closest_point(self, target: tuple[int, int], points: list[tuple[int, int]]) -> Optional[tuple[int, int]]:

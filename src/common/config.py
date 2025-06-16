@@ -80,7 +80,7 @@ class BattleConfig(BaseModel):
     drag_release_time: float = 0.1  # 拖拽松开等待时间
     drag_wait_time: float = 0.4  # 拖拽操作等待时间
     wait_ui_time: float = 0.2  # UI响应等待时间
-    recognition_retry_count: int = 1  # 战斗识别重试次数
+    recognition_time: float = 2.0  # 识别时间
     
     # 战斗相关timeout配置
     auto_battle_timeout: float = 10.0  # 自动战斗超时时间
@@ -95,7 +95,6 @@ class BattleConfig(BaseModel):
     wait_done_timeout: float = 90.0  # 等待战斗结束超时时间
     boost_timeout: float = 15.0  # 全体加成超时时间
     switch_all_timeout: float = 5.0  # 全员交替超时时间
-    find_enemy_timeout: float = 5.0  # 识别敌人超时时间
 
 class Config:
     def __init__(self, config_dir=None):

@@ -17,6 +17,15 @@ class AppManager:
         self.app_package = app_package
         self._initialized = True
 
+
+    def get_app_package(self):
+        if not self.device_manager.device:
+            logger.error("设备未连接，无法检查App运行状态")
+            return False
+        current_app = self.device_manager.device.app_current()
+        logger.info(f"当前App包名: {current_app.get('package')}")
+        return current_app.get("package")
+
     def is_app_running(self) -> bool:
         """
         检查App是否正在运行
@@ -44,6 +53,8 @@ class AppManager:
                 return
             if not self.app_package:
                 logger.error("app_package未设置，无法启动App")
+                return
+            if self.is_app_running():
                 return
             self.device_manager.device.app_start(self.app_package)
             logger.info(f"启动App: {self.app_package}")

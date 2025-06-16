@@ -1,6 +1,7 @@
 from sys import maxsize
 import tkinter as tk
-from tkinter import ttk, messagebox
+import tkinter.messagebox as mbox
+from tkinter import ttk, messagebox, filedialog
 import os
 from common.config import get_config_dir
 from utils.yaml_helper import save_yaml_with_type
@@ -77,6 +78,22 @@ class FengmoSettingsTab(ttk.Frame):
         wait_ui_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
         row += 1
 
+        # 默认战斗配置
+        self.default_battle_config_var = tk.StringVar(value=str(config_data.get("default_battle_config", "")))
+        ttk.Label(config_frame, text="默认战斗配置", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+        default_battle_entry = ttk.Entry(config_frame, textvariable=self.default_battle_config_var, width=input_width)
+        default_battle_entry.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+
+        def select_battle_file():
+            fpath = filedialog.askopenfilename(title="选择默认战斗配置文件", filetypes=[("文本文件", "*.txt"), ("所有文件", "*.*")])
+            if fpath:
+                self.default_battle_config_var.set(fpath)
+        edit_btn = ttk.Button(config_frame, text="编辑", width=6, command=self.on_edit_battle_file)
+        edit_btn.grid(row=row, column=2, padx=5, pady=3, sticky='w')
+        select_btn = ttk.Button(config_frame, text="浏览", command=select_battle_file)
+        select_btn.grid(row=row, column=3, padx=5, pady=3, sticky='w')
+        row += 1
+
         # 全灭是否复活
         revive_val = config_data.get("revive_on_all_dead", False)
         if isinstance(revive_val, str):
@@ -90,7 +107,7 @@ class FengmoSettingsTab(ttk.Frame):
         # 其余字段
         self.extra_vars = {}
         for k, v in config_data.items():
-            if k in ("rest_in_inn", "vip_cure", "city", "depth", "find_point_wait_time", "wait_map_time", "wait_ui_time", "revive_on_all_dead"):
+            if k in ("rest_in_inn", "vip_cure", "city", "depth", "find_point_wait_time", "wait_map_time", "wait_ui_time", "default_battle_config","revive_on_all_dead"):
                 continue
             var = tk.StringVar(value=str(v))
             ttk.Label(config_frame, text=k, width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
@@ -125,6 +142,7 @@ class FengmoSettingsTab(ttk.Frame):
             "find_point_wait_time": self.wait_var.get(),
             "wait_map_time": self.wait_map_time_var.get(),
             "wait_ui_time": self.wait_ui_var.get(),
+            "default_battle_config": self.default_battle_config_var.get(),
             "revive_on_all_dead": self.revive_var.get(),
         }
         for k, var in self.extra_vars.items():
@@ -138,3 +156,34 @@ class FengmoSettingsTab(ttk.Frame):
         raw_data = self.get_config_data()
         save_yaml_with_type(fpath, raw_data)
         messagebox.showinfo("提示", "设置已保存！") 
+
+    def on_edit_battle_file(self):
+        # 获取当前战斗配置文件名
+        fname = self.default_battle_config_var.get().strip()
+        if not fname:
+            mbox.showwarning("提示", "请先填写战斗配置文件名！")
+            return
+        config_dir = get_config_dir()
+        # 1. 先直接用填写的路径（绝对或相对）
+        battle_path = fname
+        if not os.path.isabs(battle_path):
+            # 2. 如果不是绝对路径，尝试config_dir下
+            try_path = os.path.join(config_dir, fname)
+            if os.path.exists(try_path):
+                battle_path = try_path
+            else:
+                # 3. 再尝试battle_scripts下
+                try_path2 = os.path.join(config_dir, 'battle_scripts', fname)
+                if os.path.exists(try_path2):
+                    battle_path = try_path2
+        if not os.path.exists(battle_path):
+            mbox.showwarning("提示", f"未找到文件: {battle_path}")
+            return
+        try:
+            if os.name == 'nt':
+                os.startfile(battle_path)
+            else:
+                subprocess.Popen(['xdg-open', battle_path])
+        except Exception as e:
+            mbox.showerror("错误", f"无法打开文件: {battle_path}\n{e}")
+            print(f"无法打开文件: {battle_path}, {e}")

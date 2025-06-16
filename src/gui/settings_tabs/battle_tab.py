@@ -18,7 +18,7 @@ class BattleSettingsTab(ttk.Frame):
             'drag_wait_time': {'display_name': '拖拽等待时间', 'description': '拖拽等待时间(秒)', 'step': 0.1},
             'drag_release_time': {'display_name': '拖拽松开时间', 'description': '拖拽松开等待时间(秒)', 'step': 0.1},
             'wait_ui_time': {'display_name': 'UI等待时间', 'description': 'UI等待时间(秒)', 'step': 0.1},
-            'recognition_retry_count': {'display_name': '识别重试次数', 'description': '每次战斗识别的最大重试次数', 'step': 1},
+            'recognition_time': {'display_name': '识别时间', 'description': '战斗识别时间(秒)', 'step': 0.1, 'min_value': 0.1},
             'auto_battle_timeout': {'display_name': '自动战斗超时', 'description': '自动战斗超时时间(秒)', 'step': 1.0},
             'check_dead_timeout': {'display_name': '检查死亡超时', 'description': '检查角色死亡超时时间(秒)', 'step': 0.5},
             'reset_round_timeout': {'display_name': '重置回合超时', 'description': '重置回合超时时间(秒)', 'step': 1.0},
@@ -31,21 +31,42 @@ class BattleSettingsTab(ttk.Frame):
             'wait_done_timeout': {'display_name': '等待结束超时', 'description': '等待战斗结束超时时间(秒)', 'step': 5.0},
             'boost_timeout': {'display_name': '全体加成超时', 'description': '全体加成超时时间(秒)', 'step': 1.0},
             'switch_all_timeout': {'display_name': '全员交替超时', 'description': '全员交替超时时间(秒)', 'step': 0.5},
-            'find_enemy_timeout': {'display_name': '识别敌人超时', 'description': '识别敌人超时时间(秒)', 'step': 0.5},
         }
-        for k, v in config_data.items():
-            if k in CONFIG_ITEMS:
-                display_name = CONFIG_ITEMS[k]['display_name']
-                description = CONFIG_ITEMS[k]['description']
-                step = CONFIG_ITEMS[k]['step']
-                ttk.Label(self, text=display_name, width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-                if isinstance(v, bool):
-                    var = tk.BooleanVar(value=v)
-                    check = ttk.Checkbutton(self, variable=var)
-                    check.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+        # 首先处理CONFIG_ITEMS中定义的配置项
+        from common.config import BattleConfig
+        default_config = BattleConfig()
+        
+        for k, config_item in CONFIG_ITEMS.items():
+            # 获取配置值，如果config_data中没有，则使用默认值
+            v = config_data.get(k, getattr(default_config, k))
+            display_name = config_item['display_name']
+            description = config_item['description']
+            step = config_item['step']
+            min_value = config_item.get('min_value', None)  # 获取自定义最小值
+            ttk.Label(self, text=display_name, width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+            if isinstance(v, bool):
+                var = tk.BooleanVar(value=v)
+                check = ttk.Checkbutton(self, variable=var)
+                check.grid(row=row, column=1, padx=5, pady=3, sticky='w')
+            else:
+                # 判断是否为整数类型的配置项
+                if isinstance(v, int) or (step >= 1.0 and step == int(step)):
+                    var = tk.IntVar(value=int(v))
+                    if step >= 1.0:
+                        from_ = 1
+                        to = 100
+                    else:
+                        from_ = 1
+                        to = 10
+                    spin = tk.Spinbox(self, from_=from_, to=to, increment=int(step), textvariable=var, width=input_width)
+                    spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
                 else:
                     var = tk.DoubleVar(value=v)
-                    if step >= 1.0:
+                    # 如果有自定义最小值，使用自定义值；否则使用默认逻辑
+                    if min_value is not None:
+                        from_ = min_value
+                        to = 100.0 if step >= 1.0 else 10.0
+                    elif step >= 1.0:
                         from_ = 1.0
                         to = 100.0
                     elif step >= 0.5:
@@ -56,11 +77,14 @@ class BattleSettingsTab(ttk.Frame):
                         to = 2.0
                     spin = tk.Spinbox(self, from_=from_, to=to, increment=step, textvariable=var, width=input_width, format="%.1f")
                     spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-                desc_label = ttk.Label(self, text=description, font=("TkDefaultFont", 8), foreground="gray")
-                desc_label.grid(row=row, column=2, padx=5, pady=3, sticky='w')
-                self.vars[k] = var
-                row += 1
-            else:
+            desc_label = ttk.Label(self, text=description, font=("TkDefaultFont", 8), foreground="gray")
+            desc_label.grid(row=row, column=2, padx=5, pady=3, sticky='w')
+            self.vars[k] = var
+            row += 1
+        
+        # 然后处理CONFIG_ITEMS中没有定义但config_data中存在的配置项
+        for k, v in config_data.items():
+            if k not in CONFIG_ITEMS:
                 ttk.Label(self, text=k, width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
                 var = tk.StringVar(value=str(v))
                 entry = ttk.Entry(self, textvariable=var, width=input_width)

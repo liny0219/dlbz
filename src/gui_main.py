@@ -13,7 +13,7 @@ CONFIG_FILES = [
     ("ocr.yaml", "OCR"),
 ]
 
-version = "v1.4.2"
+version = "v1.4.3"
 
 def main():
     title = f"旅人休息站.免费脚本 {version} 分辨率 1280x720 (dpi 240)"

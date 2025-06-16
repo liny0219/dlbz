@@ -1,4 +1,5 @@
 import time
+import threading
 from utils import logger
 from common.app import AppManager
 from core.device_manager import DeviceManager
@@ -35,7 +36,7 @@ class Battle:
         self.drag_press_time = config.battle.drag_press_time
         self.drag_wait_time = config.battle.drag_wait_time
         self.drag_release_time = config.battle.drag_release_time
-        self.ocr_retry_count = config.battle.recognition_retry_count
+        self.recognition_time = config.battle.recognition_time
         # 战斗相关timeout配置
         self.auto_battle_timeout = config.battle.auto_battle_timeout
         self.check_dead_timeout = config.battle.check_dead_timeout
@@ -49,7 +50,6 @@ class Battle:
         self.wait_done_timeout = config.battle.wait_done_timeout
         self.boost_timeout = config.battle.boost_timeout
         self.switch_all_timeout = config.battle.switch_all_timeout
-        self.find_enemy_timeout = config.battle.find_enemy_timeout
 
     # ================== 战斗状态判断相关方法 ==================
     def in_battle(self, image: Optional[Image.Image] = None, call_roll: bool = True,roll_count:int=2) -> bool:
@@ -971,32 +971,81 @@ class Battle:
         """
         logger.debug("[Battle] 逃跑（Run）")
         return self.exit_battle()
+    
+    def cmd_wait_in_round(self) -> bool:
+        """
+        等待回合
+        """
+        logger.debug("[Battle] 等待回合（WaitInRound）")
+        result = sleep_until(self.in_round)
+        if result is None:
+            return False
+        return result
+    def cmd_exit_app(self) -> bool:
+        """
+        退出战斗
+        """
+        logger.debug("[Battle] 退出战斗（Exit）")
+        self.app_manager.close_app()
+        return True
 
-    def find_enemy_ocr(self,monster_pos:list[tuple[int, int]],monsters:list[Monster],max_count: int | None = None) -> Monster | None:
+    def find_enemy_ocr(self,monster_pos:list[tuple[int, int]],monsters:list[Monster]) -> Monster | None:
         """
         识别敌人
         """
-        if max_count is None:
-            max_count = self.ocr_retry_count
         if monster_pos is None or len(monster_pos) == 0:
             logger.info("没有配置识别敌人位置")
             return None
         if monsters is None or len(monsters) == 0:
             logger.info("没有配置识别敌人")
             return
-        count = 0
-        while count < max_count:
-            logger.info(f"[find_enemy_ocr] 开始识别敌人,count={count},max_count={max_count}")
-            for pos in monster_pos:
-                self.device_manager.click(pos[0],pos[1])
-                time.sleep(0.1)
+        logger.info(f"[find_enemy_ocr] 开始识别敌人")
+        for pos in monster_pos:
+            # 创建线程停止事件
+            stop_event = threading.Event()
+            def click_thread(device_manager, pos, stop_event):
+                """
+                持续点击指定位置的子线程
+                :param device_manager: 设备管理器实例
+                :param pos: 点击位置坐标元组 (x,y)
+                :param stop_event: 线程停止事件
+                """
+                while not stop_event.is_set():
+                    device_manager.click(pos[0], pos[1])
+                    time.sleep(0.05)  # 短暂间隔避免点击过快
+            # 启动点击线程        
+            thread = threading.Thread(
+                target=click_thread,
+                args=(self.device_manager, pos, stop_event),
+                daemon=True  # 设置为守护线程,主线程结束时自动结束
+            )
+            thread.start()
+            # 使用识别时间进行循环识别
+            start_time = time.time()
+            logger.info(f"[find_enemy_ocr] 开始识别敌人,pos={pos},time={self.recognition_time}")
+            self.device_manager.click(pos[0], pos[1])
+            found_monster = None
+            while time.time() - start_time < self.recognition_time:
                 screenshot = self.device_manager.get_screenshot()
+                logger.info(f"[find_enemy_ocr] 获取截图")
                 result = self.ocr_handler.recognize_text(screenshot,(20,100,700,600))
+                logger.info(f"[find_enemy_ocr] 识别结果")
                 for r in result:
                     text = r["text"]
                     logger.info(f"[find_enemy_ocr]:{text}")
                     for monster in monsters:
                         if monster.name == text:
                             logger.info(f"匹配到敌人: {monster.name}")
-                            return monster
-            count+=1
+                            found_monster = monster
+                            break
+                    if found_monster:
+                        break
+                if found_monster:
+                    break
+                time.sleep(0.1)  # 短暂等待后再次识别
+            # 停止点击线程
+            stop_event.set()
+            thread.join(timeout=1.0)  # 等待线程结束，最多等待1秒
+            if found_monster:
+                return found_monster
+        return None
