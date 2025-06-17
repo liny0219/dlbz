@@ -37,7 +37,10 @@ class World:
         self.default_battle_config = default_battle_config
 
     def restart_wait_in_world(self):
-        logger.info(f"[wait_in_world]重启开始的等待")
+        return self.read_map_state(callback=lambda: self.app_manager.start_app() and self.device_manager.click(100,100))
+          
+    def read_map_state(self, callback:Callable[[], None]|None=None):
+        logger.info(f"[read_map_state]读取界面状态")
         max_count = 3
         count = 0
         while True:
@@ -47,29 +50,27 @@ class World:
                     count += 1
                 else:
                     count = 0
-                self.app_manager.start_app()
-                self.device_manager.click(100,100)
+                if callback is not None:
+                    callback()
             if self.in_fengmo_map():
-                logger.info(f"[wait_in_world]在逢魔地图中")
+                logger.info(f"[read_map_state]在逢魔地图中")
                 time.sleep(2)
                 self.open_minimap()
                 sleep_until(self.in_minimap)
                 if self.find_map_boss() is not None:
-                    logger.info(f"[wait_in_world]识别到三阶段")
+                    logger.info(f"[read_map_state]识别到三阶段")
                     self.closeUI()
                     return 'boss'
                 if self.find_map_treasure() is not None or self.find_map_cure() is not None or self.find_map_monster() is not None:
-                    logger.info(f"[wait_in_world]识别到二阶段")
+                    logger.info(f"[read_map_state]识别到二阶段")
                     self.closeUI()
                     return 'box'
-                logger.info(f"[wait_in_world]识别到一阶段")
+                logger.info(f"[read_map_state]识别到一阶段")
                 self.closeUI()
                 return 'collect'
-            logger.info(f"[wait_in_world]在城镇中")
+            logger.info(f"[read_map_state]在城镇中")
             self.closeUI()
             return 'in_world'
-          
-
     def in_world(self, image: Optional[Image.Image] = None) -> bool:
         """
         判断当前是否在城镇主界面且人物停止移动。
@@ -167,48 +168,6 @@ class World:
         if self.in_fengmo_map() is not None:
             return True
         return False
-    
-    def exit_fengmo_map(self,pops:list[int], image: Optional[Image.Image] = None, timeout:float= 10):
-        if image is None:
-            image = self.device_manager.get_screenshot()
-        interval = 1
-        start_time = time.time()
-        in_fengmo_map = False
-        while time.time() - start_time < timeout:
-            if self.in_fengmo_map(image) and self.in_world(image):
-                in_fengmo_map = True
-                break
-            time.sleep(interval)
-            image = self.device_manager.get_screenshot()
-        if not in_fengmo_map:
-            return
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            image = self.device_manager.get_screenshot()
-            if self.in_world(image):
-                time.sleep(interval)
-                self.open_minimap()
-                continue
-            if not self.in_minimap(image):
-                continue
-            self.device_manager.click(*pops)
-            time.sleep(1)
-            sleep_until(self.in_fengmo_map)
-            time.sleep(1)
-            
-            entrance_pop = self.find_fengmo_point(image)
-            time.sleep(interval)
-            if entrance_pop is not None:
-                self.device_manager.click(entrance_pop[0],entrance_pop[1])
-            start_time = time.time()
-            while time.time() - start_time < timeout:
-                image = self.device_manager.get_screenshot()
-                time.sleep(interval)
-                if self.ocr_handler.match_texts(["是否离开"],image):
-                    self.click_confirm_pos()
-                    continue
-                if not self.in_fengmo_map(image) and self.in_world(image):
-                    return True
     
     def find_inn_door(self, image: Optional[Image.Image] = None) -> Optional[Tuple[int, int]] | None:
         """

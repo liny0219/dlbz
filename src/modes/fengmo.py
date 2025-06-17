@@ -62,7 +62,6 @@ class StateData:
         self.turn_start_time = time.time()
         self.turn_end_time = 0
         self.step = Step.COLLECT_JUNK
-        self.done_cure = False
         self.current_point = None
         self.map_fail = False
 
@@ -186,6 +185,7 @@ class FengmoMode:
         while True:
             self.report_data()
             logger.info(f"[run]当前配置的城市: {self.city_name} 深度: {self.depth}")
+            new_true = False
             if not self.world.wait_in_fengmo_map():
                 if self.rest_in_inn:
                     logger.info("[run]休息检查")
@@ -201,10 +201,13 @@ class FengmoMode:
                         continue
                     if self.world.wait_in_fengmo_map(timeout=10):
                         break
+                new_true = True
             else:
-                self.state_data.turn_start()
-                self.state_data.step = Step.COLLECT_JUNK
-                self.state_data.done_cure = False
+                if new_true:
+                    self.state_data.turn_start()
+                    self.state_data.step = Step.COLLECT_JUNK
+                else:
+                    self.reset_state()
                 if self.state_data.step == Step.COLLECT_JUNK:
                     self._collect_junk_phase()
                 logger.info(f"[run]进入二阶段当前状态: {self.state_data.step}")
@@ -214,8 +217,6 @@ class FengmoMode:
                 if self.state_data.step == Step.FIND_BOSS:
                     self._find_boss_phase()
                 if self.state_data.step == Step.BATTLE_FAIL or self.state_data.step == Step.State_FAIL:
-                    if self.world.wait_in_fengmo_map():
-                        self.world.exit_fengmo_map(self.entrance_pos)
                     self.state_data.turn_end(type='fail')
                 if self.state_data.step == Step.FINISH:
                     self.state_data.turn_end(type='success')
@@ -482,6 +483,19 @@ class FengmoMode:
         if result == 'collect':
             state = Step.COLLECT_JUNK
         if state != self.state_data.step:
+            self.state_data.step = Step.State_FAIL
+            return False
+        return True
+    
+    def reset_state(self):
+        result = self.world.restart_wait_in_world()
+        if result == 'boss':
+            self.state_data.step = Step.FIND_BOSS
+        if result == 'box':
+            self.state_data.step = Step.FIND_BOX
+        if result == 'collect':
+            self.state_data.step = Step.COLLECT_JUNK
+        if self.state_data.step != self.state_data.step:
             self.state_data.step = Step.State_FAIL
             return False
         return True

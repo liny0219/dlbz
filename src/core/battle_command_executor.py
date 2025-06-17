@@ -118,7 +118,7 @@ class BattleCommandExecutor:
                         return { 'success': False,"state":'exception'}
                     if result in ['in_world']:
                         self.logger.info(f"指令执行异常:{cmd}{result}.但是进入世界,默认为战斗提前结束")
-                        return { 'success': False,"state":'normal'}
+                        return { 'success': True,"state":'normal'}
                 if cmd.get('type') == 'NoCheckDead':
                     self.logger.info(f"取消队友阵亡检查:{cmd}")
                     check_dead_cmd = None
