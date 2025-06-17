@@ -152,17 +152,20 @@ class World:
             logger.debug("不在旅馆中")
             return None
         
-    def wait_in_fengmo_map(self, image: Optional[Image.Image] = None, timeout:float= 10):
-        if image is None:
-            image = self.device_manager.get_screenshot()
+    def wait_in_fengmo_map(self, timeout:float= 4):
         start_time = time.time()
-        while time.time() - start_time < timeout:
-            if self.in_fengmo_map(image) and self.in_world(image):
-                logger.info("在逢魔地图中")
-                return True
-            time.sleep(0.2)
-            image = self.device_manager.get_screenshot()
-        logger.info("不在逢魔地图中")
+        count = 0
+        max_count = 3
+        while count < max_count:
+            if time.time() - start_time > timeout:
+                return False
+            if self.in_world():
+                count += 1
+            else:
+                count = 0
+            time.sleep(0.1)
+        if self.in_fengmo_map() is not None:
+            return True
         return False
     
     def exit_fengmo_map(self,pops:list[int], image: Optional[Image.Image] = None, timeout:float= 10):

@@ -186,7 +186,7 @@ class FengmoMode:
         while True:
             self.report_data()
             logger.info(f"[run]当前配置的城市: {self.city_name} 深度: {self.depth}")
-            if not self.world.in_fengmo_map():
+            if not self.world.wait_in_fengmo_map():
                 if self.rest_in_inn:
                     logger.info("[run]休息检查")
                     need_inn = True
@@ -199,7 +199,7 @@ class FengmoMode:
                     if not self.world.go_fengmo(self.depth, self.entrance_pos,callback=lambda: "map_fail" if self.state_data.map_fail else None):
                         self.state_data.map_fail = False
                         continue
-                    if self.world.wait_in_fengmo_map():
+                    if self.world.wait_in_fengmo_map(timeout=10):
                         break
             else:
                 self.state_data.turn_start()
@@ -214,7 +214,7 @@ class FengmoMode:
                 if self.state_data.step == Step.FIND_BOSS:
                     self._find_boss_phase()
                 if self.state_data.step == Step.BATTLE_FAIL or self.state_data.step == Step.State_FAIL:
-                    if self.world.wait_in_fengmo_map(timeout=4):
+                    if self.world.wait_in_fengmo_map():
                         self.world.exit_fengmo_map(self.entrance_pos)
                     self.state_data.turn_end(type='fail')
                 if self.state_data.step == Step.FINISH:
