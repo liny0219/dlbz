@@ -191,8 +191,8 @@ class Battle:
             logger.warning("无法获取截图，无法判断是否在技能释放中")
             return False
         points_colors = [
-            (767, 656, '262125', 1),
-            (816, 655, '211F22', 1),
+            (830, 658, 'E2D9DA', 1),
+            (753, 657, 'DAD9D4', 1),
         ]
         # 批量判断
         results = self.ocr_handler.match_point_color(image, points_colors)
@@ -205,8 +205,8 @@ class Battle:
             logger.warning("无法获取截图，无法判断是否在技能释放中")
             return False
         points_colors = [
-            (818, 660, '050004', 1),
-            (767, 658, '060004', 1),
+            (832, 658, '4F443E', 1),
+            (753, 658, '4E4D4B', 1),
         ]
         # 批量判断
         results = self.ocr_handler.match_point_color(image, points_colors)
@@ -786,7 +786,7 @@ class Battle:
         logger.debug(f"[Battle] 切换并攻击，角色索引: {index},技能索引: {skill},倍率: {bp},技能目标角色索引: {role_id},坐标: ({x}, {y})")
         return self.cmd_role(index, skill, bp, role_id, x, y, switch)  
 
-    def cmd_pet(self, index: int = 1, bp:int = 0, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
+    def cmd_pet(self, index: int = 1, bp:int = 0, role_id:int = 0, x:int = 0, y:int = 0, switch: bool = False) -> bool:
         """
         使用宠物
         :param index: 宠物索引
@@ -795,9 +795,9 @@ class Battle:
         :param y: 坐标y
         """
         logger.debug(f"[Battle] 使用宠物，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
-        return self.cast_pet(index, bp, role_id, x, y)
+        return self.cast_pet(index, bp, role_id, x, y, switch)
 
-    def cmd_xpet(self, index: int = 1, bp:int = 0, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
+    def cmd_xpet(self, index: int = 1, bp:int = 0, role_id:int = 0, x:int = 0, y:int = 0, switch: bool = True) -> bool:
         """
         切换并使用宠物
         :param index: 宠物索引
@@ -806,7 +806,7 @@ class Battle:
         :param y: 坐标y
         """
         logger.debug(f"[Battle] 切换并使用宠物，角色索引: {index},作用角色索引: {role_id},坐标: ({x}, {y})")
-        return self.cmd_pet(index, bp, role_id, x, y)
+        return self.cmd_pet(index, bp, role_id, x, y, switch=True)
     
     def cmd_role_ex(self, index: int = 1, skill: int = 1, bp: int = 1, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
         """
@@ -889,14 +889,11 @@ class Battle:
                 return False
             screenshot = self.device_manager.get_screenshot()
             if self.in_switch_on(screenshot):
-                logger.debug("[Battle] 全员交替on")
+                logger.info("[Battle] 全员交替on")
                 return True
             if self.in_switch_off(screenshot):
-                logger.debug("[Battle] 全员交替off")
+                logger.info("[Battle] 全员交替off")
                 self.device_manager.click(792, 659)
-            if not self.in_battle():
-                logger.debug("[Battle] 不在战斗中")
-                return False
             time.sleep(self.wait_time)
 
     def cmd_sp_skill(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
