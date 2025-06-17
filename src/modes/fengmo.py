@@ -185,7 +185,7 @@ class FengmoMode:
         while True:
             self.report_data()
             logger.info(f"[run]当前配置的城市: {self.city_name} 深度: {self.depth}")
-            new_true = False
+            new_turn = False
             if not self.world.wait_in_fengmo_map():
                 if self.rest_in_inn:
                     logger.info("[run]休息检查")
@@ -201,27 +201,27 @@ class FengmoMode:
                         continue
                     if self.world.wait_in_fengmo_map(timeout=10):
                         break
-                new_true = True
+                new_turn = True
+           
+            if new_turn:
+                self.state_data.turn_start()
+                self.state_data.step = Step.COLLECT_JUNK
             else:
-                if new_true:
-                    self.state_data.turn_start()
-                    self.state_data.step = Step.COLLECT_JUNK
-                else:
-                    self.reset_state()
-                    if self.state_data.turn_start_time == 0:
-                        self.state_data.turn_start_time = time.time()
-                if self.state_data.step == Step.COLLECT_JUNK:
-                    self._collect_junk_phase()
-                logger.info(f"[run]进入二阶段当前状态: {self.state_data.step}")
-                if self.state_data.step == Step.FIND_BOX:
-                    self._find_box_phase()
-                logger.info(f"[run]进入三阶段当前状态: {self.state_data.step}")
-                if self.state_data.step == Step.FIND_BOSS:
-                    self._find_boss_phase()
-                if self.state_data.step == Step.BATTLE_FAIL or self.state_data.step == Step.State_FAIL:
-                    self.state_data.turn_end(type='fail')
-                if self.state_data.step == Step.FINISH:
-                    self.state_data.turn_end(type='success')
+                self.reset_state()
+                if self.state_data.turn_start_time == 0:
+                    self.state_data.turn_start_time = time.time()
+            if self.state_data.step == Step.COLLECT_JUNK:
+                self._collect_junk_phase()
+            logger.info(f"[run]进入二阶段当前状态: {self.state_data.step}")
+            if self.state_data.step == Step.FIND_BOX:
+                self._find_box_phase()
+            logger.info(f"[run]进入三阶段当前状态: {self.state_data.step}")
+            if self.state_data.step == Step.FIND_BOSS:
+                self._find_boss_phase()
+            if self.state_data.step == Step.BATTLE_FAIL or self.state_data.step == Step.State_FAIL:
+                self.state_data.turn_end(type='fail')
+            if self.state_data.step == Step.FINISH:
+                self.state_data.turn_end(type='success')
             
 
     def _collect_junk_phase(self) -> None:
