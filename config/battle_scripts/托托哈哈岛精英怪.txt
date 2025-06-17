@@ -1,8 +1,6 @@
 BattleStart
 #第1回合
-XRole,1,3,0
-XPet,1,1,0
-Switch
+Role,1,3,0
 Role,2,2,0
 Role,4,2,0
 Boost
