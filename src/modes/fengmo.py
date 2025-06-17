@@ -568,6 +568,9 @@ class FengmoMode:
                 in_mini_map = self.world.in_minimap(screenshot)
                 find_text = None
                 for r in results:
+                    if "用户协议与隐私政策" in r['text']:
+                        device_manager.click(640,600)
+                        break
                     if "将重置进行状况" in r['text']:
                         time.sleep(1)
                         self.world.click_confirm_pos()

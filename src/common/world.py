@@ -416,7 +416,7 @@ class World:
         选择逢魔模式
         """
         logger.info(f"[select_fengmo_mode]等待选择深度")
-        sleep_until(lambda: self.ocr_handler.match_texts(["选择深度"]),function_name="选择深度")
+        sleep_until(lambda: self.ocr_handler.match_texts(["选择深度"]),function_name="选择深度",timeout=5)
         logger.info(f"[select_fengmo_mode]读取当前深度")
         current_depth = self.read_fengmo_depth()
         while current_depth != depth:
