@@ -37,7 +37,11 @@ class World:
         self.default_battle_config = default_battle_config
 
     def restart_wait_in_world(self):
-        return self.read_map_state(callback=lambda: self.app_manager.start_app() and self.device_manager.click(100,100))
+        def start_app_clk():
+            self.app_manager.start_app()
+            self.device_manager.click(100,100)
+            logger.info('点击开始.等待进入游戏界面')
+        return self.read_map_state(start_app_clk)
           
     def read_map_state(self, callback:Callable[[], None]|None=None):
         logger.info(f"[read_map_state]读取界面状态")

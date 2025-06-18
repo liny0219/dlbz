@@ -8,7 +8,6 @@ from gui.settings_tabs.device_tab import DeviceSettingsTab
 from gui.settings_tabs.battle_tab import BattleSettingsTab
 from gui.settings_tabs.settings_tab import SettingsSettingsTab
 from gui.settings_tabs.logging_tab import LoggingSettingsTab
-from gui.settings_tabs.game_tab import GameSettingsTab
 from gui.settings_tabs.ocr_tab import OCRSettingsTab
 
 class SettingsPanel(ttk.Frame):
@@ -39,8 +38,6 @@ class SettingsPanel(ttk.Frame):
                 tab = SettingsSettingsTab(self.notebook, config_data, fname)
             elif fname == "logging.yaml":
                 tab = LoggingSettingsTab(self.notebook, config_data, fname)
-            elif fname == "game.yaml":
-                tab = GameSettingsTab(self.notebook, config_data, fname)
             elif fname == "ocr.yaml":
                 tab = OCRSettingsTab(self.notebook, config_data, fname)
             else:

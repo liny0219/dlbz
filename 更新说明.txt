@@ -1,3 +1,9 @@
+v1.4.6
+feature: 支持逢魔地图二阶段继续游戏
+feature: 兼容官服与b服不用设置游戏app了
+feature: 重写放弃战斗逻辑
+bugfix: 修复退出重启不开始游戏的bug
+
 v1.4.5-beta1
 bugfix: 修复战斗指令异常,导致的地图状态错误,卡在某些点
 bugfix: 修复XPet指令没有切换后排

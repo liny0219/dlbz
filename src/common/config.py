@@ -18,9 +18,6 @@ class DeviceConfig(BaseModel):
     retry_count: int = 3
     adb_address: str = "127.0.0.1:5555"
 
-class GameConfig(BaseModel):
-    package_name: str = "com.netease.ma167"
-
 class LoggingConfig(BaseModel):
     level: str = "INFO"
     format: str = "{time} {level} {message}"
@@ -102,7 +99,6 @@ class Config:
             config_dir = get_config_dir()
         self.ocr = OCRConfig(**self._load_yaml_with_log(os.path.join(config_dir, "ocr.yaml"), name="ocr.yaml", fallback=os.path.join(config_dir, "battle.yaml"), key="ocr"))
         self.device = DeviceConfig(**self._load_yaml_with_log(os.path.join(config_dir, "device.yaml"), name="device.yaml", fallback=os.path.join(config_dir, "battle.yaml"), key="device"))
-        self.game = GameConfig(**self._load_yaml_with_log(os.path.join(config_dir, "game.yaml"), name="game.yaml", fallback=os.path.join(config_dir, "battle.yaml"), key="game"))
         self.logging = LoggingConfig(**self._load_yaml_with_log(os.path.join(config_dir, "logging.yaml"), name="logging.yaml", fallback=os.path.join(config_dir, "battle.yaml"), key="logging"))
         self.command_interval = self._load_yaml_with_log(os.path.join(config_dir, "battle.yaml"), name="battle.yaml").get("command_interval", 1.0)
         self.fengmo = FengmoConfig(**self._load_yaml_with_log(os.path.join(config_dir, "fengmo.yaml"), name="fengmo.yaml"))

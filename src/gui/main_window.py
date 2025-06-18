@@ -23,7 +23,6 @@ CONFIG_FILES = [
     ("battle.yaml", "战斗配置"),
     ("settings.yaml", "全局设置"),
     ("logging.yaml", "日志"),
-    ("game.yaml", "游戏"),
     ("ocr.yaml", "OCR"),
 ]
 LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]

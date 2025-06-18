@@ -208,8 +208,7 @@ class FengmoMode:
                 self.state_data.step = Step.COLLECT_JUNK
             else:
                 self.reset_state()
-                if self.state_data.turn_start_time == 0:
-                    self.state_data.turn_start_time = time.time()
+      
             if self.state_data.step == Step.COLLECT_JUNK:
                 self._collect_junk_phase()
             logger.info(f"[run]进入二阶段当前状态: {self.state_data.step}")
@@ -500,6 +499,10 @@ class FengmoMode:
         if self.state_data.step != self.state_data.step:
             self.state_data.step = Step.State_FAIL
             return False
+        if  self.state_data.current_point is None:
+            self.state_data.current_point = self.check_points[0]
+        if self.state_data.turn_start_time == 0:
+            self.state_data.turn_start_time = time.time()
         return True
 
     def find_map_tag(self):

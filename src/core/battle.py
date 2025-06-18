@@ -387,24 +387,17 @@ class Battle:
             time.sleep(0.1)
         start_time = time.time()
         logger.info(f"[battle]exit_battle in_round")
-        while True: 
-            time.sleep(0.2)
-            screenshot = self.device_manager.get_screenshot()
-            if time.time() - start_time > timeout:
-                logger.info(f"[battle]exit_battle 超时")
-                return False
-            # 顺序不能变,因为放弃会跟上面的确认战斗重叠
-            if self.ocr_handler.match_texts(["选择放弃的话"],region=(293,172,987,548),image=screenshot):
-                logger.info(f"[battle]exit_battle 选择放弃战斗")
-                self.device_manager.click(800, 485)
-                continue
-            if self.ocr_handler.match_texts(["将放弃战斗"],region=(293,172,987,548),image=screenshot):
-                logger.info(f"[battle]exit_battle 确认放弃战斗")
-                self.device_manager.click(800, 485)
-                return True
-            if self.ocr_handler.match_click_text(["放弃"],region=(30,580,1240,700),image=screenshot):
-                logger.info(f"[battle]exit_battle 点击放弃战斗")
-                continue
+        time.sleep(0.2)
+        logger.info(f"[battle]exit_battle 点击放弃战斗")
+        self.device_manager.click(592, 658)
+        time.sleep(1)
+        logger.info(f"[battle]exit_battle 选择放弃战斗")
+        self.device_manager.click(800, 485)
+        time.sleep(1)
+        logger.info(f"[battle]exit_battle 确认放弃战斗")
+        self.device_manager.click(800, 485)
+        time.sleep(1)
+        return True
 
     def switch_back_role(self, image: Optional[Image.Image] = None, timeout:float = 5) -> bool:
         """
