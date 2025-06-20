@@ -1,0 +1,17 @@
+#缇奇莲
+BattleStart
+Click,160, 406
+Role,1,1,0
+Role,2,1,3
+Role,3,3,0
+Role,4,2,0
+Attack
+
+Role,2,2,0
+Boost
+Attack
+
+Boost
+Attack
+
+BattleEnd

@@ -85,12 +85,13 @@ class MainWindow(tk.Tk):
         menubar = tk.Menu(self)
         self.config(menu=menubar)
         menubar.add_command(label="主界面", command=self.show_main)
+        menubar.add_command(label="追忆之书", command=self.show_memory_editor)
         menubar.add_command(label="设置", command=self.show_settings)
 
     def _build_main_frame(self):
         self.main_frame = ttk.Frame(self)
         # 顶部按钮区
-        self.start_btn = ttk.Button(self.main_frame, text="开始逢魔", command=self.on_start)
+        self.start_btn = ttk.Button(self.main_frame, text="启动逢魔", command=self.on_start)
         self.start_btn.grid(row=0, column=0, padx=10, pady=10, sticky="w")
         self.farming_btn = ttk.Button(self.main_frame, text="自动刷野", command=self.on_start_farming)
         self.farming_btn.grid(row=0, column=1, padx=10, pady=10, sticky="w")
@@ -123,11 +124,25 @@ class MainWindow(tk.Tk):
     def show_main(self):
         if hasattr(self, 'settings_panel'):
             self.settings_panel.pack_forget()
+        if hasattr(self, 'memory_editor_panel'):
+            self.memory_editor_panel.pack_forget()
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
     def show_settings(self):
         self.main_frame.pack_forget()
+        if hasattr(self, 'memory_editor_panel'):
+            self.memory_editor_panel.pack_forget()
         self.settings_panel.pack(fill=tk.BOTH, expand=True)
+
+    def show_memory_editor(self):
+        """显示追忆之书界面"""
+        self.main_frame.pack_forget()
+        if hasattr(self, 'settings_panel'):
+            self.settings_panel.pack_forget()
+        if not hasattr(self, 'memory_editor_panel'):
+            from gui.memory_panel import MemoryPanel
+            self.memory_editor_panel = MemoryPanel(self)
+        self.memory_editor_panel.pack(fill=tk.BOTH, expand=True)
 
     def on_log_level_change(self, event=None):
         """日志级别下拉框变更时，动态设置主进程logger级别，并同步所有Handler"""
@@ -242,12 +257,31 @@ class MainWindow(tk.Tk):
     def on_close(self):
         # 移除GUI Handler，防止内存泄漏
         self.logger.handlers = [h for h in self.logger.handlers if h.__class__.__name__ != 'GuiLogHandler']
+        
+        # 检查并关闭逢魔进程
         if self.fengmo_process and self.fengmo_process.is_alive():
             if not messagebox.askokcancel("退出", "玩法正在运行，确定要强制退出吗？"):
                 return
             self.fengmo_process.terminate()
             self.fengmo_process.join()
             self.append_log("玩法进程已终止")
+        
+        # 检查并关闭追忆之书进程
+        if hasattr(self, 'memory_editor_panel'):
+            if hasattr(self.memory_editor_panel, 'battle_test_process') and \
+               self.memory_editor_panel.battle_test_process and \
+               self.memory_editor_panel.battle_test_process.is_alive():
+                self.memory_editor_panel.battle_test_process.terminate()
+                self.memory_editor_panel.battle_test_process.join()
+                self.append_log("单次战斗测试进程已终止")
+            
+            if hasattr(self.memory_editor_panel, 'memory_test_process') and \
+               self.memory_editor_panel.memory_test_process and \
+               self.memory_editor_panel.memory_test_process.is_alive():
+                self.memory_editor_panel.memory_test_process.terminate()
+                self.memory_editor_panel.memory_test_process.join()
+                self.append_log("追忆之书测试进程已终止")
+        
         self.destroy()
         os._exit(0)
 

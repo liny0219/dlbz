@@ -1,3 +1,4 @@
+import os
 import time
 import threading
 from utils import logger
@@ -52,7 +53,7 @@ class Battle:
         self.switch_all_timeout = config.battle.switch_all_timeout
 
     # ================== 战斗状态判断相关方法 ==================
-    def in_battle(self, image: Optional[Image.Image] = None, call_roll: bool = True,roll_count:int=2) -> bool:
+    def in_battle(self, image: Optional[Image.Image] = None, call_roll: bool = True,roll_count:int=6) -> bool:
         """
         判断当前是否在战斗中。
         :param image: 可选，外部传入截图
@@ -76,7 +77,7 @@ class Battle:
         results = self.ocr_handler.match_point_color(image, points_colors)
         if results:
             logger.debug("检测到在战斗中")
-            time.sleep(self.wait_time)
+            time.sleep(0.2)
             return True
         else:
             if not call_roll:
@@ -87,7 +88,7 @@ class Battle:
             image = self.device_manager.get_screenshot()
             result = self.in_battle(image, call_roll=roll_count>0,roll_count=roll_count-1)
             if result:
-                logger.debug("调用roll后在战斗中")
+                logger.info("调用roll后在战斗中")
                 return True
             return False
 
@@ -114,6 +115,23 @@ class Battle:
         results = self.ocr_handler.match_point_color(image, points_colors)
         if results and self.in_battle(image):
             logger.debug("检测到在战斗回合中")
+            # 保存战斗回合判断的截图用于调试
+            if image is not None:
+                try:
+                    # 确保debug目录存在
+                    debug_dir = "debug"
+                    if not os.path.exists(debug_dir):
+                        os.makedirs(debug_dir)
+                    
+                    # 生成带时间戳的文件名
+                    timestamp = time.strftime("%Y%m%d_%H%M%S")
+                    filename = f"{debug_dir}/battle_round_{timestamp}.png"
+                    
+                    # 保存截图
+                    image.save(filename)
+                    logger.debug(f"已保存战斗回合判断截图: {filename}")
+                except Exception as e:
+                    logger.warning(f"保存战斗回合判断截图失败: {e}")
             time.sleep(self.wait_time)
             return True
         else:
@@ -701,9 +719,11 @@ class Battle:
             time.sleep(self.wait_time)
         logger.info(f"[Battle] 点击攻击按钮")
         self.device_manager.click(1100, 660)
+        time.sleep(0.5)
         result = sleep_until(self.not_in_round,timeout=self.attack_timeout)
         if not result:
             logger.info(f"[Battle] 攻击等待超时")
+            return False
         return result
     
     def wait_in_round_or_world(self, callback:Callable[[Image.Image], str|None]|None = None, timeout: Optional[float] = None) -> str:
@@ -727,7 +747,6 @@ class Battle:
                 if result is not None:
                     return result
             time.sleep(self.wait_time)
-            
 
     def wait_done(self, callback:Callable[[Image.Image], str|None]|None = None, timeout: Optional[float] = None) -> str:
         """
@@ -756,6 +775,28 @@ class Battle:
                     return result
             time.sleep(self.wait_time)
             
+    def press_in_round(self, timeout: float = 15) -> bool:
+        try:
+            logger.info("等待战斗开始")
+            logger.info(f"长按按下,等待跳过")
+            if self.device_manager.device is None:
+                logger.error("设备未连接")
+                return False
+            self.device_manager.press_down(100,20)
+            start_time = time.time()
+            while not self.in_round():
+                if time.time() - start_time > timeout:
+                    logger.info("[Battle] 等待战斗开始超时")
+                    return False
+                time.sleep(1)
+            logger.info(f"长按抬起")
+            self.device_manager.press_up(100,20)
+            time.sleep(0.5)
+        except Exception as e:
+            logger.warning(f"等待战斗开始失败: {e}")
+            return False
+        return True
+    
     # ================== 战斗指令执行相关方法 ==================
     def cmd_role(self, index: int = 1,skill: int = 1, bp: int = 0, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
         """
@@ -935,9 +976,12 @@ class Battle:
         :param x: X 坐标
         :param y: Y 坐标
         """
-        logger.debug(f"[Battle] 点击坐标 ({x}, {y})")
-        self.device_manager.click(x, y)
+        logger.info(f"[Battle] 双击坐标 ({x}, {y})")
+        self.device_manager.double_click(x, y)
         return True
+
+    def cmd_press_in_round(self, timeout: float = 15) -> bool:
+        return self.press_in_round(timeout)
 
     def cmd_battle_start(self) -> bool:
         """
@@ -968,15 +1012,6 @@ class Battle:
         logger.debug("[Battle] 逃跑（Run）")
         return self.exit_battle()
     
-    def cmd_wait_in_round(self) -> bool:
-        """
-        等待回合
-        """
-        logger.debug("[Battle] 等待回合（WaitInRound）")
-        result = sleep_until(self.in_round)
-        if result is None:
-            return False
-        return result
     def cmd_exit_app(self) -> bool:
         """
         退出战斗

@@ -45,8 +45,8 @@ class BattleCommandExecutor:
             "CheckDead":   [],
             "NoCheckDead": [],
             "Run":         [],
-            "WaitInRound": [],
             "ExitApp":     [],
+            "PressInRound":["timeout"],
             # 其它指令可按需扩展
         }
 
@@ -123,6 +123,7 @@ class BattleCommandExecutor:
                     self.logger.info(f"取消队友阵亡检查:{cmd}")
                     check_dead_cmd = None
                 if cmd.get('type') == 'Attack':
+                    self.logger.info(f"等待战斗回合结束")
                     result = self.battle.wait_done(lambda screenshot: "in_world" if self.world.in_world(screenshot) else None)
                     if result in ['wait_done_timeout', 'exception']:
                         self.logger.info(f"回合异常:{cmd}{result}")
@@ -132,6 +133,7 @@ class BattleCommandExecutor:
                         self.battle.reset_round()
                         self.battle.exit_battle()
                         return { 'success': False,"state":'dead'}
+                    self.logger.info(f"战斗回合结束, result: {result}")
             except Exception as e:
                 self.logger.error(f"执行指令失败: {cmd}, 错误: {e}")
                 return { 'success': False,"state":'exception'}
@@ -188,10 +190,10 @@ class BattleCommandExecutor:
             return not self.battle.cmd_check_dead(**params)
         elif cmd_type == "Run":
             return self.battle.cmd_run(**params)
-        elif cmd_type == "WaitInRound":
-            return self.battle.cmd_wait_in_round(**params)
         elif cmd_type == "ExitApp":
             return self.battle.cmd_exit_app(**params)
+        elif cmd_type == "PressInRound":
+            return self.battle.cmd_press_in_round(**params)
         else:
             self.logger.warning(f"未知指令类型: {cmd_type}")
 

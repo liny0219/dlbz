@@ -113,6 +113,8 @@ class FengmoMode:
         self.battle = Battle(device_manager, ocr_handler, self.app_manager)
         self.world = World(device_manager, ocr_handler, self.battle, self.app_manager)
         self.log_queue = log_queue  # 添加日志队列属性
+        self.world.battle_executor.load_commands_from_txt("xxxxx")
+        self.world.battle_executor.execute_all()
         self.fengmo_config = config.fengmo
         self.city_name = self.fengmo_config.city
         self.depth = self.fengmo_config.depth
@@ -244,6 +246,7 @@ class FengmoMode:
                     self.wait_map()
                     logger.info(f"[collect_junk_phase]检查是否在城镇,是否在战斗中,执行战斗回调")
                     in_world_or_battle = self.world.in_world_or_battle()
+                    logger.info(f"[collect_junk_phase]in_world_or_battle: {in_world_or_battle}")
                     if in_world_or_battle:
                         if not in_world_or_battle["app_alive"]:
                             logger.info(f"[collect_junk_phase]App未运行")
@@ -282,6 +285,7 @@ class FengmoMode:
                             self.device_manager.click(*check_point.pos)
                             self.wait_map()
                             in_world_or_battle = self.world.in_world_or_battle()
+                            logger.info(f"[collect_junk_phase]in_world_or_battle: {in_world_or_battle}")
                             if self.check_state(Step.COLLECT_JUNK,check_point):
                                 return
                             if in_world_or_battle:
@@ -330,6 +334,7 @@ class FengmoMode:
             logger.info(f"[find_box_phase]当前查找逢魔点: {self.state_data.current_point}")
             logger.info(f"[find_box_phase]是否等待在小镇中")
             in_world_or_battle = self.world.in_world_or_battle()
+            logger.info(f"[find_box_phase]in_world_or_battle: {in_world_or_battle}")
             if in_world_or_battle is not None:
                 if not in_world_or_battle["app_alive"]:
                     if not self.wait_check_mode_state_ok():

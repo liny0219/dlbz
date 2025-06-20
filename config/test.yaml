@@ -1,0 +1,4 @@
+battle_script_path: ''
+test_enabled: true
+test_timeout: 30
+auto_save: true

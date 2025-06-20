@@ -1,3 +1,9 @@
+v1.5.0 
+feature: 增加追忆之书功能
+feature: 增加战斗测试功能,可以在战斗界面按设置的轴进行战斗
+feature: 增加战斗界面校验,避免偶现回合超时
+feature: 增加PressInRound长按跳过到战斗回合指令
+
 v1.4.8
 bugfix: 修复XSP指令不切换后台
 bugfix: 修复偶现不进入逢魔地图

@@ -500,7 +500,7 @@ class World:
             logger.debug("未发现地图Boss点")
             return None
         
-    def in_world_or_battle(self, enemyName:str='', check_app_alive:bool=False, check_battle:bool=True)-> dict[str,bool|str]|None:
+    def in_world_or_battle(self, enemyName:str='', check_battle:bool=True)-> dict[str,bool|str]|None:
         logger.debug("[in_world_or_battle]开始检查")
         def check_in_world_or_battle():
             screenshot = self.device_manager.get_screenshot()
@@ -515,7 +515,7 @@ class World:
                 logger.debug("[in_world_or_battle]没检查出来")  
                 return None
         check_battle_command_done = False
-        is_battle_success = 'normal'
+        is_battle_success = True
         has_battle = False
         while True:
             check_in_world = sleep_until_app_running(check_in_world_or_battle,app_manager=self.app_manager)
@@ -574,7 +574,7 @@ class World:
         if not loadConfig:
             logger.info("没有默认战斗配置,使用委托战斗")
             self.battle.auto_battle()
-            return { "type": "auto_battle", "result": 'normal'}
+            return { "type": "auto_battle", "result": True}
         else:
             logger.info("使用默认战斗配置")
             result = self.battle_executor.execute_all()['success']

@@ -133,6 +133,21 @@ class DeviceManager:
                 logger.error("设备未连接，无法点击")
         except Exception as e:
             logger.error(f"点击坐标 ({x}, {y}) 失败: {str(e)}\n{traceback.format_exc()}") 
+
+    def double_click(self, x: int, y: int) -> None:
+        """
+        点击指定坐标，并输出日志
+        :param x: 横坐标
+        :param y: 纵坐标
+        """
+        try:
+            if self.device:
+                logger.debug(f"双击坐标 ({x}, {y})")
+                self.device.double_click(x, y)
+            else:
+                logger.error("设备未连接，无法点击")
+        except Exception as e:
+            logger.error(f"点击坐标 ({x}, {y}) 失败: {str(e)}\n{traceback.format_exc()}") 
     
     def long_click(self, x: int, y: int, duration: float = 0.5):
         """
@@ -147,7 +162,30 @@ class DeviceManager:
         logger.debug(f"长按: {duration} 秒")
         self.device.long_click(x, y, duration)
     
-    
+    def press_down(self, x: int, y: int):
+        """
+        按下指定坐标
+        :param x: 横坐标
+        :param y: 纵坐标
+        """
+        if self.device is None:
+            logger.error("设备未连接，无法按下")
+            return
+        logger.info(f"按下: {x}, {y}")
+        self.device.touch.down(x, y)
+
+    def press_up(self, x: int, y: int):
+        """
+        抬起指定坐标
+        :param x: 横坐标
+        :param y: 纵坐标
+        """
+        if self.device is None:
+            logger.error("设备未连接，无法抬起")
+            return
+        logger.info(f"抬起: {x}, {y}")
+        self.device.touch.up(x, y)
+
     def press_and_drag_step(self, start:tuple, end:tuple,drag_press_time:float=0.1,drag_wait_time:float=0.3):
         """
         长按和拖动指定坐标
