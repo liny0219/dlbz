@@ -186,22 +186,22 @@ class FengmoMode:
             self.report_data()
             logger.info(f"[run]当前配置的城市: {self.city_name} 深度: {self.depth}")
             new_turn = False
-            if not self.world.wait_in_fengmo_map():
-                if self.rest_in_inn:
-                    logger.info("[run]休息检查")
-                    need_inn = True
-                    if self.world.vip_cure(self.vip_cure) == 'finish_cure':
-                        need_inn = False
-                    if need_inn:
-                        self.world.rest_in_inn(self.inn_pos)
-                self.state_data.map_fail = False
-                while True:
-                    if not self.world.go_fengmo(self.depth, self.entrance_pos,callback=lambda: "map_fail" if self.state_data.map_fail else None):
-                        self.state_data.map_fail = False
-                        continue
-                    if self.world.wait_in_fengmo_map(timeout=10):
-                        break
-                new_turn = True
+            # if not self.world.wait_in_fengmo_map():
+            if self.rest_in_inn:
+                logger.info("[run]休息检查")
+                need_inn = True
+                if self.world.vip_cure(self.vip_cure) == 'finish_cure':
+                    need_inn = False
+                if need_inn:
+                    self.world.rest_in_inn(self.inn_pos)
+            self.state_data.map_fail = False
+            while True:
+                if not self.world.go_fengmo(self.depth, self.entrance_pos,callback=lambda: "map_fail" if self.state_data.map_fail else None):
+                    self.state_data.map_fail = False
+                    continue
+                if self.world.wait_in_fengmo_map(timeout=10):
+                    break
+            new_turn = True
            
             if new_turn:
                 self.state_data.turn_start()
@@ -221,6 +221,7 @@ class FengmoMode:
                 self.state_data.turn_end(type='fail')
             if self.state_data.step == Step.FINISH:
                 self.state_data.turn_end(type='success')
+            time.sleep(5)
             
 
     def _collect_junk_phase(self) -> None:

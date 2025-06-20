@@ -909,7 +909,7 @@ class Battle:
         :param index: 技能索引
         """
         logger.debug(f"[Battle] 释放后排特殊技能（SP），技能索引: 角色:{index} 技能对象:{role_id} 敌人坐标:{x,y}")
-        return self.cast_sp(index, role_id, x, y)
+        return self.cast_sp(index, role_id, x, y, switch=True)
 
     def cmd_wait(self, seconds: float = 1.0) -> bool:
         """

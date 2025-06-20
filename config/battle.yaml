@@ -11,7 +11,7 @@ exit_battle_timeout: 20.0
 transform_timeout: 15.0
 cast_sp_timeout: 10.0
 cast_skill_timeout: 10.0
-attack_timeout: 5.0
+attack_timeout: 10.0
 wait_in_round_timeout: 10.0
 wait_done_timeout: 90.0
 boost_timeout: 15.0
