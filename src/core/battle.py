@@ -120,6 +120,14 @@ class Battle:
             logger.debug("不在战斗回合中")
             return False
 
+    def not_in_round(self, image: Optional[Image.Image] = None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在战斗回合中")
+            return False
+        return not self.in_round(image)
+    
     def in_sp_on(self, image: Optional[Image.Image] = None) -> bool:
         """
         判断当前是否在技能释放中。
@@ -562,9 +570,8 @@ class Battle:
         return True
 
     def cast_sp(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, 
-                switch: bool = False, timeout: Optional[float] = None) -> bool:
-        if timeout is None:
-            timeout = self.cast_sp_timeout
+                switch: bool = False) -> bool:
+        timeout = self.cast_sp_timeout
         enemy_pos = None
         if index < 1 or index > 4:
             logger.error(f"[Battle] 角色索引错误，index: {index}")
@@ -677,28 +684,27 @@ class Battle:
         return True
                 
 
-    def attack(self, timeout: Optional[float] = None):
+    def attack(self):
         """
         执行攻击
         """
-        if timeout is None:
-            timeout = self.attack_timeout
-        is_done = False
-        # 设置超时时间为5秒
-        start_time = time.time()
-        while True:
-            # 检查是否超时
-            if time.time() - start_time > timeout:
-                logger.info("[Battle] attack超时")
-                return False
-            screenshot = self.device_manager.get_screenshot()
-            if not is_done and self.in_round(screenshot):
-                self.device_manager.click(1100, 650)
-                is_done = True
-                time.sleep(self.wait_time)
-            if is_done and not self.in_round(screenshot):
-                return True
+        count = 0
+        max_count = 3
+        while count < max_count:
+            if self.in_round():
+                logger.info(f"[Battle] 在回合中")
+                break
+            else:
+                logger.info(f"[Battle] 点击空白区域")
+                self.device_manager.click(135,25)
+                count += 1
             time.sleep(self.wait_time)
+        logger.info(f"[Battle] 点击攻击按钮")
+        self.device_manager.click(1100, 660)
+        result = sleep_until(self.not_in_round,timeout=self.attack_timeout)
+        if not result:
+            logger.info(f"[Battle] 攻击等待超时")
+        return result
     
     def wait_in_round_or_world(self, callback:Callable[[Image.Image], str|None]|None = None, timeout: Optional[float] = None) -> str:
         """
