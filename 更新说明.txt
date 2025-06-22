@@ -1,3 +1,6 @@
+v1.6.1
+bugfix: 修复日常统计时间累加异常
+
 v1.6.0 
 feature: 增加薅花田\果炎
 feature: 战斗指令增加LoopS与LoopE循环指令,可以用来挂宿敌

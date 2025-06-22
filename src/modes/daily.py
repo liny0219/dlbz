@@ -4,13 +4,11 @@
 """
 
 import time
-import logging
 import os
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
-from utils import app_alive_monitor
 from utils.logger import logger
 from common.world import World
 from core.battle import Battle
@@ -217,8 +215,8 @@ class DailyMode:
             self.huatian_stats["huatian1"]["total_time"] += elapsed_time
             self.huatian_stats["huatian2"]["total_time"] += elapsed_time
             
-            logger.info(f"[花田] 花田功能执行成功，重启次数: {self.huatian_stats['huatian1']['restart_count']} 耗时: {elapsed_time:.2f}秒")
-            logger.info(f"[花田] 花田功能执行成功，重启次数: {self.huatian_stats['huatian2']['restart_count']} 耗时: {elapsed_time:.2f}秒")
+            logger.info(f"[花田] 花田功能执行成功，重启次数: {self.huatian_stats['huatian1']['restart_count']} 耗时: {elapsed_time:.0f}秒")
+            logger.info(f"[花田] 花田功能执行成功，重启次数: {self.huatian_stats['huatian2']['restart_count']} 耗时: {elapsed_time:.0f}秒")
             self._send_stats_update("huatian1", elapsed_time)
             self._send_stats_update("huatian2", elapsed_time)
             
@@ -288,10 +286,12 @@ class DailyMode:
                 # 确定花田类型
                 huatian_type = f"huatian{huatian_name.split('田')[1]}"
                 self.huatian_stats[huatian_type]["restart_count"] += 1
-                
-                # 立即发送重启统计更新
-                restart_elapsed_time = time.time() - start_time
-                self._send_stats_update(huatian_type, restart_elapsed_time)
+
+            # 立即发送重启统计更新
+            count = self.huatian_stats[huatian_type]["restart_count"]
+            restart_elapsed_time = time.time() - start_time
+            logger.info(f"{[huatian_type]}重启次数{count}, 耗时{restart_elapsed_time:.0f}秒")
+            self._send_stats_update(huatian_type, restart_elapsed_time)
         
         # 找到目标后，标记为已找到
         huatian_type = f"huatian{huatian_name.split('田')[1]}"
@@ -373,9 +373,11 @@ class DailyMode:
                     self.world.restart_wait_in_world()
                     self.guoyan_stats["restart_count"] += 1
                     
-                    # 立即发送重启统计更新
-                    restart_elapsed_time = time.time() - start_time
-                    self._send_stats_update("guoyan", restart_elapsed_time)
+                # 立即发送重启统计更新
+                count = self.guoyan_stats["restart_count"] 
+                restart_elapsed_time = time.time() - start_time
+                logger.info(f"果炎重启次数{count}, 耗时:{restart_elapsed_time:.0f}秒")
+                self._send_stats_update("guoyan", restart_elapsed_time)
             
             # 找到目标后，标记为已找到并发送统计更新
             self.guoyan_stats["target_found"] = True
@@ -384,7 +386,7 @@ class DailyMode:
             elapsed_time = time.time() - start_time
             self.guoyan_stats["total_time"] += elapsed_time
             
-            logger.info(f"[果炎] 果炎功能执行成功，耗时: {elapsed_time:.2f}秒")
+            logger.info(f"[果炎] 果炎功能执行成功，耗时: {elapsed_time:.0f}秒")
             self._send_stats_update("guoyan", elapsed_time, target_found=True)
         
         except Exception as e:
