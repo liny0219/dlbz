@@ -410,9 +410,6 @@ class DailyMode:
             if not self.app_manager.is_app_running():
                 logger.info("应用未运行，尝试启动应用...")
                 self.app_manager.start_app()
-                # 等待应用启动
-                import time
-                time.sleep(3)
                 if not self.app_manager.is_app_running():
                     logger.error("启动应用失败")
                     return False

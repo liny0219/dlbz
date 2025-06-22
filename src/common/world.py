@@ -862,12 +862,13 @@ class World:
         time.sleep(1)
         sleep_until(self.in_world)
         if save:
+            time.sleep(1.5)
             self.save_by_mini_map()
-            time.sleep(1)
+            time.sleep(1.5)
 
     def save_by_mini_map(self):
-        self.device_manager.click(1060,100)
-        time.sleep(0.5)
+        self.device_manager.click(226, 607)
+        time.sleep(1)
         self.closeUI()
     
     def check_mini_map_pos(self,x:int,y:int,color:str,range:int=1):

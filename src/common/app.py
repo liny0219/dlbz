@@ -64,14 +64,12 @@ class AppManager:
                     self.device_manager.device.app_start(package)
                     if show_log:
                         logger.info(f"启动App成功: {package}")
-                    return
                 except Exception as e:
-                    logger.warning(f"启动 {package} 失败: {e}")
+                    logger.info(f"启动 {package} 失败: {e}")
                     continue
-            
-            logger.error("所有游戏包启动失败")
+            time.sleep(3)
         except Exception as e:
-            logger.error(f"启动App失败: {e}\n{traceback.format_exc()}")
+            logger.info(f"启动App失败: {e}\n{traceback.format_exc()}")
 
     def close_app(self,show_log:bool=False) -> None:
         """
