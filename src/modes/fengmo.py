@@ -32,6 +32,25 @@ class Step(Enum):
     BATTLE_FAIL = 6
     State_FAIL = 7
 
+# 状态处理结果常量
+class StateResult:
+    """状态处理结果常量"""
+    APP_NOT_ALIVE = 'app_not_alive'
+    BATTLE_FAIL = 'battle_fail'
+    IN_BATTLE = 'in_battle'
+    CONTINUE = 'continue'
+    IN_WORLD = 'in_world'
+    
+# 检查信息常量
+class CheckInfoResult:
+    """检查信息结果常量"""
+    FOUND_TREASURE = "found_treasure"
+    FOUND_POINTS = "found_points"
+    FOUND_CURE = "found_cure"
+    FOUND_BOSS = "found_boss"
+    BATTLE_END = "battle_end"
+    BATTLE_FAIL = "battle_fail"
+
 @dataclass
 class StateData:
     """
@@ -134,6 +153,76 @@ class FengmoMode:
         self.state_data = StateData()
         self.app_thread = None
         self.check_info_thread = None
+        
+        # 缓存常用配置，避免重复访问
+        self._cached_config = {
+            'find_point_wait_time': self.find_point_wait_time,
+            'wait_map_time': self.wait_map_time,
+            'revive_on_all_dead': self.revive_on_all_dead,
+            'rest_in_inn': self.rest_in_inn,
+            'vip_cure': self.vip_cure
+        }
+
+    def _handle_world_battle_state(self, phase_name: str) -> Optional[str]:
+        """
+        通用的世界/战斗状态处理方法
+        
+        :param phase_name: 阶段名称，用于日志标识
+        :return: 返回处理结果：'app_not_alive', 'battle_fail', 'in_battle', 'continue' 或 None
+        """
+        in_world_or_battle = self.world.in_world_or_battle()
+        logger.debug(f"[{phase_name}]状态检查: {in_world_or_battle}")
+        
+        if in_world_or_battle is None:
+            return None
+            
+        # 检查App是否存活
+        if not in_world_or_battle["app_alive"]:
+            logger.warning(f"[{phase_name}]App未运行")
+            return StateResult.APP_NOT_ALIVE
+            
+        # 检查战斗是否失败
+        if not in_world_or_battle["is_battle_success"]:
+            logger.warning(f"[{phase_name}]战斗失败")
+            self.state_data.step = Step.BATTLE_FAIL
+            return StateResult.BATTLE_FAIL
+            
+        # 检查是否在战斗中
+        if in_world_or_battle["in_battle"]:
+            logger.info(f"[{phase_name}]遇敌战斗过")
+            return StateResult.IN_BATTLE
+            
+        # 检查是否在城镇中
+        if in_world_or_battle["in_world"]:
+            logger.debug(f"[{phase_name}]在城镇中")
+            
+        return StateResult.CONTINUE
+
+    def _performance_monitor(self, operation_name: str):
+        """
+        性能监控装饰器上下文管理器
+        
+        :param operation_name: 操作名称
+        """
+        class PerformanceContext:
+            def __init__(self, name):
+                self.name = name
+                self.start_time = None
+                
+            def __enter__(self):
+                self.start_time = time.time()
+                logger.debug(f"[性能监控]开始执行: {self.name}")
+                return self
+                
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                if self.start_time is not None:
+                    elapsed = time.time() - self.start_time
+                    if elapsed > 5:  # 超过5秒的操作记录警告
+                        logger.warning(f"[性能监控]{self.name} 耗时较长: {elapsed:.2f}秒")
+                    else:
+                        logger.debug(f"[性能监控]{self.name} 完成: {elapsed:.2f}秒")
+                    
+        return PerformanceContext(operation_name)
 
     def cleanup(self):
         """清理线程资源"""
@@ -599,71 +688,101 @@ class FengmoMode:
                 region = (80, 0, 1280, 720)
                 results = ocr_handler.recognize_text(region=region,image=screenshot)
                 in_mini_map = self.world.in_minimap(screenshot)
-                find_text = None
-                for r in results:
-                    if "用户协议与隐私政策" in r['text']:
-                        device_manager.click(640,600)
-                        break
-                    if "将重置进行状况" in r['text']:
-                        time.sleep(1)
-                        self.world.click_confirm_pos()
-                        state_data.map_fail = True
-                        break
-                    if "获得道具" in r['text']:
-                        find_text = "found_treasure"
-                        break
-                    if "已发现所有的逢魔之影" in r['text']:
-                        state_data.step = Step.FIND_BOX
-                        find_text = "found_points"
-                        break
-                    if "完全恢复了" in r['text'] and in_fengmo:
-                        find_text = "found_cure"
-                        break
-                    if "逢魔之主已在区域某处出现" in r['text']:
-                        state_data.step = Step.FIND_BOSS
-                        find_text = "found_boss"
-                        break
-                    if "已发现逢魔之主" in r['text']:
-                        state_data.step = Step.FIGHT_BOSS
-                        ocr_handler.match_click_text(["是"],region=region,image=screenshot)
-                        break
-                    if "提示" in r['text']:
-                        if in_mini_map:
-                            break
+                # 定义文本处理函数，提高可读性
+                def handle_battle_end():
+                    """处理战斗结算"""
+                    self.world.click_tirm(6)
+                    return CheckInfoResult.BATTLE_END
+                
+                def handle_found_points():
+                    """处理发现所有逢魔之影"""
+                    state_data.step = Step.FIND_BOX
+                    return CheckInfoResult.FOUND_POINTS
+                
+                def handle_found_boss():
+                    """处理逢魔之主出现"""
+                    state_data.step = Step.FIND_BOSS
+                    return CheckInfoResult.FOUND_BOSS
+                
+                def handle_found_boss_confirm():
+                    """处理发现逢魔之主确认"""
+                    state_data.step = Step.FIGHT_BOSS
+                    ocr_handler.match_click_text(["是"], region=region, image=screenshot)
+                    return None
+                
+                def handle_reset_progress():
+                    """处理重置进行状况"""
+                    time.sleep(1)
+                    self.world.click_confirm_pos()
+                    state_data.map_fail = True
+                    return None
+                
+                def handle_tip():
+                    """处理提示"""
+                    if not in_mini_map:
                         self.world.click_confirm(screenshot)
                         logger.info("[check_info]提示，确认")
-                        break
-                    # 战斗中的信息判断
-                    if "战斗结算" in r['text']:
-                        find_text = "battle_end"
-                        self.world.click_tirm(6)
-                        break
-                    if "全灭" in r['text']:
-                        # 根据配置决定是否复活
-                        if self.revive_on_all_dead:
-                            ocr_handler.match_click_text(["是"],region=region,image=screenshot)
+                    return None
+                
+                def handle_network_error():
+                    """处理网络错误"""
+                    ocr_handler.match_click_text(["重试"], region=region, image=screenshot)
+                    logger.info("网络断连重试")
+                    return None
+                
+                # 使用字典映射优化文本检查
+                text_handlers = {
+                    "用户协议与隐私政策": lambda: device_manager.click(640, 600),
+                    "将重置进行状况": handle_reset_progress,
+                    "获得道具": lambda: CheckInfoResult.FOUND_TREASURE,
+                    "已发现所有的逢魔之影": handle_found_points,
+                    "完全恢复了": lambda: CheckInfoResult.FOUND_CURE if in_fengmo else None,
+                    "逢魔之主已在区域某处出现": handle_found_boss,
+                    "已发现逢魔之主": handle_found_boss_confirm,
+                    "提示": handle_tip,
+                    "战斗结算": handle_battle_end,
+                    "无法连接网络": handle_network_error
+                }
+                
+                find_text = None
+                for r in results:
+                    text = r['text']
+                    
+                    # 特殊处理需要额外条件的情况
+                    if "全灭" in text:
+                        if self._cached_config['revive_on_all_dead']:
+                            ocr_handler.match_click_text(["是"], region=region, image=screenshot)
                             logger.info("[check_info]全灭，确认复活，尝试自动战斗")
                             self.battle.auto_battle()
                         else:
-                            ocr_handler.match_click_text(["否"],region=region,image=screenshot)
+                            ocr_handler.match_click_text(["否"], region=region, image=screenshot)
                             logger.info("[check_info]全灭，不复活")
                             is_dead = True
                         break
-                    if "消费以上内容即可继续" in r['text']:
-                        ocr_handler.match_click_text(["否"],region=region,image=screenshot)
+                        
+                    if "消费以上内容即可继续" in text:
+                        ocr_handler.match_click_text(["否"], region=region, image=screenshot)
                         logger.info("[check_info]使用红宝石?，死了算了")
                         is_dead = True
                         break
-                    if "选择放弃的话" in r['text'] and is_dead:
+                        
+                    if "选择放弃的话" in text and is_dead:
                         self.world.click_confirm_pos()
                         logger.info("[check_info]确认，不复活了")
                         state_data.step = Step.BATTLE_FAIL
                         is_dead = False
-                        find_text = "battle_fail"
+                        find_text = CheckInfoResult.BATTLE_FAIL
                         break
-                    if "无法连接网络" in r['text']:
-                        ocr_handler.match_click_text(["重试"],region=region,image=screenshot)
-                        logger.info("网络断连重试")
+                    
+                    # 使用字典处理其他情况
+                    for key, handler in text_handlers.items():
+                        if key in text:
+                            result = handler()
+                            if isinstance(result, str):  # 如果返回字符串，说明是find_text
+                                find_text = result
+                            break
+                    
+                    if find_text:
                         break
                 if find_text:
                     logger.info(f"[check_info]找到文本: {find_text}")

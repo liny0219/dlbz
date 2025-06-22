@@ -542,16 +542,16 @@ class World:
             logger.debug("未发现地图Boss点")
             return None
         
-    def check_in_world_or_battle(self,image:Image.Image|None=None):
+    def check_in_world_or_battle(self,image:Image.Image|None=None,roll_count:int=6):
             count = 0
-            max_count = 3
+            max_count:int=3
             while True:
                 if image is None:
                     image = self.device_manager.get_screenshot()
                 if self.in_world(image):
                     logger.debug("[in_world_or_battle]小镇中")
                     return "in_world"
-                elif self.battle.in_battle(image):
+                elif self.battle.in_battle(image, roll_count = roll_count):
                     logger.debug("[in_world_or_battle]战斗中")
                     time.sleep(2)
                     return "in_battle"
@@ -561,7 +561,7 @@ class World:
                         return None
                     image = self.device_manager.get_screenshot()
                     count += 1
-                    time.sleep(0.2)
+                    time.sleep(0.1)
 
         
     def in_world_or_battle(self, enemyName:str='', check_battle:bool=True)-> dict[str,bool|str]|None:
@@ -667,12 +667,12 @@ class World:
     def run_left(self):
         device = self.device_manager.device
         if device:
-            device.swipe(640, 350, 590, 350, 0.05)
+            device.swipe(640, 350, 590, 350, 0.03)
 
     def run_right(self):
         device = self.device_manager.device
         if device:
-            device.swipe(640, 350, 690, 350, 0.05)
+            device.swipe(640, 350, 690, 350, 0.03)
 
     def click_confirm_pos(self):
         self.device_manager.click(800,485)

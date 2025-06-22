@@ -1,11 +1,7 @@
 from dataclasses import dataclass
-from logging import Logger
 import threading
 import time
 from typing import Any, Dict, Optional
-from PIL import Image
-from numpy import true_divide
-from utils import ManagedThread, app_alive_monitor_func
 from utils import logger
 from common.app import AppManager
 from core.battle import Battle
@@ -89,57 +85,50 @@ class FarmingMode:
         # 重置状态数据
         self.state_data = FarmingStateData()
         
-        # 启动App存活监控线程
-        app_shared = {
-            'app_manager': self.app_manager,
-            "device_manager": self.device_manager,
-            "ocr_handler" : self.ocr_handler,
-            'state_data': self.state_data,
-            'logger': logger,
-        }
-        app_thread = ManagedThread(app_alive_monitor_func, app_shared)
-        app_thread.start()
-        
-        app_thread = ManagedThread(self.run_map, app_shared)
-        app_thread.start()
         pre_state = None
         start_time = time.time()
-        
+        is_left = 0
         try:
             while True:
                 screenshot = self.device_manager.get_screenshot()
-                if self.ocr_handler.match_texts(["战斗结算"],screenshot):
-                    self.world.click_tirm(3,interval=0.1)
+                result = self.world.check_in_world_or_battle(screenshot,roll_count=0)
+                if result == 'in_battle':
+                    self.state_data.in_map = False
+                    pre_state = 'in_battle'
+                    self.battle.auto_battle()
                     continue
-                result = self.world.check_in_world_or_battle(screenshot)
                 if result == 'in_world':
                     self.state_data.in_map = True
                     if pre_state == 'in_battle':
                         self.state_data.battle_count += 1
                         self.state_data.last_time = round((time.time() - start_time) / 60, 2)
                         self.report_data()
+                    if pre_state == 'in_world':
+                        time.sleep(0.5)
+                    if is_left:
+                        logger.info("[in_world]向右跑")
+                        self.world.run_right()
+                    else:
+                        logger.info("[in_world]向左跑")
+                        self.world.run_left()
+                    is_left = not is_left
                     pre_state = 'in_world'
-                if result == 'in_battle':
-                    self.state_data.in_map = False
-                    pre_state = 'in_battle'
-                    self.battle.auto_battle()
-                time.sleep(0.1)
+                if result == None and pre_state == 'in_world':
+                    time.sleep(0.2)
+                    if is_left:
+                        logger.info("[None]向右跑")
+                        self.world.run_right()
+                    else:
+                        logger.info("[None]向左跑")
+                        self.world.run_left()
+                    is_left = not is_left
+                if result == None and pre_state == 'in_battle':
+                    logger.info("[None]click_tirm")
+                    self.world.click_tirm(5,interval=0.1)
+                    continue
         except Exception as e:
             logger.error(f"[刷野模式] 主循环异常: {e}")
             logger.error(f"{e.__traceback__}\n{traceback.format_exc()}")
         finally:
             # 最终报告
             logger.info("[刷野模式] 刷野任务结束")
-
-    def run_map(self, shared: Dict[str, Any], stop_event: threading.Event, lock: Optional[threading.Lock] = None):
-        state_data: FarmingStateData = shared['state_data']
-        is_left = 0
-        while not stop_event.is_set():
-            time.sleep(1)
-            if not state_data.in_map:
-                continue
-            if is_left:
-                self.world.run_right()
-            else:
-                self.world.run_left()
-            is_left = not is_left
