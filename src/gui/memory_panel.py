@@ -448,7 +448,13 @@ class MemoryPanel(ttk.Frame):
             self.memory_failed += 1
         self.update_stats()
 
-
+    def reset_stats(self):
+        """重置追忆之书统计数据"""
+        self.memory_total = 0
+        self.memory_successful = 0
+        self.memory_failed = 0
+        self.update_stats()
+        self.log_status("追忆之书统计数据已重置")
 
     def _handle_stats_update(self, msg):
         """处理统计数据更新消息"""
@@ -461,8 +467,6 @@ class MemoryPanel(ttk.Frame):
                 self.increment_memory_stats(success=False)
         except Exception as e:
             self.log_status(f"处理统计更新失败: {e}")
-
-
 
     def start_memory(self):
         """开始追忆之书测试"""
@@ -480,6 +484,9 @@ class MemoryPanel(ttk.Frame):
         click_x = self.click_x_var.get()
         click_y = self.click_y_var.get()
         ui_wait_time = self.ui_wait_time_var.get()
+        
+        # 重置统计信息
+        self.reset_stats()
         
         # 自动保存配置
         self.save_config()
@@ -644,7 +651,7 @@ def run_battle_test_main(script_path, log_queue, log_level):
         
         # 初始化OCR处理器
         logger.info("初始化OCR处理器...")
-        ocr_handler = OCRHandler(device_manager, show_logger=True)
+        ocr_handler = OCRHandler(device_manager)
         
         # 启动单次战斗测试模式
         logger.info("启动单次战斗测试模块 BattleTestMode ...")
@@ -732,7 +739,7 @@ def run_memory_test_main(script_path, battle_count, click_x, click_y, ui_wait_ti
         
         # 初始化OCR处理器
         logger.info("初始化OCR处理器...")
-        ocr_handler = OCRHandler(device_manager, show_logger=True)
+        ocr_handler = OCRHandler(device_manager)
         
         # 启动追忆之书模式
         logger.info("启动追忆之书模块 MemoryMode ...")

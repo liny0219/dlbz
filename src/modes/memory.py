@@ -100,6 +100,9 @@ class MemoryMode:
                     self.battle.press_in_round(timeout=15)
                     # 执行单次战斗
                     self.world.battle_executor.execute_all()
+                    in_battle = self.battle.in_battle()
+                    if in_battle:
+                        self.battle.exit_battle()
                     # 等待战斗结果并处理（OCR检测会更新统计数据）
                     self._wait_and_handle_battle_result(ui_wait_time)
                     self.total_battles += 1

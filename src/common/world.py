@@ -36,45 +36,67 @@ class World:
         self.monsters = monsters
         self.default_battle_config = default_battle_config
 
-    def restart_wait_in_world(self):
+    def restart_wait_in_world(self,show_log:bool=False):
+        self.app_manager.close_app()
+        if show_log:
+            logger.info(f"[read_map_state]读取界面状态")
+        max_count = 3
+        count = 0
+        while count < max_count:
+            time.sleep(1)
+            if self.in_world():
+                count += 1
+            else:
+                count = 0
+            self.app_manager.start_app()
+            self.device_manager.click(100,100)
+            if show_log:
+                logger.info('点击开始.等待进入游戏界面')
+            
+
+    def restart_wait_in_fengmo_world(self,show_log:bool=False):
         def start_app_clk():
             self.app_manager.start_app()
             self.device_manager.click(100,100)
-            logger.info('点击开始.等待进入游戏界面')
-        return self.read_map_state(start_app_clk)
+            if show_log:
+                logger.info('点击开始.等待进入游戏界面')
+        return self.read_fengmo_map_state(start_app_clk,show_log)
+    
           
-    def read_map_state(self, callback:Callable[[], None]|None=None):
-        logger.info(f"[read_map_state]读取界面状态")
+    def read_fengmo_map_state(self, callback:Callable[[], None]|None=None,show_log:bool=False):
+        if show_log:
+            logger.info(f"[read_map_state]读取界面状态")
         max_count = 3
         count = 0
-        while True:
-            while count < max_count:
-                time.sleep(1)
-                if self.in_world():
-                    count += 1
-                else:
-                    count = 0
-                if callback is not None:
-                    callback()
-            if self.in_fengmo_map():
+        while count < max_count:
+            time.sleep(1)
+            if self.in_world():
+                count += 1
+            else:
+                count = 0
+            if callback is not None:
+                callback()
+        if self.in_fengmo_map():
+            if show_log:
                 logger.info(f"[read_map_state]在逢魔地图中")
-                time.sleep(2)
-                self.open_minimap()
-                sleep_until(self.in_minimap)
-                if self.find_map_boss() is not None:
-                    logger.info(f"[read_map_state]识别到三阶段")
-                    self.closeUI()
-                    return 'boss'
-                if self.find_map_treasure() is not None or self.find_map_cure() is not None or self.find_map_monster() is not None:
-                    logger.info(f"[read_map_state]识别到二阶段")
-                    self.closeUI()
-                    return 'box'
-                logger.info(f"[read_map_state]识别到一阶段")
+            time.sleep(2)
+            self.open_minimap()
+            sleep_until(self.in_minimap)
+            if self.find_map_boss() is not None:
+                logger.info(f"[read_map_state]识别到三阶段")
                 self.closeUI()
-                return 'collect'
-            logger.info(f"[read_map_state]在城镇中")
+                return 'boss'
+            if self.find_map_treasure() is not None or self.find_map_cure() is not None or self.find_map_monster() is not None:
+                logger.info(f"[read_map_state]识别到二阶段")
+                self.closeUI()
+                return 'box'
+            logger.info(f"[read_map_state]识别到一阶段")
             self.closeUI()
-            return 'in_world'
+            return 'collect'
+        logger.info(f"[read_map_state]在城镇中")
+        self.closeUI()
+        return 'in_world'
+        
     def in_world(self, image: Optional[Image.Image] = None) -> bool:
         """
         判断当前是否在城镇主界面且人物停止移动。
@@ -100,6 +122,26 @@ class World:
             return True
         else:
             logger.debug("不在世界中")
+            return False
+        
+    def in_map(self, image: Optional[Image.Image] = None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在地图中")
+            return False
+        points_colors = [
+            (1228, 648, 'C3BCB2', 1),
+            (1189, 647, 'C6C2B9', 1),
+            (1221, 660, '030000', 1),
+            (1205, 659, '070400', 1),
+        ]
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results:
+            logger.debug("检测到在大地图中")
+            return True
+        else:
+            logger.debug("不在大地图中")
             return False
 
     def in_minimap(self, image: Optional[Image.Image] = None) -> bool:
@@ -317,7 +359,7 @@ class World:
         logger.debug("点击跳过")
         self.click_tirm(3)
         logger.debug("点击是")
-        sleep_until(lambda: self.ocr_handler.match_click_text(["是"]),function_name="旅馆 是")
+        sleep_until(lambda: self.ocr_handler.match_click_text(["是"]), function_name="旅馆 是")
         logger.debug("等待完全恢复")
         sleep_until(lambda: self.ocr_handler.match_click_text(["精力完全恢复了"]), function_name="旅馆 精力完全恢复了")
         logger.debug("等待返回城镇")
@@ -500,25 +542,36 @@ class World:
             logger.debug("未发现地图Boss点")
             return None
         
+    def check_in_world_or_battle(self,image:Image.Image|None=None):
+            count = 0
+            max_count = 3
+            while True:
+                if image is None:
+                    image = self.device_manager.get_screenshot()
+                if self.in_world(image):
+                    logger.debug("[in_world_or_battle]小镇中")
+                    return "in_world"
+                elif self.battle.in_battle(image):
+                    logger.debug("[in_world_or_battle]战斗中")
+                    time.sleep(2)
+                    return "in_battle"
+                else:
+                    if count > max_count:
+                        logger.debug("[in_world_or_battle]没检查出来")  
+                        return None
+                    image = self.device_manager.get_screenshot()
+                    count += 1
+                    time.sleep(0.2)
+
+        
     def in_world_or_battle(self, enemyName:str='', check_battle:bool=True)-> dict[str,bool|str]|None:
         logger.debug("[in_world_or_battle]开始检查")
-        def check_in_world_or_battle():
-            screenshot = self.device_manager.get_screenshot()
-            if self.in_world(screenshot):
-                logger.debug("[in_world_or_battle]小镇中")
-                return "in_world"
-            elif self.battle.in_battle(screenshot):
-                logger.debug("[in_world_or_battle]战斗中")
-                time.sleep(2)
-                return "in_battle"
-            else:
-                logger.debug("[in_world_or_battle]没检查出来")  
-                return None
+        
         check_battle_command_done = False
         is_battle_success = True
         has_battle = False
         while True:
-            check_in_world = sleep_until_app_running(check_in_world_or_battle,app_manager=self.app_manager)
+            check_in_world = sleep_until_app_running(self.check_in_world_or_battle,app_manager=self.app_manager)
             if check_in_world == 'app_not_running':
                 return { "in_world":False, "in_battle":False,"app_alive":False, 'is_battle_success':False}
             if check_in_world == "in_world":
@@ -563,7 +616,7 @@ class World:
                 if check_battle_command_done and self.battle.in_round():
                     self.battle.auto_battle()
             else:
-                logger.debug("异常")
+                logger.info("异常")
                 return None
             
     def do_default_battle(self) -> dict:
@@ -636,4 +689,193 @@ class World:
             return True
         else:
             return False
+        
+    def get_map_name(self):
+        if not self.in_world():
+            logger.debug("不在世界中，无法获取小地图位置")
+            return None
+        self.open_minimap()
+        sleep_until(self.in_minimap,timeout=5)
+        screenshot = self.device_manager.get_screenshot()
+        result = self.ocr_handler.recognize_text(screenshot,(85, 13,385, 92))
+        texts = []
+        if result is None:
+            logger.debug("小地图位置识别失败")
+            texts = []
+        else:
+            for line in result:
+                texts.append(line['text'])
+        if len(texts) == 0:
+            texts = None
+        self.closeUI()
+        logger.info(f"当前地图在{texts}")
+        return texts
     
+    def openMap(self):
+        logger.info("打开地图")
+        self.device_manager.click(875, 613)
+        time.sleep(2)
+
+    def _search_map_text(self, map_name: str, screenshot: Optional[Image.Image] = None) -> Optional[tuple[int, int]]:
+        """
+        在当前截图中搜索指定地图名称并返回坐标
+        
+        :param map_name: 要搜索的地图名称
+        :param screenshot: 可选的截图，如果不提供则自动获取
+        :return: 地图坐标 (x, y) 或 None
+        """
+        if screenshot is None:
+            screenshot = self.device_manager.get_screenshot()
+            
+        if screenshot is None:
+            return None
+            
+        result = self.ocr_handler.recognize_text(screenshot)
+        if result is not None and len(result) > 0:
+            for line in result:
+                if line['text'] == map_name:
+                    x = int(sum([p[0] for p in line['box']]) / 4)
+                    y = int(sum([p[1] for p in line['box']]) / 4)
+                    return (x, y - 30)
+        return None
+
+    def _perform_map_swipe(self, start: tuple[int, int], end: tuple[int, int]) -> None:
+        """
+        执行地图滑动操作
+        
+        :param start: 起始坐标 (x, y)
+        :param end: 结束坐标 (x, y)
+        """
+        self.device_manager.press_down(start[0], start[1])
+        time.sleep(0.1)
+        self.device_manager.press_move(end[0], end[1])
+        time.sleep(0.1)
+        self.device_manager.press_up(end[0], end[1])
+        time.sleep(0.5)
+
+    def tpAnywhere(self, map_name: str) -> bool:
+        """
+        在地图上搜索指定地名并传送
+        
+        通过多个方向的滑动搜索来查找目标地图名称：
+        1. 首先在当前视图搜索
+        2. 向下滑动搜索
+        3. 向右滑动搜索  
+        4. 向上滑动搜索
+        
+        :param map_name: 目标地图名称
+        :return: 找到的地图坐标 (x, y) 或 None
+        """
+        logger.info(f"开始搜索地图: {map_name}")
+        
+        # 检查是否在世界中
+        in_world = sleep_until(self.in_world, timeout=5)
+        if not in_world:
+            logger.info("不在世界中，无法传送")
+            return False
+            
+        time.sleep(1.5)
+        self.openMap()
+        self.nomalize_map()
+
+        mapping = {
+           "圣树之泉":{1: (469, 321)}
+        }
+        
+        # 定义搜索策略：(起始坐标, 结束坐标, 描述)
+        search_strategies = [
+            (1, None, None, "初始位置"),  # 不滑动，直接搜索
+            (2, (378, 75), (660, 700), "向下滑动"),
+            (3, (660, 700), (1260, 700), "向右滑动"),
+            (4, (660, 700), (660, 0), "向上滑动")
+        ]
+        
+        for id, start, end, description in search_strategies:
+            logger.debug(f"在{description}搜索地图: {map_name}")
+            # 如果不是初始搜索，执行滑动操作
+            if start is not None and end is not None:
+                self._perform_map_swipe(start, end)
+            if map_name in mapping.keys():
+                map_id = list(mapping[map_name].keys())[0]
+                if id != map_id + 1:
+                    continue
+                else:
+                    map_pos = mapping[map_name][map_id]
+                    break
+            # 搜索地图文本
+            map_pos = self._search_map_text(map_name)
+            if map_pos is not None:
+                logger.info(f"在{description}找到地图 {map_name}，坐标: {map_pos}")
+                break
+        if map_pos is None:
+            logger.info(f"未找到地图: {map_name}")
+            return False
+        logger.info(f"找到地图: {map_name}，坐标: {map_pos}")
+        # 点击地图
+        logger.info(f"点击地图: {map_pos}")
+        self.device_manager.click(map_pos[0],map_pos[1])
+        time.sleep(1)
+        # 前往
+        logger.info(f"点击前往")
+        self.device_manager.click(1153, 632)
+        time.sleep(1)
+        # 部分需要选择入口
+        logger.info(f"点击入口")
+        self.device_manager.click(631, 281)
+        time.sleep(1)
+        # 确认
+        logger.info(f"点击确认")
+        self.click_confirm_pos()
+        logger.info(f"等待地图")
+        result = sleep_until(self.in_world)
+        if not result:
+            logger.error("传送失败")
+            return False
+        return True
+
+    def scale_map(self):
+        logger.info("缩放地图")
+        self.device_manager.click(1210, 649)
+        time.sleep(1)
+
+    def nomalize_map(self):
+        logger.info("等待地图界面")
+        in_map = sleep_until(self.in_map,timeout=5)
+        if not in_map:
+            logger.info("不在地图中，无法归一化")
+            return
+        self.scale_map()
+        logger.info("归一化地图")
+        start = 600,360
+        end = 0,0
+        for i in range(3):
+            self.device_manager.press_down(start[0],start[1])
+            self.device_manager.press_move(end[0],end[1])
+            self.device_manager.press_up(end[0],end[1])
+            time.sleep(0.5)
+
+    def move_mini_map(self,x,y,save:bool=True):
+        self.device_manager.click(1060,100)
+        time.sleep(1)
+        sleep_until(self.in_minimap,timeout=5)
+        self.device_manager.click(x,y)
+        time.sleep(1)
+        sleep_until(self.in_world)
+        if save:
+            self.save_by_mini_map()
+            time.sleep(1)
+
+    def save_by_mini_map(self):
+        self.device_manager.click(1060,100)
+        time.sleep(0.5)
+        self.closeUI()
+    
+    def check_mini_map_pos(self,x:int,y:int,color:str,range:int=1):
+        self.device_manager.click(1060,100)
+        time.sleep(1)
+        sleep_until(self.in_minimap,timeout=5)
+        screenshot = self.device_manager.get_screenshot()
+        if screenshot is None:
+            return False
+        result = self.ocr_handler.match_point_color(screenshot,[(x,y,color,range)],0.9)
+        return result

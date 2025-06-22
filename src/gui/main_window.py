@@ -86,6 +86,7 @@ class MainWindow(tk.Tk):
         self.config(menu=menubar)
         menubar.add_command(label="主界面", command=self.show_main)
         menubar.add_command(label="追忆之书", command=self.show_memory_editor)
+        menubar.add_command(label="日常", command=self.show_daily_editor)
         menubar.add_command(label="设置", command=self.show_settings)
 
     def _build_main_frame(self):
@@ -126,12 +127,16 @@ class MainWindow(tk.Tk):
             self.settings_panel.pack_forget()
         if hasattr(self, 'memory_editor_panel'):
             self.memory_editor_panel.pack_forget()
+        if hasattr(self, 'daily_editor_panel'):
+            self.daily_editor_panel.pack_forget()
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
     def show_settings(self):
         self.main_frame.pack_forget()
         if hasattr(self, 'memory_editor_panel'):
             self.memory_editor_panel.pack_forget()
+        if hasattr(self, 'daily_editor_panel'):
+            self.daily_editor_panel.pack_forget()
         self.settings_panel.pack(fill=tk.BOTH, expand=True)
 
     def show_memory_editor(self):
@@ -139,10 +144,24 @@ class MainWindow(tk.Tk):
         self.main_frame.pack_forget()
         if hasattr(self, 'settings_panel'):
             self.settings_panel.pack_forget()
+        if hasattr(self, 'daily_editor_panel'):
+            self.daily_editor_panel.pack_forget()
         if not hasattr(self, 'memory_editor_panel'):
             from gui.memory_panel import MemoryPanel
             self.memory_editor_panel = MemoryPanel(self)
         self.memory_editor_panel.pack(fill=tk.BOTH, expand=True)
+
+    def show_daily_editor(self):
+        """显示日常界面"""
+        self.main_frame.pack_forget()
+        if hasattr(self, 'settings_panel'):
+            self.settings_panel.pack_forget()
+        if hasattr(self, 'memory_editor_panel'):
+            self.memory_editor_panel.pack_forget()
+        if not hasattr(self, 'daily_editor_panel'):
+            from gui.daily_panel import DailyPanel
+            self.daily_editor_panel = DailyPanel(self)
+        self.daily_editor_panel.pack(fill=tk.BOTH, expand=True)
 
     def on_log_level_change(self, event=None):
         """日志级别下拉框变更时，动态设置主进程logger级别，并同步所有Handler"""
@@ -281,6 +300,15 @@ class MainWindow(tk.Tk):
                 self.memory_editor_panel.memory_test_process.terminate()
                 self.memory_editor_panel.memory_test_process.join()
                 self.append_log("追忆之书测试进程已终止")
+        
+        # 检查并关闭日常进程
+        if hasattr(self, 'daily_editor_panel'):
+            if hasattr(self.daily_editor_panel, 'daily_process') and \
+               self.daily_editor_panel.daily_process and \
+               self.daily_editor_panel.daily_process.is_alive():
+                self.daily_editor_panel.daily_process.terminate()
+                self.daily_editor_panel.daily_process.join()
+                self.append_log("日常玩法进程已终止")
         
         self.destroy()
         os._exit(0)

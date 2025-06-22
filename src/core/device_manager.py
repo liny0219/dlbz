@@ -174,6 +174,17 @@ class DeviceManager:
         logger.info(f"按下: {x}, {y}")
         self.device.touch.down(x, y)
 
+    def press_move(self, x: int, y: int):
+        """
+        按下并移动指定坐标
+        :param x: 横坐标
+        :param y: 纵坐标
+        """
+        if self.device is None:
+            logger.error("设备未连接，无法按下并移动")
+            return
+        self.device.touch.move(x, y)
+
     def press_up(self, x: int, y: int):
         """
         抬起指定坐标

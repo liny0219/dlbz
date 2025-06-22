@@ -1,3 +1,9 @@
+v1.6.0 
+feature: 增加薅花田\果炎
+feature: 战斗指令增加LoopS与LoopE循环指令,可以用来挂宿敌
+feature: 追忆之书增加战斗轴打不赢boss时,自动放弃
+feature: 更新技能说明文档
+
 v1.5.0 
 feature: 增加追忆之书功能
 feature: 增加战斗测试功能,可以在战斗界面按设置的轴进行战斗

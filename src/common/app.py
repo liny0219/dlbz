@@ -1,3 +1,5 @@
+import time
+from tracemalloc import start
 from typing import Optional
 from core.device_manager import DeviceManager
 from utils import logger
@@ -42,7 +44,7 @@ class AppManager:
             logger.error(f"检查App运行状态失败: {e}\n{traceback.format_exc()}")
             return False
 
-    def start_app(self) -> None:
+    def start_app(self,show_log:bool=False) -> None:
         """
         启动游戏App，优先启动官服，失败则尝试B服
         """
@@ -52,14 +54,16 @@ class AppManager:
                 return
             
             if self.is_app_running():
-                logger.info("游戏已在运行中")
+                if show_log:
+                    logger.info("游戏已在运行中")
                 return
                 
             # 尝试启动游戏，优先官服
             for package in self.app_packages:
                 try:
                     self.device_manager.device.app_start(package)
-                    logger.info(f"启动App成功: {package}")
+                    if show_log:
+                        logger.info(f"启动App成功: {package}")
                     return
                 except Exception as e:
                     logger.warning(f"启动 {package} 失败: {e}")
@@ -69,7 +73,7 @@ class AppManager:
         except Exception as e:
             logger.error(f"启动App失败: {e}\n{traceback.format_exc()}")
 
-    def close_app(self) -> None:
+    def close_app(self,show_log:bool=False) -> None:
         """
         关闭游戏App
         """
@@ -82,12 +86,18 @@ class AppManager:
             for package in self.app_packages:
                 try:
                     self.device_manager.device.app_stop(package)
-                    logger.info(f"关闭App: {package}")
+                    if show_log:
+                        logger.info(f"关闭App: {package}")
                 except Exception as e:
                     logger.debug(f"关闭 {package} 失败或未运行: {e}")
                     
         except Exception as e:
             logger.error(f"关闭App失败: {e}\n{traceback.format_exc()}")
+
+    def restart_app(self) -> None:
+        self.close_app()
+        time.sleep(1)
+        self.start_app()
 
     def check_app_alive(self) -> bool:
         """

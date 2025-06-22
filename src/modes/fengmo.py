@@ -482,7 +482,7 @@ class FengmoMode:
 
     def wait_check_mode_state_ok(self):
         state = None
-        result = self.world.restart_wait_in_world()
+        result = self.world.restart_wait_in_fengmo_world()
         if result == 'boss':
             state = Step.FIND_BOSS
         if result == 'box':
@@ -495,7 +495,7 @@ class FengmoMode:
         return True
     
     def reset_state(self):
-        result = self.world.restart_wait_in_world()
+        result = self.world.restart_wait_in_fengmo_world()
         if result == 'boss':
             self.state_data.step = Step.FIND_BOSS
         if result == 'box':
@@ -539,11 +539,12 @@ class FengmoMode:
     
     def wait_check_boss(self):
         in_world_or_battle = self.world.in_world_or_battle()
+        logger.info(f"[wait_check_boss]:in_world_or_battle {in_world_or_battle}")
         if self.state_data == Step.BATTLE_FAIL:
             return 'in_world_battle_fail'
         if in_world_or_battle:
             if not in_world_or_battle["app_alive"]:
-                self.world.restart_wait_in_world()
+                self.world.restart_wait_in_fengmo_world()
                 return 'app_not_alive'
             if not in_world_or_battle["is_battle_success"]:
                 logger.info(f"[find_boss_phase]战斗失败")

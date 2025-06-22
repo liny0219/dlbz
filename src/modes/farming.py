@@ -111,15 +111,15 @@ class FarmingMode:
                 if self.ocr_handler.match_texts(["战斗结算"],screenshot):
                     self.world.click_tirm(3,interval=0.1)
                     continue
-                in_world,in_battle = self.check_in_world_or_battle(screenshot)
-                if in_world:
+                result = self.world.check_in_world_or_battle(screenshot)
+                if result == 'in_world':
                     self.state_data.in_map = True
                     if pre_state == 'in_battle':
                         self.state_data.battle_count += 1
                         self.state_data.last_time = round((time.time() - start_time) / 60, 2)
                         self.report_data()
                     pre_state = 'in_world'
-                if in_battle:
+                if result == 'in_battle':
                     self.state_data.in_map = False
                     pre_state = 'in_battle'
                     self.battle.auto_battle()
@@ -143,8 +143,3 @@ class FarmingMode:
             else:
                 self.world.run_left()
             is_left = not is_left
-        
-    def check_in_world_or_battle(self,image:Image.Image | None):
-        in_world = self.world.in_world(image)
-        in_battle = self.battle.in_battle(image)
-        return in_world,in_battle

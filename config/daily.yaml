@@ -1,0 +1,8 @@
+huatian:
+  enabled: true
+  huatian1_enabled: true
+  huatian2_enabled: true
+  target_count: 27
+guoyan:
+  enabled: true
+  target_count: 100

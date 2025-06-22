@@ -25,7 +25,7 @@ def sleep_until(condition_func, timeout: float = 30.0, interval: float = 0.1, fu
             return result
         logger.debug("条件未满足，sleep...")
         time.sleep(interval)
-    logger.debug(f"等待超时，条件未满足:{condition_func.__name__}")
+    logger.info(f"等待超时，条件未满足:{condition_func.__name__}")
     return None 
 
 def sleep_until_app_running(condition_func, timeout: float = 30.0, interval: float = 0.1, function_name: str = "", app_manager: Optional[AppManager] = None):
