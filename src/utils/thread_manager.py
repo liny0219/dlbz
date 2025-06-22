@@ -20,7 +20,8 @@ class ManagedThread:
         self.lock = threading.Lock() if use_lock else None
         self.thread = threading.Thread(
             target=target,
-            args=(self.shared_data, self.stop_event, self.lock)
+            args=(self.shared_data, self.stop_event, self.lock),
+            daemon=True  # 设置为守护线程，主进程退出时自动结束
         )
 
     def start(self):
@@ -30,7 +31,12 @@ class ManagedThread:
     def stop(self):
         """通知线程退出并等待结束"""
         self.stop_event.set()
-        self.thread.join(timeout=2)
+        self.thread.join(timeout=5)  # 增加超时时间到5秒
+        if self.thread.is_alive():
+            # 如果线程仍然存活，记录警告
+            import logging
+            logger = logging.getLogger("dldbz")
+            logger.warning(f"线程 {self.thread.name} 未能在5秒内正常退出")
 
     def is_alive(self):
         """判断线程是否存活"""

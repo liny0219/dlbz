@@ -113,8 +113,6 @@ class FengmoMode:
         self.battle = Battle(device_manager, ocr_handler, self.app_manager)
         self.world = World(device_manager, ocr_handler, self.battle, self.app_manager)
         self.log_queue = log_queue  # 添加日志队列属性
-        self.world.battle_executor.load_commands_from_txt("xxxxx")
-        self.world.battle_executor.execute_all()
         self.fengmo_config = config.fengmo
         self.city_name = self.fengmo_config.city
         self.depth = self.fengmo_config.depth
@@ -134,6 +132,19 @@ class FengmoMode:
         self.wait_map_time = getattr(self.fengmo_config, 'wait_map_time', 0.5)
         self.default_battle_config = getattr(self.fengmo_config, 'default_battle_config', '')
         self.state_data = StateData()
+        self.app_thread = None
+        self.check_info_thread = None
+
+    def cleanup(self):
+        """清理线程资源"""
+        logger.info("开始清理逢魔模式线程...")
+        if hasattr(self, 'app_thread') and self.app_thread:
+            logger.info("停止App监控线程...")
+            self.app_thread.stop()
+        if hasattr(self, 'check_info_thread') and self.check_info_thread:
+            logger.info("停止信息检查线程...")
+            self.check_info_thread.stop()
+        logger.info("逢魔模式线程清理完成")
 
     def report_data(self):
         """发送统计数据到主进程GUI"""
@@ -165,66 +176,76 @@ class FengmoMode:
         3. 进入逢魔
         4. 按阶段依次执行收集、找宝箱/怪物/治疗点、Boss战
         """
-        self.state_data = StateData()
-        app_shared = {
-            'app_manager': self.app_manager,
-            'state_data': self.state_data,
-            'logger': logger,              # 可选
-            'check_interval': 60,           # 可选
-            'restart_wait': 5              # 可选
-        }
-        app_thread = ManagedThread(app_alive_monitor_func, app_shared)
-        app_thread.start()
-        check_info_shared = {
-            'state_data': self.state_data,
-            "device_manager": self.device_manager,
-            'logger': logger,   # 可选
-        }
-        check_info_thread = ManagedThread(self.check_info, check_info_shared)
-        check_info_thread.start()
-        self.world.set_monsters(self.monster_pos,self.monsters,self.default_battle_config)
-        self.state_data.step = Step.UN_START
-        while True:
-            self.report_data()
-            logger.info(f"[run]当前配置的城市: {self.city_name} 深度: {self.depth}")
-            new_turn = False
-            # if not self.world.wait_in_fengmo_map():
-            if self.rest_in_inn:
-                logger.info("[run]休息检查")
-                need_inn = True
-                if self.world.vip_cure(self.vip_cure) == 'finish_cure':
-                    need_inn = False
-                if need_inn:
-                    self.world.rest_in_inn(self.inn_pos)
-            self.state_data.map_fail = False
+        try:
+            self.state_data = StateData()
+            app_shared = {
+                'app_manager': self.app_manager,
+                'state_data': self.state_data,
+                'logger': logger,              # 可选
+                'check_interval': 60,           # 可选
+                'restart_wait': 5              # 可选
+            }
+            self.app_thread = ManagedThread(app_alive_monitor_func, app_shared)
+            self.app_thread.start()
+            check_info_shared = {
+                'state_data': self.state_data,
+                "device_manager": self.device_manager,
+                'logger': logger,   # 可选
+            }
+            self.check_info_thread = ManagedThread(self.check_info, check_info_shared)
+            self.check_info_thread.start()
+            self.world.set_monsters(self.monster_pos,self.monsters,self.default_battle_config)
+            self.state_data.step = Step.UN_START
             while True:
-                if not self.world.go_fengmo(self.depth, self.entrance_pos,callback=lambda: "map_fail" if self.state_data.map_fail else None):
-                    self.state_data.map_fail = False
-                    continue
-                if self.world.wait_in_fengmo_map(timeout=10):
-                    break
-            new_turn = True
-           
-            if new_turn:
-                self.state_data.turn_start()
-                self.state_data.step = Step.COLLECT_JUNK
-            else:
-                self.reset_state()
-      
-            if self.state_data.step == Step.COLLECT_JUNK:
-                self._collect_junk_phase()
-            logger.info(f"[run]进入二阶段当前状态: {self.state_data.step}")
-            if self.state_data.step == Step.FIND_BOX:
-                self._find_box_phase()
-            logger.info(f"[run]进入三阶段当前状态: {self.state_data.step}")
-            if self.state_data.step == Step.FIND_BOSS:
-                self._find_boss_phase()
-            if self.state_data.step == Step.BATTLE_FAIL or self.state_data.step == Step.State_FAIL:
-                self.state_data.turn_end(type='fail')
-            if self.state_data.step == Step.FINISH:
-                self.state_data.turn_end(type='success')
-            time.sleep(5)
-            
+                self.report_data()
+                logger.info(f"[run]当前配置的城市: {self.city_name} 深度: {self.depth}")
+                new_turn = False
+                # if not self.world.wait_in_fengmo_map():
+                if self.rest_in_inn:
+                    logger.info("[run]休息检查")
+                    need_inn = True
+                    if self.world.vip_cure(self.vip_cure) == 'finish_cure':
+                        need_inn = False
+                    if need_inn:
+                        self.world.rest_in_inn(self.inn_pos)
+                self.state_data.map_fail = False
+                while True:
+                    if not self.world.go_fengmo(self.depth, self.entrance_pos,callback=lambda: "map_fail" if self.state_data.map_fail else None):
+                        self.state_data.map_fail = False
+                        continue
+                    if self.world.wait_in_fengmo_map(timeout=10):
+                        break
+                new_turn = True
+               
+                if new_turn:
+                    self.state_data.turn_start()
+                    self.state_data.step = Step.COLLECT_JUNK
+                else:
+                    self.reset_state()
+          
+                if self.state_data.step == Step.COLLECT_JUNK:
+                    self._collect_junk_phase()
+                logger.info(f"[run]进入二阶段当前状态: {self.state_data.step}")
+                if self.state_data.step == Step.FIND_BOX:
+                    self._find_box_phase()
+                logger.info(f"[run]进入三阶段当前状态: {self.state_data.step}")
+                if self.state_data.step == Step.FIND_BOSS:
+                    self._find_boss_phase()
+                if self.state_data.step == Step.BATTLE_FAIL or self.state_data.step == Step.State_FAIL:
+                    self.state_data.turn_end(type='fail')
+                if self.state_data.step == Step.FINISH:
+                    self.state_data.turn_end(type='success')
+                time.sleep(5)
+        except KeyboardInterrupt:
+            logger.info("逢魔进程收到中断信号，正在清理...")
+        except Exception as e:
+            logger.error(f"逢魔进程发生异常: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+        finally:
+            # 确保清理线程资源
+            self.cleanup()
+            logger.info("逢魔进程已结束")
 
     def _collect_junk_phase(self) -> None:
         """

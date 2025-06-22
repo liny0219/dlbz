@@ -246,8 +246,22 @@ class MainWindow(tk.Tk):
 
     def on_stop(self):
         if self.fengmo_process and self.fengmo_process.is_alive():
+            self.append_log("正在停止玩法进程...")
+            
+            # 先尝试优雅终止
             self.fengmo_process.terminate()
-            self.fengmo_process.join()
+            
+            # 等待进程结束，最多等待5秒
+            try:
+                self.fengmo_process.join(timeout=5)
+                if self.fengmo_process.is_alive():
+                    # 如果进程仍然存活，强制杀死
+                    self.append_log("进程未正常退出，强制结束...")
+                    self.fengmo_process.kill()
+                    self.fengmo_process.join(timeout=2)
+            except Exception as e:
+                self.append_log(f"停止进程时发生异常: {e}")
+            
             self.status_label.config(text="状态: 已停止")
             self.start_btn.config(state=tk.NORMAL)
             self.farming_btn.config(state=tk.NORMAL)
@@ -409,7 +423,7 @@ def run_fengmo_main(log_queue, log_level):
                 log_queue.put("设备连接失败")
             return
         logger.info("Initializing OCR handler...")
-        ocr_handler = OCRHandler(device_manager,show_logger=True)
+        ocr_handler = OCRHandler(device_manager)
         logger.info("启动逢魔玩法模块 FengmoMode ...")
         fengmo_mode = FengmoMode(device_manager, ocr_handler, log_queue)
         fengmo_mode.run()
@@ -483,7 +497,7 @@ def run_farming_main(log_queue, log_level):
         
         # 初始化OCR处理器
         logger.info("初始化OCR处理器...")
-        ocr_handler = OCRHandler(device_manager,show_logger=True)
+        ocr_handler = OCRHandler(device_manager)
         
         # 启动刷野模式
         logger.info("启动刷野玩法模块 FarmingMode ...")
