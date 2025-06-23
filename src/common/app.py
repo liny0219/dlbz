@@ -39,6 +39,11 @@ class AppManager:
                 return False
             current_app = self.device_manager.device.app_current()
             current_package = current_app.get("package")
+            if self.current_package:
+                if current_package == self.current_package:
+                    return True
+                else:
+                    self.current_package = None
             for package in self.app_packages:
                 if current_package == package:
                     self.current_package = package

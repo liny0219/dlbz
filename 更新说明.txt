@@ -1,3 +1,8 @@
+v1.7.0
+feature: 使用单线程修改逢魔玩法逻辑,加快整体速度
+feature: 修复逢魔若干个问题
+feature: 让智障AI增加GC优化内存管理
+
 v1.6.7
 bugfix: 修复boss阶段战斗失败地图乱跑
 feature: 优化日常逻辑

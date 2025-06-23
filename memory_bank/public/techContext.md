@@ -1,9 +1,51 @@
-- 主要语言：Python 3.8+
-- 依赖库：uiautomator2、paddleocr、loguru、PyInstaller、tkinter、opencv-python、PyYAML、Pillow等
-- 依赖管理：requirements.txt 自动生成，确保环境一致性
-- 打包：PyInstaller，spec文件中手动添加loguru等hiddenimports
-- 设备连接：基于adb与uiautomator2
-- OCR：PaddleOCR
-- 日志：loguru，主进程与子进程日志分离
-- 配置：YAML文件，支持多玩法参数
-- 兼容性：Windows 10+，需adb环境 
+# 技术上下文
+
+## 核心技术栈
+- **主要语言**：Python 3.8+
+- **GUI框架**：tkinter (内置)
+- **设备控制**：uiautomator2 + adbutils
+- **OCR识别**：PaddleOCR + PaddlePaddle
+- **图像处理**：OpenCV + Pillow
+- **配置管理**：PyYAML
+- **日志系统**：loguru
+- **打包工具**：PyInstaller
+
+## 依赖管理
+- **依赖库**：requirements.txt 自动生成，确保环境一致性
+- **版本控制**：固定版本号，避免兼容性问题
+- **打包配置**：spec文件中手动添加loguru等hiddenimports
+
+## 设备连接技术
+- **基础框架**：基于adb与uiautomator2
+- **连接管理**：支持多次重试和存活监控
+- **截图缓存**：线程安全的截图缓存管理，支持引用计数
+- **点击操作**：精确的坐标点击和区域识别
+
+## OCR技术
+- **引擎选择**：PaddleOCR，支持中英文识别
+- **模型优化**：本地模型缓存，减少加载时间
+- **结果缓存**：OCR结果缓存机制，提高识别效率
+- **内存管理**：完善的模型清理机制，防止内存泄漏
+
+## 架构技术
+- **多进程通信**：Queue机制，主进程GUI与子进程业务逻辑解耦
+- **线程安全**：锁机制保护共享资源，截图缓存引用计数
+- **配置系统**：YAML文件，支持类型转换和验证
+- **日志分层**：主进程GUI显示，子进程文件记录
+
+## 性能优化
+- **内存管理**：OCR模型缓存、截图缓存清理、线程资源管理
+- **配置缓存**：5分钟TTL的配置缓存机制
+- **智能清理**：自动垃圾回收和资源清理
+- **监控工具**：内存监控和性能统计
+
+## 兼容性要求
+- **操作系统**：Windows 10+
+- **Python版本**：3.8+
+- **设备要求**：支持adb的安卓设备
+- **分辨率**：1280x720 (dpi 240)
+
+## 开发工具
+- **调试工具**：坐标标记工具、截图工具、图片选择器
+- **监控工具**：内存监控、性能统计、日志分析
+- **打包工具**：PyInstaller，支持单文件打包 

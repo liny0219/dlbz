@@ -4,10 +4,53 @@ from pydantic import BaseModel
 from utils.get_asset_path import get_asset_path
 from typing import Dict, List, TypedDict, Optional, Union
 import logging
+import time
 
 # 兼容旧接口，返回config目录绝对路径
 def get_config_dir():
     return get_asset_path('config')
+
+# 配置缓存类
+class ConfigCache:
+    """配置缓存管理器，避免重复读取配置文件"""
+    
+    def __init__(self, cache_ttl=300):  # 5分钟缓存时间
+        self._cache = {}
+        self._cache_times = {}
+        self._cache_ttl = cache_ttl
+    
+    def get(self, file_path: str) -> Optional[Dict]:
+        """获取缓存的配置"""
+        if file_path in self._cache:
+            # 检查缓存是否过期
+            if time.time() - self._cache_times[file_path] < self._cache_ttl:
+                return self._cache[file_path]
+            else:
+                # 缓存过期，删除
+                del self._cache[file_path]
+                del self._cache_times[file_path]
+        return None
+    
+    def set(self, file_path: str, data: Dict):
+        """设置缓存"""
+        self._cache[file_path] = data
+        self._cache_times[file_path] = time.time()
+    
+    def clear(self):
+        """清空缓存"""
+        self._cache.clear()
+        self._cache_times.clear()
+    
+    def get_cache_info(self) -> Dict:
+        """获取缓存信息"""
+        return {
+            'cache_size': len(self._cache),
+            'cache_ttl': self._cache_ttl,
+            'cached_files': list(self._cache.keys())
+        }
+
+# 全局配置缓存实例
+_config_cache = ConfigCache()
 
 class OCRConfig(BaseModel):
     lang: str = "ch"
@@ -106,6 +149,14 @@ class Config:
         self.battle = BattleConfig(**self._load_yaml_with_log(os.path.join(config_dir, "battle.yaml"), name="battle.yaml"))
 
     def _load_yaml_with_log(self, path, name=None, fallback=None, key=None):
+        # 首先尝试从缓存获取
+        cached_data = _config_cache.get(path)
+        if cached_data is not None:
+            print(f"[Config] 从缓存加载配置: {name or path}")
+            if key:
+                return cached_data.get(key, {})
+            return cached_data
+        
         print(f"[Config] 加载配置文件: {name or path}")
         print(f"[Config] 路径: {path}")
         if os.path.exists(path):
@@ -116,6 +167,8 @@ class Config:
                 try:
                     data = yaml.safe_load(content) or {}
                     print(f"[Config] 解析结果: {data}")
+                    # 缓存结果
+                    _config_cache.set(path, data)
                     return data
                 except Exception as e:
                     print(f"[Config] YAML解析异常: {e}")
@@ -130,6 +183,8 @@ class Config:
                     if key:
                         data = data.get(key, {})
                     print(f"[Config] 回退解析结果: {data}")
+                    # 缓存结果
+                    _config_cache.set(fallback, data)
                     return data
                 except Exception as e:
                     print(f"[Config] 回退YAML解析异常: {e}")
@@ -137,6 +192,17 @@ class Config:
         else:
             print(f"[Config] 文件不存在！")
             return {}
+
+    @staticmethod
+    def clear_cache():
+        """清空配置缓存"""
+        _config_cache.clear()
+        print("[Config] 配置缓存已清空")
+
+    @staticmethod
+    def get_cache_info():
+        """获取缓存信息"""
+        return _config_cache.get_cache_info()
 
     @staticmethod
     def get_logging_format_and_datefmt(log_format: str, datefmt: Optional[str] = None):

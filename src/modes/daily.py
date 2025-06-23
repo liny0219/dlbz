@@ -150,11 +150,15 @@ class DailyMode:
             # 执行启用的日常功能
             if self.huatian_enabled:
                 logger.info("开始执行花田功能...")
+                # 重置花田统计
+                self.reset_stats(reset_huatian=True, reset_guoyan=False)
                 self._execute_huatian()
-                
+            
             time.sleep(1)
             if self.guoyan_enabled:
                 logger.info("开始执行果炎功能...")
+                # 只重置果炎统计，不影响花田统计
+                self.reset_stats(reset_huatian=False, reset_guoyan=True)
                 self._execute_guoyan()
             
             logger.info("=" * 50)
@@ -203,35 +207,43 @@ class DailyMode:
             huatian2_pos = (680, 350)
             ocr_region = (512, 316, 767, 356)
             
+            # 分别处理花田1和花田2，独立统计
             if self.huatian1_enabled:
-                if not self._check_huatian_target("花田1", huatian1_pos, ocr_region, start_time):
+                huatian1_start_time = time.time()
+                if not self._check_huatian_target("花田1", huatian1_pos, ocr_region, huatian1_start_time):
                     return
+                huatian1_elapsed_time = time.time() - huatian1_start_time
+                self.huatian_stats["huatian1"]["total_time"] = huatian1_elapsed_time  # 覆盖，因为是一次完整的执行耗时
+                logger.info(f"[花田1] 执行完成，重启次数: {self.huatian_stats['huatian1']['restart_count']} 耗时: {huatian1_elapsed_time:.0f}秒")
+                self._send_stats_update("huatian1", huatian1_elapsed_time)
             
             if self.huatian2_enabled:
-                if not self._check_huatian_target("花田2", huatian2_pos, ocr_region, start_time):
+                huatian2_start_time = time.time()
+                if not self._check_huatian_target("花田2", huatian2_pos, ocr_region, huatian2_start_time):
                     return
+                huatian2_elapsed_time = time.time() - huatian2_start_time
+                self.huatian_stats["huatian2"]["total_time"] = huatian2_elapsed_time  # 覆盖，因为是一次完整的执行耗时
+                logger.info(f"[花田2] 执行完成，重启次数: {self.huatian_stats['huatian2']['restart_count']} 耗时: {huatian2_elapsed_time:.0f}秒")
+                self._send_stats_update("huatian2", huatian2_elapsed_time)
             
-            # 计算耗时并发送统计更新
-            elapsed_time = time.time() - start_time
-            self.huatian_stats["huatian1"]["total_time"] += elapsed_time
-            self.huatian_stats["huatian2"]["total_time"] += elapsed_time
-            
-            logger.info(f"[花田] 花田功能执行成功，重启次数: {self.huatian_stats['huatian1']['restart_count']} 耗时: {elapsed_time:.0f}秒")
-            logger.info(f"[花田] 花田功能执行成功，重启次数: {self.huatian_stats['huatian2']['restart_count']} 耗时: {elapsed_time:.0f}秒")
-            self._send_stats_update("huatian1", elapsed_time)
-            self._send_stats_update("huatian2", elapsed_time)
+            # 计算总耗时
+            total_elapsed_time = time.time() - start_time
+            logger.info(f"[花田] 花田功能执行成功，总耗时: {total_elapsed_time:.0f}秒")
             
         except Exception as e:
             elapsed_time = time.time() - start_time
             logger.error(f"[花田] 花田功能执行异常: {e}", exc_info=True)
             
-            # 即使失败也要记录统计
-            self.huatian_stats["huatian1"]["restart_count"] += 1
-            self.huatian_stats["huatian2"]["restart_count"] += 1
-            self.huatian_stats["huatian1"]["total_time"] += elapsed_time
-            self.huatian_stats["huatian2"]["total_time"] += elapsed_time
-            self._send_stats_update("huatian1", elapsed_time)
-            self._send_stats_update("huatian2", elapsed_time)
+            # 即使失败也要记录统计，但只影响启用的花田
+            if self.huatian1_enabled:
+                self.huatian_stats["huatian1"]["restart_count"] += 1
+                self.huatian_stats["huatian1"]["total_time"] = elapsed_time  # 覆盖
+                self._send_stats_update("huatian1", elapsed_time)
+            
+            if self.huatian2_enabled:
+                self.huatian_stats["huatian2"]["restart_count"] += 1
+                self.huatian_stats["huatian2"]["total_time"] = elapsed_time  # 覆盖
+                self._send_stats_update("huatian2", elapsed_time)
 
     def _check_huatian_target(self, huatian_name: str, position: tuple, ocr_region: tuple, start_time: float) -> bool:
         """
@@ -385,13 +397,13 @@ class DailyMode:
             
             # 计算耗时并发送统计更新
             elapsed_time = time.time() - start_time
-            self.guoyan_stats["total_time"] += elapsed_time
+            self.guoyan_stats["total_time"] = elapsed_time  # 改为覆盖，与花田保持一致
             
             logger.info(f"[果炎] 果炎功能执行成功，耗时: {elapsed_time:.0f}秒")
             self._send_stats_update("guoyan", elapsed_time, target_found=True)
         
         except Exception as e:
-            logger.info(f"[果炎] 果炎功能执行异常: {e}", exc_info=True)
+            logger.error(f"[果炎] 果炎功能执行异常: {e}", exc_info=True)
 
     def _check_app_status(self) -> bool:
         """
@@ -457,27 +469,40 @@ class DailyMode:
             "guoyan": self.guoyan_stats.copy()
         }
 
-    def reset_stats(self):
+    def reset_stats(self, reset_huatian=True, reset_guoyan=True):
         """
         重置统计信息
+        
+        :param reset_huatian: 是否重置花田统计
+        :param reset_guoyan: 是否重置果炎统计
         """
-        self.huatian_stats = {
-            "huatian1": {
-                "restart_count": 0,
-                "total_time": 0.0,
-                "target_found": False
-            },
-            "huatian2": {
+        if reset_huatian:
+            self.huatian_stats = {
+                "huatian1": {
+                    "restart_count": 0,
+                    "total_time": 0.0,
+                    "target_found": False
+                },
+                "huatian2": {
+                    "restart_count": 0,
+                    "total_time": 0.0,
+                    "target_found": False
+                }
+            }
+            logger.info("花田统计信息已重置")
+        
+        if reset_guoyan:
+            self.guoyan_stats = {
                 "restart_count": 0,
                 "total_time": 0.0,
                 "target_found": False
             }
-        }
-        
-        self.guoyan_stats = {
-            "restart_count": 0,
-            "total_time": 0.0,
-            "target_found": False
-        }
-        
-        logger.info("日常玩法统计信息已重置") 
+            logger.info("果炎统计信息已重置")
+
+    def _send_final_stats(self):
+        """
+        发送最终统计信息
+        """
+        self._send_stats_update("huatian1", self.huatian_stats["huatian1"]["total_time"])
+        self._send_stats_update("huatian2", self.huatian_stats["huatian2"]["total_time"])
+        self._send_stats_update("guoyan", self.guoyan_stats["total_time"]) 

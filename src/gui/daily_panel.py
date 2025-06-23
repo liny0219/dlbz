@@ -238,6 +238,11 @@ class DailyPanel(ttk.Frame):
                                     command=self.reset_stats)
         reset_stats_btn.pack(side=tk.LEFT)
 
+        # 重置目标找到状态按钮
+        reset_target_status_btn = ttk.Button(button_frame, text="重置目标找到状态", 
+                                    command=self.reset_target_status)
+        reset_target_status_btn.pack(side=tk.LEFT)
+
         # 统计信息展示区域
         stats_frame = ttk.LabelFrame(self, text="日常统计", padding=(10, 10))
         stats_frame.pack(fill=tk.X, padx=20, pady=(10, 5))
@@ -459,27 +464,26 @@ class DailyPanel(ttk.Frame):
     def reset_stats(self):
         """重置统计数据"""
         if messagebox.askyesno("确认", "确定要重置所有统计数据吗？"):
-            self.huatian_stats = {
-                "huatian1": {
-                    "restart_count": 0,
-                    "total_time": 0.0,
-                    "target_found": False,
-                },
-                "huatian2": {
-                    "restart_count": 0,
-                    "total_time": 0.0,
-                    "target_found": False,
-                }
-            }
-            
-            self.guoyan_stats = {
-                "restart_count": 0,
-                "total_time": 0.0,
-                "target_found": False,
-            }
+            # 只重置统计数据，不影响目标找到状态
+            self.huatian_stats["huatian1"]["restart_count"] = 0
+            self.huatian_stats["huatian1"]["total_time"] = 0.0
+            self.huatian_stats["huatian2"]["restart_count"] = 0
+            self.huatian_stats["huatian2"]["total_time"] = 0.0
+            self.guoyan_stats["restart_count"] = 0
+            self.guoyan_stats["total_time"] = 0.0
             
             self.update_stats()
             self.log_status("统计数据已重置")
+
+    def reset_target_status(self):
+        """重置目标找到状态"""
+        if messagebox.askyesno("确认", "确定要重置目标找到状态吗？"):
+            self.huatian_stats["huatian1"]["target_found"] = False
+            self.huatian_stats["huatian2"]["target_found"] = False
+            self.guoyan_stats["target_found"] = False
+            
+            self.update_stats()
+            self.log_status("目标找到状态已重置")
 
     def format_time(self, seconds):
         """格式化时间显示"""

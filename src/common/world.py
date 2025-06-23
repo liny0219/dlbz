@@ -542,36 +542,33 @@ class World:
             logger.debug("未发现地图Boss点")
             return None
         
-    def check_in_world_or_battle(self,image:Image.Image|None=None,roll_count:int=6):
-            count = 0
-            max_count:int=3
+    def check_in_world_or_battle(self,image:Image.Image|None=None, callback:Callable[[Image.Image], None]|None=None):
             while True:
                 if image is None:
                     image = self.device_manager.get_screenshot()
+                if not self.app_manager.is_app_running():
+                    return "app_not_running"
                 if self.in_world(image):
                     logger.debug("[in_world_or_battle]小镇中")
                     return "in_world"
-                elif self.battle.in_battle(image, roll_count = roll_count):
+                elif self.battle.in_battle(image):
                     logger.debug("[in_world_or_battle]战斗中")
-                    time.sleep(2)
                     return "in_battle"
                 else:
-                    if count > max_count:
-                        logger.debug("[in_world_or_battle]没检查出来")  
-                        return None
-                    image = self.device_manager.get_screenshot()
-                    count += 1
+                    if callback is not None and image is not None:
+                        callback(image)
                     time.sleep(0.1)
+                    image = self.device_manager.get_screenshot()
 
         
-    def in_world_or_battle(self, enemyName:str='', check_battle:bool=True)-> dict[str,bool|str]|None:
+    def in_world_or_battle(self, callback:Callable[[Image.Image], None]|None=None)-> dict[str,bool|str]|None:
         logger.debug("[in_world_or_battle]开始检查")
         
         check_battle_command_done = False
         is_battle_success = True
         has_battle = False
         while True:
-            check_in_world = sleep_until_app_running(self.check_in_world_or_battle,app_manager=self.app_manager)
+            check_in_world = sleep_until_app_running(lambda: self.check_in_world_or_battle(callback=callback) ,app_manager=self.app_manager, function_name="in_world_or_battle")
             if check_in_world == 'app_not_running':
                 return { "in_world":False, "in_battle":False,"app_alive":False, 'is_battle_success':False}
             if check_in_world == "in_world":
@@ -579,31 +576,13 @@ class World:
                 return { "in_world":True, "in_battle":has_battle,"app_alive":True, 'is_battle_success':is_battle_success }
             elif check_in_world == "in_battle":
                 logger.debug("战斗场景中")
-                if not check_battle:
-                    continue
                 has_battle = True
-                if check_battle and not check_battle_command_done and self.battle.in_round():
+                if not check_battle_command_done and self.battle.in_round():
                     logger.info("执行战斗场景")
                     monster = self.battle.find_enemy_ocr(self.monster_pos, self.monsters)
                     if monster is None:
-                        logger.info("没有识别到敌人")
-                        if enemyName:
-                            logger.info(f"没有识别到敌人{enemyName},使用硬编码的映射敌人配置")
-                            monster = next((x for x in self.monsters if x.name == enemyName), None)
-                            if monster is None:
-                                logger.info(f"没有找到硬编码的映射敌人配置{enemyName}")
-                                is_battle_success = self.do_default_battle()['result']
-                            else:
-                                loadConfig = self.battle_executor.load_commands_from_txt(monster.battle_config)
-                                if not loadConfig:
-                                    logger.info(f"没有找到硬编码映射敌人的战斗配置{enemyName}")
-                                    is_battle_success = self.do_default_battle()['result']
-                                else:
-                                    logger.info("使用硬编码映射敌人的战斗配置")
-                                    is_battle_success = self.battle_executor.execute_all()['success']
-                        else:
-                            logger.info("没有识别到敌人,使用默认战斗配置")
-                            is_battle_success = self.do_default_battle()['result']
+                        logger.info("没有识别到敌人,使用默认战斗配置")
+                        is_battle_success = self.do_default_battle()['result']
                     if monster:
                         loadConfig = self.battle_executor.load_commands_from_txt(monster.battle_config)
                         if not loadConfig:

@@ -53,7 +53,7 @@ class Battle:
         self.switch_all_timeout = config.battle.switch_all_timeout
 
     # ================== 战斗状态判断相关方法 ==================
-    def in_battle(self, image: Optional[Image.Image] = None, call_roll: bool = True,roll_count:int=6) -> bool:
+    def in_battle(self, image: Optional[Image.Image] = None, call_roll: bool = True,roll_count:int=0) -> bool:
         """
         判断当前是否在战斗中。
         :param image: 可选，外部传入截图
@@ -767,7 +767,7 @@ class Battle:
             if self.in_round(screenshot):
                 logger.info("[in_round] in_round")
                 return 'in_round'
-            if not self.in_battle(screenshot):
+            if not self.in_battle(screenshot, roll_count=6):
                 return 'not_in_battle'
             if callback:
                 result = callback(screenshot)

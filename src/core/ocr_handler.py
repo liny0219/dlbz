@@ -13,6 +13,8 @@ from utils.get_asset_path import get_asset_path
 import traceback
 import threading
 import concurrent.futures
+import gc
+from functools import lru_cache
 
 class OCRHandler:
     def __init__(self, device_manager: DeviceManager, model_dir: Optional[str] = None, show_logger:bool = False) -> None:
@@ -83,7 +85,56 @@ class OCRHandler:
         )
         self.device_manager = device_manager
         self.ocr_lock = threading.Lock()  # 新增：OCR推理锁
+        
+        # 添加OCR结果缓存
+        self._ocr_cache = {}
+        self._cache_max_size = 50  # 最大缓存条目数
+        self._cache_hits = 0
+        self._cache_misses = 0
+        
         logger.debug("OCR handler initialized")
+
+    def _cleanup_cache(self):
+        """清理OCR缓存"""
+        self._ocr_cache.clear()
+        self._cache_hits = 0
+        self._cache_misses = 0
+        gc.collect()
+        logger.debug("OCR缓存已清理")
+
+    def _get_cache_key(self, image, region=None, threshold=0.8):
+        """生成缓存键"""
+        if isinstance(image, str):
+            # 如果是文件路径，使用文件路径和修改时间
+            try:
+                mtime = os.path.getmtime(image)
+                return f"file:{image}:{mtime}:{region}:{threshold}"
+            except:
+                return f"file:{image}:{region}:{threshold}"
+        elif isinstance(image, np.ndarray):
+            # 对于numpy数组，使用形状和前几个像素值作为键
+            shape = image.shape
+            if len(shape) >= 2:
+                # 使用图像中心点的RGB值作为特征
+                h, w = shape[:2]
+                center_pixel = image[h//2, w//2]
+                return f"array:{shape}:{center_pixel}:{region}:{threshold}"
+        return None
+
+    def cleanup(self):
+        """清理OCR处理器资源"""
+        logger.info("清理OCR处理器资源...")
+        self._cleanup_cache()
+        
+        # 清理OCR模型（PaddleOCR没有显式的清理方法，但可以删除引用）
+        if hasattr(self, 'ocr'):
+            del self.ocr
+        if hasattr(self, 'ocr_digit'):
+            del self.ocr_digit
+        
+        # 强制垃圾回收
+        gc.collect()
+        logger.info("OCR处理器资源清理完成")
 
     def match_texts(
         self,
