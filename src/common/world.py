@@ -667,12 +667,12 @@ class World:
     def run_left(self):
         device = self.device_manager.device
         if device:
-            device.swipe(640, 350, 590, 350, 0.03)
+            device.swipe(640, 350, 590, 350, 0.05)
 
     def run_right(self):
         device = self.device_manager.device
         if device:
-            device.swipe(640, 350, 690, 350, 0.03)
+            device.swipe(640, 350, 690, 350, 0.05)
 
     def click_confirm_pos(self):
         self.device_manager.click(800,485)

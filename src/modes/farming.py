@@ -104,7 +104,7 @@ class FarmingMode:
                         self.state_data.last_time = round((time.time() - start_time) / 60, 2)
                         self.report_data()
                     if pre_state == 'in_world':
-                        time.sleep(0.5)
+                        time.sleep(1)
                     if is_left:
                         logger.info("[in_world]向右跑")
                         self.world.run_right()
@@ -114,7 +114,7 @@ class FarmingMode:
                     is_left = not is_left
                     pre_state = 'in_world'
                 if result == None and pre_state == 'in_world':
-                    time.sleep(0.2)
+                    time.sleep(0.8)
                     if is_left:
                         logger.info("[None]向右跑")
                         self.world.run_right()
