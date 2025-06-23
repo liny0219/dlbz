@@ -152,6 +152,7 @@ class DailyMode:
                 logger.info("开始执行花田功能...")
                 self._execute_huatian()
                 
+            time.sleep(1)
             if self.guoyan_enabled:
                 logger.info("开始执行果炎功能...")
                 self._execute_guoyan()

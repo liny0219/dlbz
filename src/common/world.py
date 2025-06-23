@@ -692,7 +692,7 @@ class World:
         
     def get_map_name(self):
         if not self.in_world():
-            logger.debug("不在世界中，无法获取小地图位置")
+            logger.info("不在世界中，无法获取小地图位置")
             return None
         self.open_minimap()
         sleep_until(self.in_minimap,timeout=5)
@@ -700,7 +700,7 @@ class World:
         result = self.ocr_handler.recognize_text(screenshot,(85, 13,385, 92))
         texts = []
         if result is None:
-            logger.debug("小地图位置识别失败")
+            logger.info("小地图位置识别失败")
             texts = []
         else:
             for line in result:
