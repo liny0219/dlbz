@@ -288,7 +288,6 @@ class FengmoMode:
             while True:
                 self.report_data()
                 logger.info(f"[run]当前配置的城市: {self.city_name} 深度: {self.depth}")
-                new_turn = False
                 # if not self.world.wait_in_fengmo_map():
                 if self.rest_in_inn:
                     logger.info("[run]休息检查")
@@ -304,14 +303,10 @@ class FengmoMode:
                         continue
                     if self.world.wait_in_fengmo_map(timeout=10):
                         break
-                new_turn = True
-               
-                if new_turn:
-                    self.state_data.turn_start()
-                    self.state_data.step = Step.COLLECT_JUNK
-                else:
-                    self.reset_state()
-          
+            
+                self.state_data.turn_start()
+                self.state_data.step = Step.COLLECT_JUNK
+    
                 if self.state_data.step == Step.COLLECT_JUNK:
                     self._collect_junk_phase()
                 logger.info(f"[run]进入二阶段当前状态: {self.state_data.step}")
@@ -604,23 +599,6 @@ class FengmoMode:
             return False
         return True
     
-    def reset_state(self):
-        result = self.world.restart_wait_in_fengmo_world()
-        if result == 'boss':
-            self.state_data.step = Step.FIND_BOSS
-        if result == 'box':
-            self.state_data.step = Step.FIND_BOX
-        if result == 'collect':
-            self.state_data.step = Step.COLLECT_JUNK
-        if self.state_data.step != self.state_data.step:
-            self.state_data.step = Step.State_FAIL
-            return False
-        if  self.state_data.current_point is None:
-            self.state_data.current_point = self.check_points[0]
-        if self.state_data.turn_start_time == 0:
-            self.state_data.turn_start_time = time.time()
-        return True
-
     def find_map_tag(self):
         screenshot = self.device_manager.get_screenshot()
         find_points = []
@@ -650,7 +628,7 @@ class FengmoMode:
     def wait_check_boss(self):
         in_world_or_battle = self.world.in_world_or_battle()
         logger.info(f"[wait_check_boss]:in_world_or_battle {in_world_or_battle},state_data {self.state_data.step}")
-        if self.state_data == Step.BATTLE_FAIL:
+        if self.state_data.step == Step.BATTLE_FAIL:
             return 'in_world_battle_fail'
         if in_world_or_battle:
             if not in_world_or_battle["app_alive"]:
