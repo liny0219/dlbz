@@ -289,10 +289,31 @@ class MemoryPanel(ttk.Frame):
 
     def start_test(self):
         """开始单次战斗测试"""
-        # 检查是否已有任何测试在运行
-        if self._is_any_test_running():
-            messagebox.showwarning("提示", "已有测试在运行中！")
-            return
+        # 检查是否有其他玩法在运行
+        if hasattr(self.parent, 'check_running_processes'):
+            is_any_running, running_processes = self.parent.check_running_processes()
+            if is_any_running:
+                running_list = '\n'.join([f"• {process}" for process in running_processes])
+                result = messagebox.askyesno(
+                    "其他玩法正在运行", 
+                    f"检测到以下玩法正在运行:\n\n{running_list}\n\n是否停止所有正在运行的玩法并启动单次战斗测试？",
+                    icon="warning"
+                )
+                if result:
+                    stopped_processes = self.parent.stop_all_processes()
+                    if stopped_processes:
+                        stopped_list = ', '.join(stopped_processes)
+                        self.log_status(f"已停止: {stopped_list}")
+                    # 等待一小段时间确保进程完全停止
+                    import time
+                    time.sleep(1)
+                else:
+                    return
+        else:
+            # 检查是否已有任何测试在运行
+            if self._is_any_test_running():
+                messagebox.showwarning("提示", "已有测试在运行中！")
+                return
             
         script_path = self.battle_script_var.get().strip()
         if not script_path:
@@ -470,10 +491,31 @@ class MemoryPanel(ttk.Frame):
 
     def start_memory(self):
         """开始追忆之书测试"""
-        # 检查是否已有任何测试在运行
-        if self._is_any_test_running():
-            messagebox.showwarning("提示", "已有测试在运行中！")
-            return
+        # 检查是否有其他玩法在运行
+        if hasattr(self.parent, 'check_running_processes'):
+            is_any_running, running_processes = self.parent.check_running_processes()
+            if is_any_running:
+                running_list = '\n'.join([f"• {process}" for process in running_processes])
+                result = messagebox.askyesno(
+                    "其他玩法正在运行", 
+                    f"检测到以下玩法正在运行:\n\n{running_list}\n\n是否停止所有正在运行的玩法并启动追忆之书测试？",
+                    icon="warning"
+                )
+                if result:
+                    stopped_processes = self.parent.stop_all_processes()
+                    if stopped_processes:
+                        stopped_list = ', '.join(stopped_processes)
+                        self.log_status(f"已停止: {stopped_list}")
+                    # 等待一小段时间确保进程完全停止
+                    import time
+                    time.sleep(1)
+                else:
+                    return
+        else:
+            # 检查是否已有任何测试在运行
+            if self._is_any_test_running():
+                messagebox.showwarning("提示", "已有测试在运行中！")
+                return
             
         script_path = self.battle_script_var.get().strip()
         if not script_path:

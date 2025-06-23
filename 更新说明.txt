@@ -1,3 +1,9 @@
+v1.6.7
+bugfix: 修复boss阶段战斗失败地图乱跑
+feature: 优化日常逻辑
+feature: 拆分刷野面板
+feature: 增加启动进程检测执行进程
+
 v1.6.6
 feature: 增加花田果炎日志,地图识别重试次数
 

@@ -84,7 +84,8 @@ class MainWindow(tk.Tk):
     def _build_menu(self):
         menubar = tk.Menu(self)
         self.config(menu=menubar)
-        menubar.add_command(label="主界面", command=self.show_main)
+        menubar.add_command(label="逢魔玩法", command=self.show_main)
+        menubar.add_command(label="自动刷野", command=self.show_farming_editor)
         menubar.add_command(label="追忆之书", command=self.show_memory_editor)
         menubar.add_command(label="日常", command=self.show_daily_editor)
         menubar.add_command(label="设置", command=self.show_settings)
@@ -94,29 +95,27 @@ class MainWindow(tk.Tk):
         # 顶部按钮区
         self.start_btn = ttk.Button(self.main_frame, text="启动逢魔", command=self.on_start)
         self.start_btn.grid(row=0, column=0, padx=10, pady=10, sticky="w")
-        self.farming_btn = ttk.Button(self.main_frame, text="自动刷野", command=self.on_start_farming)
-        self.farming_btn.grid(row=0, column=1, padx=10, pady=10, sticky="w")
         self.stop_btn = ttk.Button(self.main_frame, text="停止玩法", command=self.on_stop, state=tk.DISABLED)
-        self.stop_btn.grid(row=0, column=2, padx=10, pady=10, sticky="w")
+        self.stop_btn.grid(row=0, column=1, padx=10, pady=10, sticky="w")
         self.coord_btn = ttk.Button(self.main_frame, text="标记坐标", command=self.on_mark_coord)
-        self.coord_btn.grid(row=0, column=3, padx=10, pady=10, sticky="w")
+        self.coord_btn.grid(row=0, column=2, padx=10, pady=10, sticky="w")
         self.status_label = ttk.Label(self.main_frame, text="状态: 等待启动")
-        self.status_label.grid(row=0, column=4, padx=10, pady=10, sticky="w")
-        ttk.Label(self.main_frame, text="日志级别:").grid(row=0, column=5, padx=5, sticky="e")
+        self.status_label.grid(row=0, column=3, padx=10, pady=10, sticky="w")
+        ttk.Label(self.main_frame, text="日志级别:").grid(row=0, column=4, padx=5, sticky="e")
         self.loglevel_combo = ttk.Combobox(self.main_frame, textvariable=self.log_level_var, values=LOG_LEVELS, width=10, state="readonly")
-        self.loglevel_combo.grid(row=0, column=6, padx=5, sticky="e")
-        # 玩法统计区块
-        self.report_frame = ttk.LabelFrame(self.main_frame, text="玩法统计", padding=(5, 5))
-        self.report_frame.grid(row=1, column=0, columnspan=7, padx=10, pady=5, sticky="nsew")
+        self.loglevel_combo.grid(row=0, column=5, padx=5, sticky="e")
+        # 逢魔玩法统计区块
+        self.report_frame = ttk.LabelFrame(self.main_frame, text="逢魔玩法统计", padding=(5, 5))
+        self.report_frame.grid(row=1, column=0, columnspan=6, padx=10, pady=5, sticky="nsew")
         self.report_text = tk.Text(self.report_frame, height=7, width=120, state='disabled', font=("Consolas", 11))
         self.report_text.pack(fill=tk.BOTH, expand=True)
         # 日志区块
         self.log_text = scrolledtext.ScrolledText(self.main_frame, width=120, height=20, state='disabled', font=("Consolas", 10))
-        self.log_text.grid(row=2, column=0, columnspan=7, padx=10, pady=5, sticky="nsew")
+        self.log_text.grid(row=2, column=0, columnspan=6, padx=10, pady=5, sticky="nsew")
         # 拉伸自适应
         self.main_frame.rowconfigure(1, weight=0)  # 统计区块高度固定
         self.main_frame.rowconfigure(2, weight=1)  # 日志区块随窗体拉伸
-        for i in range(7):
+        for i in range(6):
             self.main_frame.columnconfigure(i, weight=1)
 
     def _build_settings_frame(self, config_files):
@@ -129,6 +128,8 @@ class MainWindow(tk.Tk):
             self.memory_editor_panel.pack_forget()
         if hasattr(self, 'daily_editor_panel'):
             self.daily_editor_panel.pack_forget()
+        if hasattr(self, 'farming_editor_panel'):
+            self.farming_editor_panel.pack_forget()
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
     def show_settings(self):
@@ -137,6 +138,8 @@ class MainWindow(tk.Tk):
             self.memory_editor_panel.pack_forget()
         if hasattr(self, 'daily_editor_panel'):
             self.daily_editor_panel.pack_forget()
+        if hasattr(self, 'farming_editor_panel'):
+            self.farming_editor_panel.pack_forget()
         self.settings_panel.pack(fill=tk.BOTH, expand=True)
 
     def show_memory_editor(self):
@@ -146,6 +149,8 @@ class MainWindow(tk.Tk):
             self.settings_panel.pack_forget()
         if hasattr(self, 'daily_editor_panel'):
             self.daily_editor_panel.pack_forget()
+        if hasattr(self, 'farming_editor_panel'):
+            self.farming_editor_panel.pack_forget()
         if not hasattr(self, 'memory_editor_panel'):
             from gui.memory_panel import MemoryPanel
             self.memory_editor_panel = MemoryPanel(self)
@@ -158,10 +163,26 @@ class MainWindow(tk.Tk):
             self.settings_panel.pack_forget()
         if hasattr(self, 'memory_editor_panel'):
             self.memory_editor_panel.pack_forget()
+        if hasattr(self, 'farming_editor_panel'):
+            self.farming_editor_panel.pack_forget()
         if not hasattr(self, 'daily_editor_panel'):
             from gui.daily_panel import DailyPanel
             self.daily_editor_panel = DailyPanel(self)
         self.daily_editor_panel.pack(fill=tk.BOTH, expand=True)
+
+    def show_farming_editor(self):
+        """显示自动刷野界面"""
+        self.main_frame.pack_forget()
+        if hasattr(self, 'settings_panel'):
+            self.settings_panel.pack_forget()
+        if hasattr(self, 'memory_editor_panel'):
+            self.memory_editor_panel.pack_forget()
+        if hasattr(self, 'daily_editor_panel'):
+            self.daily_editor_panel.pack_forget()
+        if not hasattr(self, 'farming_editor_panel'):
+            from gui.farming_panel import FarmingPanel
+            self.farming_editor_panel = FarmingPanel(self)
+        self.farming_editor_panel.pack(fill=tk.BOTH, expand=True)
 
     def on_log_level_change(self, event=None):
         """日志级别下拉框变更时，动态设置主进程logger级别，并同步所有Handler"""
@@ -179,17 +200,142 @@ class MainWindow(tk.Tk):
         for h in default_logger.handlers:
             h.setLevel(log_level)
 
-    def on_start(self):
+    def check_running_processes(self):
+        """
+        检查所有玩法进程是否在运行
+        :return: (is_any_running, running_processes_list)
+        """
+        running_processes = []
+        
+        # 检查主窗口的逢魔/刷野进程
         if self.fengmo_process and self.fengmo_process.is_alive():
-            messagebox.showinfo("提示", "玩法已在运行中！")
-            return
+            running_processes.append("逢魔/刷野玩法")
+        
+        # 检查追忆之书进程
+        if hasattr(self, 'memory_editor_panel'):
+            if hasattr(self.memory_editor_panel, 'battle_test_process') and \
+               self.memory_editor_panel.battle_test_process and \
+               self.memory_editor_panel.battle_test_process.is_alive():
+                running_processes.append("单次战斗测试")
+            
+            if hasattr(self.memory_editor_panel, 'memory_test_process') and \
+               self.memory_editor_panel.memory_test_process and \
+               self.memory_editor_panel.memory_test_process.is_alive():
+                running_processes.append("追忆之书测试")
+        
+        # 检查日常进程
+        if hasattr(self, 'daily_editor_panel'):
+            if hasattr(self.daily_editor_panel, 'daily_process') and \
+               self.daily_editor_panel.daily_process and \
+               self.daily_editor_panel.daily_process.is_alive():
+                running_processes.append("日常玩法")
+        
+        # 检查刷野进程
+        if hasattr(self, 'farming_editor_panel'):
+            if hasattr(self.farming_editor_panel, 'farming_process') and \
+               self.farming_editor_panel.farming_process and \
+               self.farming_editor_panel.farming_process.is_alive():
+                running_processes.append("自动刷野")
+        
+        return len(running_processes) > 0, running_processes
+
+    def stop_all_processes(self):
+        """
+        停止所有正在运行的玩法进程
+        """
+        stopped_processes = []
+        
+        # 停止主窗口的逢魔/刷野进程
+        if self.fengmo_process and self.fengmo_process.is_alive():
+            try:
+                self.fengmo_process.terminate()
+                self.fengmo_process.join(timeout=5)
+                if self.fengmo_process.is_alive():
+                    self.fengmo_process.kill()
+                    self.fengmo_process.join(timeout=2)
+                stopped_processes.append("逢魔/刷野玩法")
+            except Exception as e:
+                self.append_log(f"停止逢魔/刷野进程时发生异常: {e}")
+        
+        # 停止追忆之书进程
+        if hasattr(self, 'memory_editor_panel'):
+            if hasattr(self.memory_editor_panel, 'battle_test_process') and \
+               self.memory_editor_panel.battle_test_process and \
+               self.memory_editor_panel.battle_test_process.is_alive():
+                try:
+                    self.memory_editor_panel.battle_test_process.terminate()
+                    self.memory_editor_panel.battle_test_process.join(timeout=5)
+                    stopped_processes.append("单次战斗测试")
+                except Exception as e:
+                    self.append_log(f"停止单次战斗测试进程时发生异常: {e}")
+            
+            if hasattr(self.memory_editor_panel, 'memory_test_process') and \
+               self.memory_editor_panel.memory_test_process and \
+               self.memory_editor_panel.memory_test_process.is_alive():
+                try:
+                    self.memory_editor_panel.memory_test_process.terminate()
+                    self.memory_editor_panel.memory_test_process.join(timeout=5)
+                    stopped_processes.append("追忆之书测试")
+                except Exception as e:
+                    self.append_log(f"停止追忆之书测试进程时发生异常: {e}")
+        
+        # 停止日常进程
+        if hasattr(self, 'daily_editor_panel'):
+            if hasattr(self.daily_editor_panel, 'daily_process') and \
+               self.daily_editor_panel.daily_process and \
+               self.daily_editor_panel.daily_process.is_alive():
+                try:
+                    self.daily_editor_panel.daily_process.terminate()
+                    self.daily_editor_panel.daily_process.join(timeout=5)
+                    stopped_processes.append("日常玩法")
+                except Exception as e:
+                    self.append_log(f"停止日常玩法进程时发生异常: {e}")
+        
+        # 停止刷野进程
+        if hasattr(self, 'farming_editor_panel'):
+            if hasattr(self.farming_editor_panel, 'farming_process') and \
+               self.farming_editor_panel.farming_process and \
+               self.farming_editor_panel.farming_process.is_alive():
+                try:
+                    self.farming_editor_panel.farming_process.terminate()
+                    self.farming_editor_panel.farming_process.join(timeout=5)
+                    stopped_processes.append("自动刷野")
+                except Exception as e:
+                    self.append_log(f"停止自动刷野进程时发生异常: {e}")
+        
+        # 重置UI状态
+        self.status_label.config(text="状态: 已停止所有玩法")
+        self.start_btn.config(state=tk.NORMAL)
+        self.stop_btn.config(state=tk.DISABLED)
+        
+        return stopped_processes
+
+    def on_start(self):
+        # 检查是否有其他玩法在运行
+        is_any_running, running_processes = self.check_running_processes()
+        if is_any_running:
+            running_list = '\n'.join([f"• {process}" for process in running_processes])
+            result = messagebox.askyesno(
+                "其他玩法正在运行", 
+                f"检测到以下玩法正在运行:\n\n{running_list}\n\n是否停止所有正在运行的玩法并启动逢魔玩法？",
+                icon="warning"
+            )
+            if result:
+                stopped_processes = self.stop_all_processes()
+                if stopped_processes:
+                    stopped_list = ', '.join(stopped_processes)
+                    self.append_log(f"已停止: {stopped_list}")
+                # 等待一小段时间确保进程完全停止
+                import time
+                time.sleep(1)
+            else:
+                return
         
         # 在启动玩法前检查并清理日志目录
         from utils.logger import cleanup_logs_dir
         cleanup_logs_dir()
         
         self.start_btn.config(state=tk.DISABLED)
-        self.farming_btn.config(state=tk.DISABLED)
         self.stop_btn.config(state=tk.NORMAL)
         self.status_label.config(text="状态: 正在初始化...")
         self.append_log("逢魔玩法进程启动中...")
@@ -201,30 +347,7 @@ class MainWindow(tk.Tk):
         self.status_label.config(text="状态: 逢魔玩法运行中... (点击停止可终止)")
         self.after(100, self.poll_log_queue)
 
-    def on_start_farming(self):
-        """
-        启动刷野玩法
-        """
-        if self.fengmo_process and self.fengmo_process.is_alive():
-            messagebox.showinfo("提示", "玩法已在运行中！")
-            return
-        
-        # 在启动玩法前检查并清理日志目录
-        from utils.logger import cleanup_logs_dir
-        cleanup_logs_dir()
-        
-        self.start_btn.config(state=tk.DISABLED)
-        self.farming_btn.config(state=tk.DISABLED)
-        self.stop_btn.config(state=tk.NORMAL)
-        self.status_label.config(text="状态: 正在初始化...")
-        self.append_log("刷野玩法进程启动中...")
-        self.update_report_data("")
-        self.log_queue = multiprocessing.Queue()
-        log_level = self.log_level_var.get()  # 获取最新日志级别
-        self.fengmo_process = multiprocessing.Process(target=run_farming_main, args=(self.log_queue, log_level))
-        self.fengmo_process.start()
-        self.status_label.config(text="状态: 刷野玩法运行中... (点击停止可终止)")
-        self.after(100, self.poll_log_queue)
+
 
     def poll_log_queue(self):
         try:
@@ -264,14 +387,12 @@ class MainWindow(tk.Tk):
             
             self.status_label.config(text="状态: 已停止")
             self.start_btn.config(state=tk.NORMAL)
-            self.farming_btn.config(state=tk.NORMAL)
             self.stop_btn.config(state=tk.DISABLED)
             self.logger.info("玩法进程已终止")
             self.append_log("玩法进程已终止")
         else:
             self.status_label.config(text="状态: 未运行")
             self.start_btn.config(state=tk.NORMAL)
-            self.farming_btn.config(state=tk.NORMAL)
             self.stop_btn.config(state=tk.DISABLED)
             self.append_log("玩法进程未运行")
 
@@ -323,6 +444,15 @@ class MainWindow(tk.Tk):
                 self.daily_editor_panel.daily_process.terminate()
                 self.daily_editor_panel.daily_process.join()
                 self.append_log("日常玩法进程已终止")
+        
+        # 检查并关闭刷野进程
+        if hasattr(self, 'farming_editor_panel'):
+            if hasattr(self.farming_editor_panel, 'farming_process') and \
+               self.farming_editor_panel.farming_process and \
+               self.farming_editor_panel.farming_process.is_alive():
+                self.farming_editor_panel.farming_process.terminate()
+                self.farming_editor_panel.farming_process.join()
+                self.append_log("自动刷野进程已终止")
         
         self.destroy()
         os._exit(0)

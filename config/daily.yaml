@@ -1,5 +1,5 @@
 huatian:
-  enabled: false
+  enabled: true
   huatian1_enabled: true
   huatian2_enabled: true
   target_count: 27

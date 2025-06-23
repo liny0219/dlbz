@@ -16,6 +16,7 @@ class AppManager:
         self.device_manager = device_manager
         # 硬编码游戏包名，支持官服和B服
         self.app_packages = ['com.netease.ma167', 'com.netease.ma167.bilibili']
+        self.current_package = None
         self._initialized = True
 
 
@@ -37,9 +38,13 @@ class AppManager:
                 logger.error("设备未连接，无法检查App运行状态")
                 return False
             current_app = self.device_manager.device.app_current()
-            running = current_app.get("package") in self.app_packages
-            logger.debug(f"App当前包名: {current_app.get('package')}, 目标包名: {self.app_packages}, 运行状态: {running}")
-            return running
+            current_package = current_app.get("package")
+            for package in self.app_packages:
+                if current_package == package:
+                    self.current_package = package
+                    logger.debug(f"App当前包名: {current_app.get('package')}, 目标包名: {self.app_packages}, 运行状态: {True}")
+                    return True
+            return False
         except Exception as e:
             logger.error(f"检查App运行状态失败: {e}\n{traceback.format_exc()}")
             return False
@@ -57,7 +62,14 @@ class AppManager:
                 if show_log:
                     logger.info("游戏已在运行中")
                 return
-                
+            
+            if self.current_package:
+                self.device_manager.device.app_start(self.current_package)
+                if show_log:
+                    logger.info(f"启动App成功: {self.current_package}")
+                time.sleep(3)
+                return
+            
             # 尝试启动游戏，优先官服
             for package in self.app_packages:
                 try:
@@ -79,7 +91,11 @@ class AppManager:
             if not self.device_manager.device:
                 logger.error("设备未连接，无法关闭App")
                 return
-                
+            if self.current_package:
+                self.device_manager.device.app_stop(self.current_package)
+                if show_log:
+                    logger.info(f"关闭App成功: {self.current_package}")
+                return
             # 关闭所有可能运行的游戏包
             for package in self.app_packages:
                 try:
