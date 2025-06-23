@@ -694,19 +694,24 @@ class World:
         if not self.in_world():
             logger.info("不在世界中，无法获取小地图位置")
             return None
+        time.sleep(0.5)
         self.open_minimap()
         sleep_until(self.in_minimap,timeout=5)
-        screenshot = self.device_manager.get_screenshot()
-        result = self.ocr_handler.recognize_text(screenshot,(85, 13,385, 92))
-        texts = []
-        if result is None:
-            logger.info("小地图位置识别失败")
+        count = 0
+        max_count = 3
+        while count < max_count:
+            time.sleep(0.5)
+            screenshot = self.device_manager.get_screenshot()
+            result = self.ocr_handler.recognize_text(screenshot,(85, 13,385, 92))
             texts = []
-        else:
-            for line in result:
-                texts.append(line['text'])
-        if len(texts) == 0:
-            texts = None
+            if result is None or len(result) == 0:
+                logger.info("小地图位置识别失败")
+                texts = []
+                count += 1
+            else:
+                for line in result:
+                    texts.append(line['text'])
+                break
         self.closeUI()
         logger.info(f"当前地图在{texts}")
         return texts

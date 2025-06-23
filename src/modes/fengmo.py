@@ -649,7 +649,7 @@ class FengmoMode:
     
     def wait_check_boss(self):
         in_world_or_battle = self.world.in_world_or_battle()
-        logger.info(f"[wait_check_boss]:in_world_or_battle {in_world_or_battle}")
+        logger.info(f"[wait_check_boss]:in_world_or_battle {in_world_or_battle},state_data {self.state_data.step}")
         if self.state_data == Step.BATTLE_FAIL:
             return 'in_world_battle_fail'
         if in_world_or_battle:
