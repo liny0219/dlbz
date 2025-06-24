@@ -91,7 +91,8 @@ class FarmingMode:
         try:
             while True:
                 screenshot = self.device_manager.get_screenshot()
-                result = self.world.check_in_world_or_battle(screenshot)
+                result = self.world.check_in_world_or_battle(
+                    screenshot,lambda image: self.world.click_tirm(5,interval=0.1))
                 if result == 'in_battle':
                     self.state_data.in_map = False
                     pre_state = 'in_battle'
@@ -113,19 +114,6 @@ class FarmingMode:
                         self.world.run_left()
                     is_left = not is_left
                     pre_state = 'in_world'
-                if result == None and pre_state == 'in_world':
-                    time.sleep(0.8)
-                    if is_left:
-                        logger.info("[None]向右跑")
-                        self.world.run_right()
-                    else:
-                        logger.info("[None]向左跑")
-                        self.world.run_left()
-                    is_left = not is_left
-                if result == None and pre_state == 'in_battle':
-                    logger.info("[None]click_tirm")
-                    self.world.click_tirm(5,interval=0.1)
-                    continue
         except Exception as e:
             logger.error(f"[刷野模式] 主循环异常: {e}")
             logger.error(f"{e.__traceback__}\n{traceback.format_exc()}")

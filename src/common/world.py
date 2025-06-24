@@ -315,7 +315,7 @@ class World:
         点击跳过按钮，count次
         """
         for _ in range(count):
-            self.device_manager.click(1100,680)
+            self.device_manager.click(1270,710)
             time.sleep(interval)
         
     def rest_in_inn(self,inn_pos:list[int]) -> str:
@@ -430,7 +430,6 @@ class World:
         if not vip_cure:
             return None
         logger.debug("使用vip治疗")
-        self.device_manager.click(1238, 20)
         sleep_until(self.in_world)
         time.sleep(0.2)
         logger.info(f"[vip_cure]使用vip治疗")

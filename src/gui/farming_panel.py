@@ -4,7 +4,7 @@
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext, filedialog
+from tkinter import ttk, messagebox, filedialog
 import yaml
 import os
 import datetime
@@ -72,60 +72,63 @@ class FarmingPanel(ttk.Frame):
 
     def _build_widgets(self):
         """构建界面组件"""
-        # 不需要配置变量了
-        
-        # 主容器
-        main_container = ttk.Frame(self)
-        main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        # 左侧配置区域
-        left_frame = ttk.Frame(main_container)
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, padx=(0, 10))
-        
+        # 刷野配置区域
+        farming_frame = ttk.LabelFrame(self, text="自动刷野配置", padding=(10, 10))
+        farming_frame.pack(fill=tk.X, padx=20, pady=(10, 10))
+
         # 刷野说明
-        info_frame = ttk.LabelFrame(left_frame, text="刷野说明", padding=(10, 10))
-        info_frame.pack(fill=tk.X, pady=(0, 10))
+        info_frame = ttk.Frame(farming_frame)
+        info_frame.pack(fill=tk.X, pady=5)
         
-        ttk.Label(info_frame, text="自动刷野模式将持续运行直到手动停止", wraplength=200).pack(pady=5)
+        ttk.Label(info_frame, text="自动刷野模式将持续运行直到手动停止", 
+                 wraplength=400, font=("TkDefaultFont", 9)).pack(pady=5)
+
+        # 按钮区域
+        button_frame = ttk.Frame(farming_frame)
+        button_frame.pack(fill=tk.X, pady=(10, 5))
+
+        # 开始刷野按钮
+        self.start_farming_btn = ttk.Button(button_frame, text="开始刷野", 
+                                           command=self.start_farming, style="Accent.TButton")
+        self.start_farming_btn.pack(side=tk.LEFT, padx=(0, 10))
+
+        # 停止刷野按钮
+        self.stop_farming_btn = ttk.Button(button_frame, text="停止刷野", 
+                                          command=self.stop_farming, state=tk.DISABLED)
+        self.stop_farming_btn.pack(side=tk.LEFT, padx=(0, 10))
+
+        # 保存配置按钮
+        save_config_btn = ttk.Button(button_frame, text="保存配置", 
+                                    command=self.save_config)
+        save_config_btn.pack(side=tk.LEFT, padx=(0, 10))
+
+        # 重置统计按钮
+        reset_stats_btn = ttk.Button(button_frame, text="重置统计", 
+                                    command=self.reset_stats)
+        reset_stats_btn.pack(side=tk.LEFT)
+
+        # 统计信息展示区域
+        stats_frame = ttk.LabelFrame(self, text="刷野统计", padding=(10, 10))
+        stats_frame.pack(fill=tk.X, padx=20, pady=(10, 5))
+
+        self.stats_text = tk.Text(stats_frame, height=6, width=80, font=("Consolas", 11), state='disabled')
+        self.stats_text.pack(fill=tk.BOTH, expand=True)
+
+        # 状态区域
+        status_frame = ttk.LabelFrame(self, text="运行日志", padding=(10, 10))
+        status_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=(5, 10))
+
+        self.status_text = tk.Text(status_frame, height=15, width=80, font=("Consolas", 10))
+        scrollbar = ttk.Scrollbar(status_frame, orient=tk.VERTICAL, command=self.status_text.yview)
+        self.status_text.config(yscrollcommand=scrollbar.set)
         
-        # 控制按钮
-        control_frame = ttk.LabelFrame(left_frame, text="操作控制", padding=(10, 10))
-        control_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        button_frame = ttk.Frame(control_frame)
-        button_frame.pack(fill=tk.X)
-        
-        self.start_farming_btn = ttk.Button(button_frame, text="开始刷野", command=self.start_farming)
-        self.start_farming_btn.pack(side=tk.LEFT, padx=(0, 5))
-        
-        self.stop_farming_btn = ttk.Button(button_frame, text="停止刷野", command=self.stop_farming, state=tk.DISABLED)
-        self.stop_farming_btn.pack(side=tk.LEFT, padx=(0, 5))
-        
-        ttk.Button(button_frame, text="保存配置", command=self.save_config).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(button_frame, text="重置统计", command=self.reset_stats).pack(side=tk.LEFT)
-        
-        # 右侧信息区域
-        right_frame = ttk.Frame(main_container)
-        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        
-        # 统计信息
-        stats_frame = ttk.LabelFrame(right_frame, text="刷野统计", padding=(10, 5))
-        stats_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        self.stats_text = tk.Text(stats_frame, height=6, state='disabled', font=("Consolas", 10))
-        self.stats_text.pack(fill=tk.X)
-        
-        # 状态日志
-        log_frame = ttk.LabelFrame(right_frame, text="状态日志", padding=(10, 5))
-        log_frame.pack(fill=tk.BOTH, expand=True)
-        
-        self.status_text = scrolledtext.ScrolledText(log_frame, height=20, font=("Consolas", 9))
-        self.status_text.pack(fill=tk.BOTH, expand=True)
-        
+        self.status_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
         # 初始化统计显示
         self.update_stats()
-
-
+        self.log_status("自动刷野面板已初始化")
+        self.log_status("点击开始刷野即可启动持续刷野模式")
 
     def start_farming(self):
         """开始刷野"""
