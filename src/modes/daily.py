@@ -215,7 +215,9 @@ class DailyMode:
                 huatian1_elapsed_time = time.time() - huatian1_start_time
                 self.huatian_stats["huatian1"]["total_time"] = huatian1_elapsed_time  # 覆盖，因为是一次完整的执行耗时
                 logger.info(f"[花田1] 执行完成，重启次数: {self.huatian_stats['huatian1']['restart_count']} 耗时: {huatian1_elapsed_time:.0f}秒")
-                self._send_stats_update("huatian1", huatian1_elapsed_time)
+                # 发送最终统计更新，包含目标找到状态
+                target_found = self.huatian_stats["huatian1"]["target_found"]
+                self._send_stats_update("huatian1", huatian1_elapsed_time, target_found=target_found)
             
             if self.huatian2_enabled:
                 huatian2_start_time = time.time()
@@ -224,7 +226,9 @@ class DailyMode:
                 huatian2_elapsed_time = time.time() - huatian2_start_time
                 self.huatian_stats["huatian2"]["total_time"] = huatian2_elapsed_time  # 覆盖，因为是一次完整的执行耗时
                 logger.info(f"[花田2] 执行完成，重启次数: {self.huatian_stats['huatian2']['restart_count']} 耗时: {huatian2_elapsed_time:.0f}秒")
-                self._send_stats_update("huatian2", huatian2_elapsed_time)
+                # 发送最终统计更新，包含目标找到状态
+                target_found = self.huatian_stats["huatian2"]["target_found"]
+                self._send_stats_update("huatian2", huatian2_elapsed_time, target_found=target_found)
             
             # 计算总耗时
             total_elapsed_time = time.time() - start_time
@@ -238,12 +242,14 @@ class DailyMode:
             if self.huatian1_enabled:
                 self.huatian_stats["huatian1"]["restart_count"] += 1
                 self.huatian_stats["huatian1"]["total_time"] = elapsed_time  # 覆盖
-                self._send_stats_update("huatian1", elapsed_time)
+                target_found = self.huatian_stats["huatian1"]["target_found"]
+                self._send_stats_update("huatian1", elapsed_time, target_found=target_found)
             
             if self.huatian2_enabled:
                 self.huatian_stats["huatian2"]["restart_count"] += 1
                 self.huatian_stats["huatian2"]["total_time"] = elapsed_time  # 覆盖
-                self._send_stats_update("huatian2", elapsed_time)
+                target_found = self.huatian_stats["huatian2"]["target_found"]
+                self._send_stats_update("huatian2", elapsed_time, target_found=target_found)
 
     def _check_huatian_target(self, huatian_name: str, position: tuple, ocr_region: tuple, start_time: float) -> bool:
         """
@@ -257,14 +263,19 @@ class DailyMode:
         target_found = False
         target_count_str = str(self.huatian_target_count)
         in_target = False
+        
+        # 确定花田类型用于统计
+        huatian_type = f"huatian{huatian_name.split('田')[1]}"
+        
         while not target_found:
             if not in_target:
                 self.world.move_mini_map(418, 222)
                 in_target = True
-            # 移动到花田区域
+            
             # 点击花田位置
             self.device_manager.click(position[0], position[1])
             time.sleep(1.5)
+            
             # 获取截图
             screenshot = self.device_manager.get_screenshot()
             if screenshot is None:
@@ -274,40 +285,37 @@ class DailyMode:
             # OCR识别目标数量
             ocr_result = self.ocr_handler.recognize_text(screenshot, ocr_region, rec_char_type='digit')
             
-            # 确定花田类型用于截图保存
-            huatian_type = f"huatian{huatian_name.split('田')[1]}"
-            
+            # 检查OCR结果
             if ocr_result is not None and len(ocr_result) > 0:
                 for line in ocr_result:
-                    logger.info(f"找到花田目标数量: {line['text']}")
+                    logger.info(f"找到{huatian_name}目标数量: {line['text']}")
                     if target_count_str in line['text']:
-                        logger.info(f"{huatian_name}目标数量: {self.huatian_target_count}")
+                        logger.info(f"{huatian_name}目标数量匹配: {self.huatian_target_count}")
                         target_found = True
-                        self.device_manager.click(640, 430)
                         # 保存成功识别的截图
                         self._save_ocr_screenshot(screenshot, huatian_type, success=True)
+                        self.device_manager.click(640, 430)
                         break
             
-            # 如果没有找到目标，保存普通截图
+            # 如果没有找到目标，保存普通截图并重启
             if not target_found:
                 self._save_ocr_screenshot(screenshot, huatian_type, success=False)
-            
-            if not target_found:
                 logger.info(f"未找到{huatian_name}目标数量，重启等待")
                 self.world.restart_wait_in_world()
                 
-                # 确定花田类型
-                huatian_type = f"huatian{huatian_name.split('田')[1]}"
+                # 增加重启次数
                 self.huatian_stats[huatian_type]["restart_count"] += 1
 
-            # 立即发送重启统计更新
-            count = self.huatian_stats[huatian_type]["restart_count"]
-            restart_elapsed_time = time.time() - start_time
-            logger.info(f"{[huatian_type]}重启次数{count}, 耗时{restart_elapsed_time:.0f}秒")
-            self._send_stats_update(huatian_type, restart_elapsed_time)
+                # 立即发送重启统计更新
+                count = self.huatian_stats[huatian_type]["restart_count"]
+                restart_elapsed_time = time.time() - start_time
+                logger.info(f"{huatian_type}重启次数{count}, 耗时{restart_elapsed_time:.0f}秒")
+                self._send_stats_update(huatian_type, restart_elapsed_time)
+        
+        # 测试模式：直接设置找到目标（注释掉OCR逻辑时使用）
+        # target_found = True
         
         # 找到目标后，标记为已找到
-        huatian_type = f"huatian{huatian_name.split('田')[1]}"
         self.huatian_stats[huatian_type]["target_found"] = True
         
         # 发送目标找到的统计更新
@@ -454,9 +462,12 @@ class DailyMode:
                 
                 stats_msg = f"STATS_UPDATE__type:{activity_type},time:{elapsed_time:.2f},restart_count:{restart_count},target_found:{target_found}"
                 self.log_queue.put(stats_msg)
-                logger.debug(f"已发送统计更新: {stats_msg}")
+                logger.info(f"[统计更新] 发送统计更新: {stats_msg}")
+                logger.debug(f"[统计更新] 目标找到状态: {target_found}")
             except Exception as e:
                 logger.error(f"发送统计更新失败: {e}")
+        else:
+            logger.warning(f"[统计更新] 日志队列为空，无法发送统计更新: {activity_type}, target_found={target_found}")
 
     def get_stats(self) -> Dict[str, Any]:
         """

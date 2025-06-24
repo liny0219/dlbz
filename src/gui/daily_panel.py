@@ -407,6 +407,7 @@ class DailyPanel(ttk.Frame):
         """处理统计数据更新消息"""
         try:
             # 消息格式: STATS_UPDATE__type:huatian1,time:12.5,restart_count:3,target_found:true
+            self.log_status(f"[GUI统计] 收到统计更新消息: {msg}")
             stats_data = msg[len("STATS_UPDATE__"):]
             
             # 解析统计数据
@@ -421,23 +422,39 @@ class DailyPanel(ttk.Frame):
             restart_count = int(stats_info.get("restart_count", "0"))
             target_found = stats_info.get("target_found", "false").lower() == "true"
             
+            self.log_status(f"[GUI统计] 解析结果: type={activity_type}, time={elapsed_time}, restart_count={restart_count}, target_found={target_found}")
+            
             if activity_type in ["huatian1", "huatian2"]:
+                self.log_status(f"[GUI统计] 更新花田统计: {activity_type}")
                 self.update_huatian_stats(activity_type, elapsed_time=elapsed_time, restart_count=restart_count, target_found=target_found)
             elif activity_type == "guoyan":
+                self.log_status(f"[GUI统计] 更新果炎统计")
                 self.update_guoyan_stats(elapsed_time=elapsed_time, restart_count=restart_count, target_found=target_found)
+            else:
+                self.log_status(f"[GUI统计] 未知活动类型: {activity_type}")
                 
         except Exception as e:
             self.log_status(f"处理统计更新失败: {e}")
+            import traceback
+            self.log_status(f"错误详情: {traceback.format_exc()}")
 
     def update_huatian_stats(self, huatian_type, elapsed_time=0.0, restart_count=None, target_found=None):
         """更新花田统计数据"""
+        self.log_status(f"[GUI统计] 更新花田统计: {huatian_type}, target_found={target_found}")
+        
         if huatian_type in self.huatian_stats:
             if restart_count is not None:
                 self.huatian_stats[huatian_type]["restart_count"] = restart_count
+                self.log_status(f"[GUI统计] 设置重启次数: {restart_count}")
             if elapsed_time > 0:
                 self.huatian_stats[huatian_type]["total_time"] = elapsed_time  # 直接赋值，不累加
+                self.log_status(f"[GUI统计] 设置耗时: {elapsed_time}")
             if target_found is not None:
+                old_status = self.huatian_stats[huatian_type]["target_found"]
                 self.huatian_stats[huatian_type]["target_found"] = target_found
+                self.log_status(f"[GUI统计] 目标找到状态更新: {old_status} -> {target_found}")
+        else:
+            self.log_status(f"[GUI统计] 未知花田类型: {huatian_type}")
         
         self.update_stats()
 

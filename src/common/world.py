@@ -572,7 +572,17 @@ class World:
                 return { "in_world":False, "in_battle":False,"app_alive":False, 'is_battle_success':False}
             if check_in_world == "in_world":
                 logger.debug("在城镇中")
-                return { "in_world":True, "in_battle":has_battle,"app_alive":True, 'is_battle_success':is_battle_success }
+                result = { "in_world":True, "in_battle":has_battle,"app_alive":True, 'is_battle_success':is_battle_success }
+                if has_battle:
+                    time.sleep(0.5)
+                    check_in_world = sleep_until_app_running(lambda: self.check_in_world_or_battle(callback=callback) ,app_manager=self.app_manager, function_name="in_world_or_battle")
+                    if check_in_world == "in_world":
+                        return result
+                    else:
+                        logger.debug(f"战斗场景后，识别错误到城镇中{check_in_world},重新检查")
+                        return self.in_world_or_battle(callback=callback)
+                else:
+                    return result
             elif check_in_world == "in_battle":
                 logger.debug("战斗场景中")
                 has_battle = True
@@ -669,9 +679,7 @@ class World:
             return False
         
     def get_map_name(self):
-        if not self.in_world():
-            logger.info("不在世界中，无法获取小地图位置")
-            return None
+        sleep_until(self.in_world,timeout=5)
         time.sleep(0.5)
         self.open_minimap()
         sleep_until(self.in_minimap,timeout=5)
