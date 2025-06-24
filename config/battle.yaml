@@ -3,7 +3,7 @@ drag_press_time: 0.1
 drag_wait_time: 0.3
 drag_release_time: 0.1
 wait_ui_time: 0.2
-recognition_time: 4.0
+recognition_time: 5.0
 auto_battle_timeout: 10.0
 check_dead_timeout: 1.0
 reset_round_timeout: 10.0

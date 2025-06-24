@@ -53,45 +53,26 @@ class Battle:
         self.switch_all_timeout = config.battle.switch_all_timeout
 
     # ================== 战斗状态判断相关方法 ==================
-    def in_battle(self, image: Optional[Image.Image] = None, call_roll: bool = True,roll_count:int=0) -> bool:
+    def in_battle(self, image: Optional[Image.Image] = None) -> bool:
         """
         判断当前是否在战斗中。
-        :param image: 可选，外部传入截图
-        :param points_colors: 可选，[(x, y, color, range)] 数组，默认用原有6点
-        :return: bool
         """
         if image is None:
             image = self.device_manager.get_screenshot()
         if image is None:
             logger.warning("无法获取截图，无法判断是否在战斗中")
             return False
-        points_colors = [
-            (116, 19, "87878C", 1),
-            (125, 19, "878790", 1),
-            (116, 29, "8F9096", 1),
-            (125, 29, "8F8F98", 1),
-            (131, 26, "9999A1", 1),
-            (139, 26, "9A9BA3", 1),
-        ]
-        # 批量判断
-        results = self.ocr_handler.match_point_color(image, points_colors)
-        if results:
+        region = (1028, 6, 1272, 587)
+        find = self.ocr_handler.match_image_multi(image, "assets/hp_alive_front.png",region = region)
+        if find and len(find) > 0:
             logger.debug("检测到在战斗中")
-            time.sleep(0.2)
             return True
-        else:
-            if not call_roll:
-                logger.debug("不调用roll,不在战斗中")
-                return False
-            logger.debug("调用roll,不在战斗中")
-            time.sleep(self.wait_time)
-            image = self.device_manager.get_screenshot()
-            result = self.in_battle(image, call_roll=roll_count>0,roll_count=roll_count-1)
-            if result:
-                logger.info("调用roll后在战斗中")
-                return True
-            return False
-
+        find = self.ocr_handler.match_image_multi(image, "assets/hp_alive_back.png",region = region)
+        if find and len(find) > 0:
+            logger.debug("检测到在战斗中")
+            return True
+        return False
+    
     def in_round(self, image: Optional[Image.Image] = None) -> bool:
         """
         判断当前是否在战斗回合中。
@@ -767,7 +748,7 @@ class Battle:
             if self.in_round(screenshot):
                 logger.info("[in_round] in_round")
                 return 'in_round'
-            if not self.in_battle(screenshot, roll_count=6):
+            if not self.in_battle(screenshot):
                 return 'not_in_battle'
             if callback:
                 result = callback(screenshot)
