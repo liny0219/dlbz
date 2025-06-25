@@ -94,20 +94,10 @@ class FengmoSettingsTab(ttk.Frame):
         select_btn.grid(row=row, column=3, padx=5, pady=3, sticky='w')
         row += 1
 
-        # 全灭是否复活
-        revive_val = config_data.get("revive_on_all_dead", False)
-        if isinstance(revive_val, str):
-            revive_val = revive_val.lower() == "true"
-        self.revive_var = tk.StringVar(value="是" if revive_val else "否")
-        ttk.Label(config_frame, text="全灭是否复活", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-        revive_combo = ttk.Combobox(config_frame, textvariable=self.revive_var, values=["是", "否"], state="readonly", width=input_width)
-        revive_combo.grid(row=row, column=1, padx=5, pady=3, sticky='w')
-        row += 1
-
         # 其余字段
         self.extra_vars = {}
         for k, v in config_data.items():
-            if k in ("rest_in_inn", "vip_cure", "city", "depth", "find_point_wait_time", "wait_map_time", "wait_ui_time", "default_battle_config","revive_on_all_dead"):
+            if k in ("rest_in_inn", "vip_cure", "city", "depth", "find_point_wait_time", "wait_map_time", "wait_ui_time", "default_battle_config"):
                 continue
             var = tk.StringVar(value=str(v))
             ttk.Label(config_frame, text=k, width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
@@ -143,7 +133,6 @@ class FengmoSettingsTab(ttk.Frame):
             "wait_map_time": self.wait_map_time_var.get(),
             "wait_ui_time": self.wait_ui_var.get(),
             "default_battle_config": self.default_battle_config_var.get(),
-            "revive_on_all_dead": self.revive_var.get(),
         }
         for k, var in self.extra_vars.items():
             data[k] = var.get()

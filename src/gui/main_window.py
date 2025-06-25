@@ -76,6 +76,7 @@ class MainWindow(tk.Tk):
         self.log_text.configure(state='disabled')
 
     def update_report_data(self, report_str):
+        """更新统计数据显示 - 恢复原始文字版"""
         self.report_text.configure(state='normal')
         self.report_text.delete(1.0, tk.END)
         self.report_text.insert(tk.END, report_str)
@@ -104,11 +105,13 @@ class MainWindow(tk.Tk):
         ttk.Label(self.main_frame, text="日志级别:").grid(row=0, column=4, padx=5, sticky="e")
         self.loglevel_combo = ttk.Combobox(self.main_frame, textvariable=self.log_level_var, values=LOG_LEVELS, width=10, state="readonly")
         self.loglevel_combo.grid(row=0, column=5, padx=5, sticky="e")
-        # 逢魔玩法统计区块
+        
+        # 逢魔玩法统计区块 - 恢复原始文字版
         self.report_frame = ttk.LabelFrame(self.main_frame, text="逢魔玩法统计", padding=(5, 5))
         self.report_frame.grid(row=1, column=0, columnspan=6, padx=10, pady=5, sticky="nsew")
         self.report_text = tk.Text(self.report_frame, height=7, width=120, state='disabled', font=("Consolas", 11))
         self.report_text.pack(fill=tk.BOTH, expand=True)
+        
         # 日志区块
         self.log_text = scrolledtext.ScrolledText(self.main_frame, width=120, height=20, state='disabled', font=("Consolas", 10))
         self.log_text.grid(row=2, column=0, columnspan=6, padx=10, pady=5, sticky="nsew")
@@ -346,8 +349,6 @@ class MainWindow(tk.Tk):
         self.fengmo_process.start()
         self.status_label.config(text="状态: 逢魔玩法运行中... (点击停止可终止)")
         self.after(100, self.poll_log_queue)
-
-
 
     def poll_log_queue(self):
         try:

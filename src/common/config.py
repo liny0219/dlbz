@@ -70,10 +70,10 @@ class FengmoConfig(BaseModel):
     rest_in_inn: bool = True
     city: str = "newdelsta"
     find_point_wait_time: float = 1.5
-    wait_start_time: float = 0.8
+    wait_map_time: float = 0.8
+    wait_ui_time: float = 0.2  # UI响应等待时间
     default_battle_config: str = ""
     vip_cure: bool = False  # 月卡恢复
-    revive_on_all_dead: bool = False  # 全灭是否复活
 
 class ItemPos(BaseModel):
     pos: List[int]

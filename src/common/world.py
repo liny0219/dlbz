@@ -317,6 +317,14 @@ class World:
         for _ in range(count):
             self.device_manager.click(1270,710)
             time.sleep(interval)
+
+    def dclick_tirm(self,count: int = 1,interval: float = 0.1) -> None:
+        """
+        点击跳过按钮，count次
+        """
+        for _ in range(count):
+            self.device_manager.double_click(1270,710)
+            time.sleep(interval)
         
     def rest_in_inn(self,inn_pos:list[int]) -> str:
         """
@@ -552,6 +560,8 @@ class World:
                     return "in_world"
                 elif self.battle.in_battle(image):
                     logger.debug("[in_world_or_battle]战斗中")
+                    if self.battle.check_battle_fail(image):
+                        return "battle_fail"
                     return "in_battle"
                 else:
                     if callback is not None and image is not None:
@@ -567,7 +577,11 @@ class World:
         is_battle_success = True
         has_battle = False
         while True:
-            check_in_world = sleep_until_app_running(lambda: self.check_in_world_or_battle(callback=callback) ,app_manager=self.app_manager, function_name="in_world_or_battle")
+            check_in_world = sleep_until_app_running(lambda: self.check_in_world_or_battle(callback=callback),
+                                                     app_manager=self.app_manager, function_name="in_world_or_battle")
+            if check_in_world == 'battle_fail':
+                is_battle_success = False
+                continue
             if check_in_world == 'app_not_running':
                 return { "in_world":False, "in_battle":False,"app_alive":False, 'is_battle_success':False}
             if check_in_world == "in_world":

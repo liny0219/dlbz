@@ -1,4 +1,3 @@
-import os
 import time
 import threading
 from utils import logger
@@ -53,6 +52,77 @@ class Battle:
         self.switch_all_timeout = config.battle.switch_all_timeout
 
     # ================== 战斗状态判断相关方法 ==================
+
+    def all_dead(self, image: Optional[Image.Image] = None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否全灭")
+            return False
+        points_colors = [
+            (622, 177, 'FEFAF9', 1),
+            (621, 189, 'FFFEFD', 1),
+            (622, 198, 'FFFEFF', 1),
+            (612, 205, 'FEFEFE', 1),
+            (630, 206, 'FBFFFF', 1)
+        ]
+        # 批量判断
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results and self.in_battle(image):
+            logger.debug("检测到在战斗回合中全灭")
+            time.sleep(self.wait_time)
+            return True
+        else:
+            logger.debug("不在战斗回合中全灭")
+            return False
+    
+    def battle_end(self, image: Optional[Image.Image] = None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否战斗结算")
+            return False
+        
+        points_colors = [
+            (103, 28, 'F1E8E9', 1), # 战
+            (204, 62, 'EFE7E5', 1), # 斗
+            (291, 79, 'F4EBEC', 1), # 结
+            (346, 28, 'ECE8E5', 1), # 算
+            (38, 65, '6A6069', 1), # 左侧花边
+        ]
+        # 批量判断
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results:
+            logger.debug("检测到在战斗结算")
+            return True
+        else:
+            logger.debug("不在战斗结算")
+            return False
+    
+    def battle_award(self, image: Optional[Image.Image] = None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否战斗奖励")
+            return False
+        
+        points_colors = [
+            (610, 91, 'EFF1EE', 1), 
+            (669, 104, 'EDECEA', 1), 
+            (669, 112, 'EFF0EB', 1), 
+            (626, 104, 'EDEDEB', 1), 
+            (612, 100, 'F2F2F0', 1),
+            (615, 113, 'EFEFED', 1), 
+        ]
+        # 批量判断
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results:
+            logger.debug("检测到在战斗奖励")
+            return True
+        else:
+            logger.debug("不在战斗奖励")
+            return False
+
     def in_battle(self, image: Optional[Image.Image] = None) -> bool:
         """
         判断当前是否在战斗中。
@@ -96,23 +166,6 @@ class Battle:
         results = self.ocr_handler.match_point_color(image, points_colors)
         if results and self.in_battle(image):
             logger.debug("检测到在战斗回合中")
-            # 保存战斗回合判断的截图用于调试
-            if image is not None:
-                try:
-                    # 确保debug目录存在
-                    debug_dir = "debug"
-                    if not os.path.exists(debug_dir):
-                        os.makedirs(debug_dir)
-                    
-                    # 生成带时间戳的文件名
-                    timestamp = time.strftime("%Y%m%d_%H%M%S")
-                    filename = f"{debug_dir}/battle_round_{timestamp}.png"
-                    
-                    # 保存截图
-                    image.save(filename)
-                    logger.debug(f"已保存战斗回合判断截图: {filename}")
-                except Exception as e:
-                    logger.warning(f"保存战斗回合判断截图失败: {e}")
             time.sleep(self.wait_time)
             return True
         else:
@@ -755,6 +808,24 @@ class Battle:
                 if result is not None:
                     return result
             time.sleep(self.wait_time)
+
+    def check_battle_fail(self, image: Image.Image|None = None, type = 'tip'):
+        if image is None:
+           image = self.device_manager.get_screenshot()
+        if not self.all_dead(image):
+            return False
+        time.sleep(0.2)
+        self.device_manager.click(480,480)
+        time.sleep(0.5)
+        self.device_manager.click(800,480)
+        time.sleep(0.5)
+        if type == 'tip':
+            while True:
+                image = self.device_manager.get_screenshot();
+                if self.ocr_handler.match_click_text(["是"]):
+                    break
+                time.sleep(0.2)
+        return True
             
     def press_in_round(self, timeout: float = 15) -> bool:
         try:

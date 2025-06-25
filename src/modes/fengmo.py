@@ -102,13 +102,29 @@ class StateData:
 
     
     def report_data(self):
+        """报告统计数据 - 补充完整字段"""
+        # 计算成功率
+        total_attempts = self.total_finished_count + self.total_fail_count
+        success_rate = (self.total_finished_count / total_attempts * 100) if total_attempts > 0 else 0
+        
+        # 计算失败平均用时
+        fail_avg_time = (self.total_fail_time / self.total_fail_count) if self.total_fail_count > 0 else 0
+        
+        # 计算综合平均用时
+        total_time = self.total_finished_time + self.total_fail_time
+        total_avg_time = (total_time / total_attempts) if total_attempts > 0 else 0
+        
+        # 记录详细统计信息到日志
         logger.info(f"[report_data]当前轮数: {self.turn_count}")
         logger.info(f"[report_data]当前轮次用时: {self.turn_time}分钟")
         logger.info(f"[report_data]当前成功次数: {self.total_finished_count}")
         logger.info(f"[report_data]当前失败次数: {self.total_fail_count}")
         logger.info(f"[report_data]当前成功用时: {self.total_finished_time}分钟")
         logger.info(f"[report_data]当前成功平均用时: {self.avg_finished_time}分钟")
-        logger.info(f"[report_data]当前失败平均用时: {self.avg_fail_time}分钟")
+        logger.info(f"[report_data]当前失败用时: {self.total_fail_time}分钟")
+        logger.info(f"[report_data]当前失败平均用时: {fail_avg_time:.1f}分钟")
+        logger.info(f"[report_data]当前成功率: {success_rate:.1f}%")
+        logger.info(f"[report_data]当前综合平均用时: {total_avg_time:.1f}分钟")
 
 class FengmoMode:
     """
@@ -135,7 +151,6 @@ class FengmoMode:
         self.depth = self.fengmo_config.depth
         self.rest_in_inn = self.fengmo_config.rest_in_inn
         self.vip_cure = self.fengmo_config.vip_cure
-        self.revive_on_all_dead = self.fengmo_config.revive_on_all_dead  # 添加全灭是否复活的配置
         fengmo_cities = config.fengmo_cities
         if self.city_name not in fengmo_cities:
             raise ValueError(f"未找到城市配置: {self.city_name}")
@@ -147,6 +162,7 @@ class FengmoMode:
         self.check_points = self.city_config.get("check_points", [])
         self.find_point_wait_time = getattr(self.fengmo_config, 'find_point_wait_time', 1.5)
         self.wait_map_time = getattr(self.fengmo_config, 'wait_map_time', 0.5)
+        self.wait_ui_time = getattr(self.fengmo_config, 'wait_ui_time', 0.2)
         self.default_battle_config = getattr(self.fengmo_config, 'default_battle_config', '')
         
         self.state_data: StateData = StateData()
@@ -164,6 +180,7 @@ class FengmoMode:
             logger.debug(f"定期内存清理完成，回收对象数: {collected}")
 
     def _in_world_or_battle(self):
+        time.sleep(self.wait_ui_time)
         return self.world.in_world_or_battle(callback=lambda image: self.check_info(image))
 
     def _performance_monitor(self, operation_name: str):
@@ -211,25 +228,42 @@ class FengmoMode:
         logger.info(f"逢魔模式线程清理完成，回收对象数: {collected}")
 
     def report_data(self):
-        """报告统计数据"""
+        """报告统计数据 - 补充完整字段"""
         # 使用本地变量避免重复访问，使用类型断言确保linter知道state_data不为None
         state_data = self.state_data
         assert state_data is not None  # 类型断言，告诉linter state_data不为None
+        
+        # 计算成功率
+        total_attempts = state_data.total_finished_count + state_data.total_fail_count
+        success_rate = (state_data.total_finished_count / total_attempts * 100) if total_attempts > 0 else 0
+        
+        # 计算失败平均用时
+        fail_avg_time = (state_data.total_fail_time / state_data.total_fail_count) if state_data.total_fail_count > 0 else 0
+        
+        # 计算综合平均用时
+        total_time = state_data.total_finished_time + state_data.total_fail_time
+        total_avg_time = (total_time / total_attempts) if total_attempts > 0 else 0
+        
+        # 记录详细统计信息到日志
         logger.info(f"[report_data]当前轮数: {state_data.turn_count}")
         logger.info(f"[report_data]当前轮次用时: {state_data.turn_time}分钟")
         logger.info(f"[report_data]当前成功次数: {state_data.total_finished_count}")
         logger.info(f"[report_data]当前失败次数: {state_data.total_fail_count}")
         logger.info(f"[report_data]当前成功用时: {state_data.total_finished_time}分钟")
         logger.info(f"[report_data]当前成功平均用时: {state_data.avg_finished_time}分钟")
-        logger.info(f"[report_data]当前失败平均用时: {state_data.avg_fail_time}分钟")
+        logger.info(f"[report_data]当前失败用时: {state_data.total_fail_time}分钟")
+        logger.info(f"[report_data]当前失败平均用时: {fail_avg_time:.1f}分钟")
+        logger.info(f"[report_data]当前成功率: {success_rate:.1f}%")
+        logger.info(f"[report_data]当前综合平均用时: {total_avg_time:.1f}分钟")
         
-        # 发送统计数据到主进程
-        if self.log_queue:
-            try:
-                report_str = f"REPORT_DATA__轮数:{state_data.turn_count},成功:{state_data.total_finished_count},失败:{state_data.total_fail_count},成功用时:{state_data.total_finished_time}分钟,平均用时:{state_data.avg_finished_time}分钟"
-                self.log_queue.put(report_str)
-            except Exception as e:
-                logger.warning(f"发送统计数据失败: {e}")
+        # 发送统计数据到主进程GUI - 使用紧凑的文字格式
+        if self.log_queue is not None:
+            report_str = f"""当前轮数: {state_data.turn_count} | 当前用时: {state_data.turn_time:.1f} 分钟
+成功: {state_data.total_finished_count} 次 | 失败: {state_data.total_fail_count} 次 | 成功率: {success_rate:.1f}%
+总用时: {state_data.total_finished_time + state_data.total_fail_time:.1f} 分钟 | 综合平均: {total_avg_time:.1f} 分钟
+成功平均: {state_data.avg_finished_time:.1f} 分钟 | 失败平均: {fail_avg_time:.1f} 分钟"""
+            
+            self.log_queue.put(f"REPORT_DATA__{report_str}")
 
     def check_enter_fengmo(self):
         screenshot = self.device_manager.get_screenshot()
@@ -351,9 +385,10 @@ class FengmoMode:
                             self.world.open_minimap()
                             in_minimap = sleep_until(self.world.in_minimap,timeout=5)
                             if not in_minimap:
-                                break
-                            logger.info(f"[collect_junk_phase]点击小地图: {check_point}")
-                            self.device_manager.click(*check_point.pos)
+                                logger.info(f"[collect_junk_phase]小地图未打开")
+                            else:
+                                logger.info(f"[collect_junk_phase]点击小地图: {check_point}")
+                                self.device_manager.click(*check_point.pos)
                             self.wait_map()
                             in_world_or_battle = self._in_world_or_battle()
                             logger.info(f"[collect_junk_phase]in_world_or_battle: {in_world_or_battle}")
@@ -429,6 +464,7 @@ class FengmoMode:
             if in_minimap == 'return':
                 return
             if not in_minimap:
+                logger.info(f"[find_box_phase]小地图未打开")
                 continue
             logger.info(f"[find_box_phase]查找小地图标签")
             closest_point = self.find_map_tag()
@@ -511,6 +547,7 @@ class FengmoMode:
             in_minimap = sleep_until(self.world.in_minimap,timeout=5)
             if not in_minimap:
                 logger.error("[find_boss_phase]打开小地图失败")
+                first_loop = True
                 continue
             logger.info(f"[find_boss_phase]查找Boss点")
             find_map_boss = sleep_until(self.world.find_map_boss,timeout=6)
@@ -643,19 +680,19 @@ class FengmoMode:
                     return 'in_world_fight_monster'
         return 'in_world'
 
-    def check_info(self, screenshot: Image.Image):
+    def check_info(self, screenshot: Image.Image|None):
+        if screenshot is None:
+            screenshot = self.device_manager.get_screenshot()
         try:
             # 使用新的属性访问器，避免类型注解问题
             state_data = self.state_data
-            is_dead = False
-            
             try:
+                if self.battle.battle_end(screenshot):
+                    logger.info(f"[check_info]战斗结算")
+                    self.world.dclick_tirm(6)
+                    return
                 region = (80, 0, 1280, 720)
-                
-                # 直接执行OCR识别，不使用缓存
                 results = self.ocr_handler.recognize_text(region=region, image=screenshot)
-                
-                in_mini_map = self.world.in_minimap(screenshot)
                 in_fengmo = False
                 if state_data.step in [Step.COLLECT_JUNK,Step.FIND_BOX,Step.FIND_BOSS,Step.FIGHT_BOSS]:
                     in_fengmo = True
@@ -663,11 +700,6 @@ class FengmoMode:
                 find_text = None
                 for r in results:
                     text = r['text']
-                    if "战斗结算" in text:
-                        logger.info(f"[check_info]战斗结算")
-                        self.world.click_tirm(6)
-                        find_text = CheckInfoResult.BATTLE_END
-                        break
                     if "已发现所有的逢魔之影" in text:
                         state_data.step = Step.FIND_BOX
                         find_text = CheckInfoResult.FOUND_POINTS
@@ -685,50 +717,30 @@ class FengmoMode:
                         break
                     if "已发现逢魔之主" in text:
                         state_data.step = Step.FIGHT_BOSS
-                        self.ocr_handler.match_click_text(["是"], region=region, image=screenshot)
-                        break
-                    if "提示" in text:
-                        if not in_mini_map:
-                            self.world.click_confirm(screenshot)
-                            logger.info("[check_info]提示，确认")
-                            break
-                    if "全灭" in text:
-                        if self.revive_on_all_dead:
-                            self.ocr_handler.match_click_text(["是"], region=region, image=screenshot)
-                            logger.info("[check_info]全灭，确认复活，尝试自动战斗")
-                            self.battle.auto_battle()
-                        else:
-                            self.ocr_handler.match_click_text(["否"], region=region, image=screenshot)
-                            logger.info("[check_info]全灭，不复活")
-                            is_dead = True
-                        break
-                    if "消费以上内容即可继续" in text:
-                        self.ocr_handler.match_click_text(["否"], region=region, image=screenshot)
-                        logger.info("[check_info]使用红宝石?，死了算了")
-                        is_dead = True
-                        break
-                    if "选择放弃的话" in text and is_dead:
+                        time.sleep(self.wait_ui_time)
+                        logger.info(f"[check_info]找到boss,点击确认")
                         self.world.click_confirm_pos()
-                        logger.info("[check_info]确认，不复活了")
-                        state_data.step = Step.BATTLE_FAIL
-                        is_dead = False
-                        find_text = CheckInfoResult.BATTLE_FAIL
                         break
                     if "用户协议与隐私政策" in text:
+                        logger.info(f"[check_info]找到用户协议,点击确认")
+                        time.sleep(self.wait_ui_time)
                         self.device_manager.click(640, 600)
                         break
                     if "将重置进行状况" in text:
+                        logger.info(f"[check_info]找到逢魔入口重置进行状况,点击确认")
                         time.sleep(1)
                         self.world.click_confirm_pos()
                         state_data.map_fail = True
                         break
                     if "无法连接网络" in text:
+                        time.sleep(self.wait_ui_time)
                         self.ocr_handler.match_click_text(["重试"], region=region, image=screenshot)
                         logger.info("网络断连重试")
                         break
                 if find_text:
                     logger.info(f"[check_info]找到文本: {find_text}")
-                    self.ocr_handler.match_click_text(["确定"],region=region,image=screenshot)
+                    time.sleep(self.wait_ui_time)
+                    self.world.dclick_tirm(2)
                     
             except Exception as e:
                 logger.info(f"[check_info]处理截图时发生异常: {e}")

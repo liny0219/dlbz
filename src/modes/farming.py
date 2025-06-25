@@ -92,7 +92,7 @@ class FarmingMode:
             while True:
                 screenshot = self.device_manager.get_screenshot()
                 result = self.world.check_in_world_or_battle(
-                    screenshot,lambda image: self.world.click_tirm(5,interval=0.1))
+                    screenshot,lambda image: self.world.dclick_tirm(6))
                 if result == 'in_battle':
                     self.state_data.in_map = False
                     pre_state = 'in_battle'

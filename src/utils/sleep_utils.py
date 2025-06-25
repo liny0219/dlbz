@@ -28,11 +28,14 @@ def sleep_until(condition_func, timeout: float = 30.0, interval: float = 0.1, fu
     logger.info(f"等待超时，条件未满足:{condition_func.__name__}")
     return None 
 
-def sleep_until_app_running(condition_func, timeout: float = 30.0, interval: float = 0.1, function_name: str = "", app_manager: Optional[AppManager] = None):
+def sleep_until_app_running(condition_func, timeout: float = 30.0, 
+                            interval: float = 0.1, function_name: str = "", 
+                            app_manager: Optional[AppManager] = None, show_log = False):
     """
     通用sleep_until函数，轮询等待条件。
     """
-    logger.info(f"开始轮询等待条件，{condition_func.__name__} {function_name}")
+    if show_log:
+        logger.info(f"开始轮询等待条件，{condition_func.__name__} {function_name}")
     start_time = time.time()
     while time.time() - start_time < timeout:
         result = condition_func()
