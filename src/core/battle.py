@@ -4,11 +4,14 @@ from utils import logger
 from common.app import AppManager
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Tuple, TYPE_CHECKING
 from PIL import Image
 from utils.singleton import singleton
 from common.config import Monster, config
 from utils.sleep_utils import sleep_until
+
+if TYPE_CHECKING:
+    from common.world import World
 
 @singleton
 class Battle:
@@ -16,14 +19,16 @@ class Battle:
     战斗模块
     负责实现战斗相关的自动化逻辑
     """
-    def __init__(self, device_manager: DeviceManager, ocr_handler: OCRHandler,app_manager:AppManager) -> None:
+    def __init__(self, device_manager: DeviceManager, ocr_handler: OCRHandler, app_manager: AppManager) -> None:
         """
         :param device_manager: DeviceManager 实例
         :param ocr_handler: OCRHandler 实例
+        :param app_manager: AppManager 实例
         """
         self.app_manager = app_manager
         self.device_manager = device_manager
         self.ocr_handler = ocr_handler
+        self.world: Optional['World'] = None  # 可选依赖，通过setWorld方法设置
         self.extra_skill_bp_pos = (570, 305)
         self.extra_bp_offset_x = [0, 778, 895, 982]
         self.role_base_pos = (1100, 80)
@@ -51,6 +56,13 @@ class Battle:
         self.boost_timeout = config.battle.boost_timeout
         self.switch_all_timeout = config.battle.switch_all_timeout
 
+    def set_world(self, world: 'World') -> None:
+        """
+        设置World依赖（依赖注入）
+        :param world: World实例
+        """
+        self.world = world
+
     # ================== 战斗状态判断相关方法 ==================
 
     def all_dead(self, image: Optional[Image.Image] = None) -> bool:
@@ -68,7 +80,7 @@ class Battle:
         ]
         # 批量判断
         results = self.ocr_handler.match_point_color(image, points_colors)
-        if results and self.in_battle(image):
+        if results and self.world is not None and self.world.click_confirm(image, click=False):
             logger.debug("检测到在战斗回合中全灭")
             time.sleep(self.wait_time)
             return True
@@ -820,11 +832,13 @@ class Battle:
         self.device_manager.click(800,480)
         time.sleep(0.5)
         if type == 'tip':
+            start_time = time.time()
             while True:
-                image = self.device_manager.get_screenshot();
-                if self.ocr_handler.match_click_text(["是"]):
+                if time.time() - start_time > 3:
+                    logger.info(f"[check_battle_fail]tip confirm 超时")
                     break
-                time.sleep(0.2)
+                if self.world is not None:
+                    self.world.click_confirm()
         return True
             
     def press_in_round(self, timeout: float = 15) -> bool:

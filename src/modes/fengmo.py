@@ -171,6 +171,9 @@ class FengmoMode:
         self._screenshot_counter = 0  # 截图计数器
         self._gc_interval = 100  # 每100次截图执行一次GC
 
+        # 设置Battle的world依赖
+        self.battle.set_world(self.world)
+
     def _manage_screenshot_memory(self):
         """管理截图内存，定期执行GC"""
         self._screenshot_counter += 1
@@ -689,8 +692,12 @@ class FengmoMode:
             try:
                 if self.battle.battle_end(screenshot):
                     logger.info(f"[check_info]战斗结算")
-                    self.world.dclick_tirm(6)
-                    return
+                    self.world.dclick_tirm()
+                    if sleep_until(self.battle.battle_award,timeout=1.5):
+                        self.world.dclick_tirm()
+                    if sleep_until(self.battle.battle_end,timeout=1.5):
+                        self.world.dclick_tirm()
+                        return
                 region = (80, 0, 1280, 720)
                 results = self.ocr_handler.recognize_text(region=region, image=screenshot)
                 in_fengmo = False

@@ -51,6 +51,9 @@ class BattleTestMode:
         self.battle = Battle(device_manager, ocr_handler, self.app_manager)
         self.world = World(device_manager, ocr_handler, self.battle, self.app_manager)
         
+        # 设置Battle的world依赖
+        self.battle.set_world(self.world)
+        
         logger.info("[BattleTestMode] 战斗测试模式初始化完成")
 
     def set_battle_script_path(self, script_path: str) -> None:

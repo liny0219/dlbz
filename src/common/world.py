@@ -1,15 +1,17 @@
 import time
-from core.battle import Battle
 from common.config import CheckPoint, Monster
 from core.battle_command_executor import BattleCommandExecutor
 from utils import logger
 from common.app import AppManager
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Tuple, TYPE_CHECKING
 from PIL import Image
 from utils.singleton import singleton
 from utils.sleep_utils import sleep_until, sleep_until_app_running
+
+if TYPE_CHECKING:
+    from core.battle import Battle
 
 @singleton
 class World:
@@ -17,16 +19,18 @@ class World:
     世界地图玩法模块
     负责实现世界地图相关的自动化逻辑
     """
-    def __init__(self, device_manager: DeviceManager, ocr_handler: OCRHandler,battle:Battle, app_manager:AppManager) -> None:
+    def __init__(self, device_manager: DeviceManager, ocr_handler: OCRHandler, battle: 'Battle', app_manager: AppManager) -> None:
         """
         :param device_manager: DeviceManager 实例
         :param ocr_handler: OCRHandler 实例
+        :param battle: Battle 实例
+        :param app_manager: AppManager 实例
         """
         self.app_manager = app_manager
         self.device_manager = device_manager
         self.ocr_handler = ocr_handler
         self.battle = battle
-        self.battle_executor = BattleCommandExecutor(battle,self)
+        self.battle_executor = BattleCommandExecutor(battle, self)
         self.monsters = []
         self.monster_pos = []
         self.default_battle_config = ""
@@ -679,15 +683,16 @@ class World:
     def click_confirm_pos(self):
         self.device_manager.click(800,485)
     
-    def click_confirm(self,image:Image.Image|None=None):
+    def click_confirm(self, image:Image.Image|None=None, click:bool = True):
         if image is None:
             image = self.device_manager.get_screenshot()
         find = self.ocr_handler.match_image(image, "assets/confirm.png")
         if find:
-            logger.debug("检测到按钮-是")
-            self.device_manager.click(find[0],find[1])
-            time.sleep(0.2)
-            logger.debug("点击按钮-是")
+            logger.info("检测到按钮-是")
+            if click:
+                self.device_manager.click(find[0],find[1])
+                time.sleep(0.2)
+                logger.info("点击按钮-是")
             return True
         else:
             return False

@@ -41,6 +41,9 @@ class MemoryMode:
         # 初始化世界对象，包含战斗执行器等核心组件
         self.world = World(device_manager, ocr_handler, self.battle, self.app_manager)
         
+        # 设置Battle的world依赖
+        self.battle.set_world(self.world)
+        
         # 统计信息（仅保留总次数用于进度跟踪）
         self.total_battles = 0
         self.is_running = False
@@ -189,8 +192,6 @@ class MemoryMode:
             logger.error(f"加载战斗脚本时发生异常: {e}", exc_info=True)
             return False
 
-
-
     def _print_final_stats(self):
         """
         输出最终统计信息
@@ -201,8 +202,6 @@ class MemoryMode:
         logger.info(f"总战斗次数: {self.total_battles}")
         logger.info("详细统计信息请查看GUI界面")
         logger.info("=" * 50)
-
-
 
     def _print_current_stats(self, total_count):
         """
