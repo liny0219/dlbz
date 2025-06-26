@@ -460,16 +460,20 @@ class Battle:
         start_time = time.time()
         logger.info(f"[battle]exit_battle in_round")
         time.sleep(0.2)
-        logger.info(f"[battle]exit_battle 点击放弃战斗")
-        self.device_manager.click(592, 658)
-        time.sleep(1)
-        logger.info(f"[battle]exit_battle 选择放弃战斗")
-        self.device_manager.click(800, 485)
-        time.sleep(1)
-        logger.info(f"[battle]exit_battle 确认放弃战斗")
-        self.device_manager.click(800, 485)
-        time.sleep(1)
-        return True
+        if self.in_battle():
+            logger.info(f"[battle]exit_battle 点击放弃战斗")
+            self.device_manager.click(592, 658)
+            time.sleep(1)
+        if self.in_battle():
+            logger.info(f"[battle]exit_battle 选择放弃战斗")
+            self.device_manager.click(800, 485)
+            time.sleep(1)
+        if self.in_battle():
+            logger.info(f"[battle]exit_battle 确认放弃战斗")
+            self.device_manager.click(800, 485)
+            time.sleep(1)
+            return True
+        return False
 
     def switch_back_role(self, image: Optional[Image.Image] = None, timeout:float = 5) -> bool:
         """
@@ -839,6 +843,7 @@ class Battle:
                     break
                 if self.world is not None:
                     self.world.click_confirm()
+                    return True
         return True
             
     def press_in_round(self, timeout: float = 15) -> bool:

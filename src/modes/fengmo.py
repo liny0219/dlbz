@@ -474,6 +474,19 @@ class FengmoMode:
             # 如果为空,则当前点遮挡了地图
             if closest_point: 
                 self.state_data.current_point = closest_point
+            else:
+                logger.info(f"[find_box_phase]小地图未找到标签,可能逢魔之主弹窗被跳过,状态异常")
+                logger.info(f"[find_box_phase]尝试寻找boss")
+                boss_point = self.world.find_map_boss()
+                self.world.closeUI()
+                if boss_point:
+                    logger.info(f"[find_box_phase]找到boss,状态矫正")
+                    self.state_data.step = Step.FIND_BOSS
+                    return
+                else:
+                    logger.info(f"[find_box_phase]小地图未找到boss,状态异常,退出重来")
+                    self.world.exit_fengmo( self.entrance_pos, callback=self.check_enter_fengmo )
+                    return
             if self.state_data.current_point is None:
                 logger.error("[find_box_phase]出现异常,需要排查")
                 raise Exception("[find_box_phase]出现异常,需要排查")
@@ -693,10 +706,13 @@ class FengmoMode:
                 if self.battle.battle_end(screenshot):
                     logger.info(f"[check_info]战斗结算")
                     self.world.dclick_tirm()
-                    if sleep_until(self.battle.battle_award,timeout=1.5):
+                    time.sleep(self.wait_ui_time)
+                    if sleep_until(self.battle.battle_award,timeout=self.wait_map_time):
                         self.world.dclick_tirm()
-                    if sleep_until(self.battle.battle_end,timeout=1.5):
+                        time.sleep(self.wait_ui_time)
+                    if sleep_until(self.battle.battle_end,timeout=self.wait_map_time):
                         self.world.dclick_tirm()
+                        time.sleep(self.wait_ui_time)
                         return
                 region = (80, 0, 1280, 720)
                 results = self.ocr_handler.recognize_text(region=region, image=screenshot)
@@ -734,7 +750,7 @@ class FengmoMode:
                         self.device_manager.click(640, 600)
                         break
                     if "将重置进行状况" in text:
-                        logger.info(f"[check_info]找到逢魔入口重置进行状况,点击确认")
+                        logger.info(f"[check_info]找到逢魔入口,退出点击确认")
                         time.sleep(1)
                         self.world.click_confirm_pos()
                         state_data.map_fail = True

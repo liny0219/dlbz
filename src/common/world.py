@@ -44,18 +44,20 @@ class World:
         self.app_manager.close_app()
         if show_log:
             logger.info(f"[read_map_state]读取界面状态")
-        max_count = 3
+        max_count = 2
         count = 0
         while count < max_count:
             time.sleep(1)
-            if self.in_world():
+            in_world = self.in_world()
+            if in_world:
                 count += 1
             else:
                 count = 0
-            self.app_manager.start_app()
-            self.device_manager.click(100,100)
-            if show_log:
-                logger.info('点击开始.等待进入游戏界面')
+            if not in_world:
+                self.app_manager.start_app()
+                self.device_manager.click(100,100)
+                if show_log:
+                    logger.info('点击开始.等待进入游戏界面')
             
 
     def restart_wait_in_fengmo_world(self,show_log:bool=False):
@@ -389,6 +391,44 @@ class World:
         logger.debug("点击旅馆门口")
         self.device_manager.click(*door_pos)
         return 'rest_in_inn'
+    
+    def exit_fengmo(self,entrance_pos:list[int],wait_time:float=0.2,callback:Callable[[], str|None]|None = None):
+        """
+        退出逢魔
+        """
+        logger.info(f"[exit_fengmo]检查是否在城镇")
+        in_world = sleep_until(self.in_world)
+        if not in_world:
+            logger.debug("不在城镇中")
+            return False
+        while True:
+            time.sleep(0.2)
+            logger.debug("打开小地图")
+            self.open_minimap()
+            logger.debug("等待小地图")
+            in_minimap = self.in_minimap()
+            if not in_minimap:
+                continue
+            else:
+                logger.debug("在小地图中")
+                break
+        self.open_minimap()
+        in_minimap = sleep_until(self.in_minimap)
+        if not in_minimap:
+            return False
+        logger.info(f"[go_fengmo]点击小地图: {entrance_pos}")
+        self.device_manager.click(*entrance_pos)
+        self.in_world_or_battle()
+        time.sleep(wait_time)
+        # 寻找逢魔入口
+        fengmo_pos = sleep_until(self.find_fengmo_point,function_name=f"exit_fengmo 寻找逢魔入口 {entrance_pos}")
+        if fengmo_pos is None:
+            return False
+        logger.info(f"[go_fengmo]点击逢魔入口: {fengmo_pos}")
+        self.device_manager.click(*fengmo_pos[:2])
+        sleep_until(callback,function_name=f"exit_fengmo 回调 {entrance_pos}")
+        self.in_world_or_battle()
+        return True
 
     def go_fengmo(self,depth:int,entrance_pos:list[int],wait_time:float=0.2,callback:Callable[[], str|None]|None = None) -> bool:
         """

@@ -289,9 +289,11 @@ class DailyMode:
             
             # OCR识别目标数量
             ocr_result = self.ocr_handler.recognize_text(screenshot, ocr_region, rec_char_type='digit')
-            
-            # 检查OCR结果
-            if ocr_result is not None and len(ocr_result) > 0:
+
+            if ocr_result is None or len(ocr_result) == 0:
+                logger.error("无法识别目标数量")
+                return False
+            else:
                 for line in ocr_result:
                     logger.info(f"找到{huatian_name}目标数量: {line['text']}")
                     if target_count_str in line['text']:
@@ -380,7 +382,10 @@ class DailyMode:
                 # OCR识别目标数量
                 ocr_result = self.ocr_handler.recognize_text(screenshot, ocr_region, rec_char_type='digit')
                 
-                if ocr_result is not None and len(ocr_result) > 0:
+                if ocr_result is None or len(ocr_result) == 0:
+                    logger.error("无法识别目标数量")
+                    return False
+                else:
                     for line in ocr_result:
                         logger.info(f"找到果炎目标数量: {line['text']}")
                         if target_count_str in line['text']:
