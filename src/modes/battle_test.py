@@ -49,7 +49,7 @@ class BattleTestMode:
         # 初始化核心组件
         self.app_manager = AppManager(device_manager)
         self.battle = Battle(device_manager, ocr_handler, self.app_manager)
-        self.world = World(device_manager, ocr_handler, self.battle, self.app_manager)
+        self.world = World(device_manager, ocr_handler, self.app_manager)
         
         # 设置Battle的world依赖
         self.battle.set_world(self.world)

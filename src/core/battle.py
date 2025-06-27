@@ -28,7 +28,8 @@ class Battle:
         self.app_manager = app_manager
         self.device_manager = device_manager
         self.ocr_handler = ocr_handler
-        self.world: Optional['World'] = None  # 可选依赖，通过setWorld方法设置
+        # 移除对World的直接依赖，改为通过服务定位器获取
+        self.world: Optional['World'] = None  # 延迟初始化
         self.extra_skill_bp_pos = (570, 305)
         self.extra_bp_offset_x = [0, 778, 895, 982]
         self.role_base_pos = (1100, 80)
@@ -55,10 +56,21 @@ class Battle:
         self.wait_done_timeout = config.battle.wait_done_timeout
         self.boost_timeout = config.battle.boost_timeout
         self.switch_all_timeout = config.battle.switch_all_timeout
-
+        
+        # 注册到服务定位器
+        from utils.service_locator import register_service
+        register_service("battle", self, type(self))
+    
+    def _get_world(self):
+        """
+        通过服务定位器获取World实例
+        """
+        from utils.service_locator import get_typed_service
+        return get_typed_service("world")
+    
     def set_world(self, world: 'World') -> None:
         """
-        设置World依赖（依赖注入）
+        设置World依赖（依赖注入）- 保持向后兼容
         :param world: World实例
         """
         self.world = world
@@ -80,7 +92,8 @@ class Battle:
         ]
         # 批量判断
         results = self.ocr_handler.match_point_color(image, points_colors)
-        if results and self.world is not None and self.world.click_confirm_yes(image, click=False):
+        world = self.world or self._get_world()
+        if results and world and world.click_confirm_yes(image, click=False):
             logger.debug("检测到在战斗回合中全灭")
             time.sleep(self.wait_time)
             return True
@@ -828,13 +841,14 @@ class Battle:
     def check_battle_fail(self, image: Image.Image|None = None, type = 'tip'):
         if image is None:
            image = self.device_manager.get_screenshot()
-        if self.world is None:
+        world = self.world or self._get_world()
+        if not world:
             return False
         if not self.all_dead(image):
             return False
         logger.info(f"[check_battle_fail]检测到被全灭")
         start_time = time.time()
-        while not self.world.in_world():
+        while not world.in_world():
             if time.time() - start_time > 10:
                 logger.info(f"[check_battle_fail]全灭返回世界超时")
                 return False
@@ -846,8 +860,7 @@ class Battle:
             time.sleep(0.5)
             if type == 'tip':
                 logger.info(f"[check_battle_fail]tip confirm")
-                if self.world is not None:
-                    self.world.click_confirm_yes()
+                world.click_confirm_yes()
         return True
     
     def press_in_round(self, timeout: float = 15) -> bool:

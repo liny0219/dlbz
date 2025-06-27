@@ -52,8 +52,16 @@ class MemoryMonitor:
             return
             
         self.monitoring = False
-        if self.monitor_thread:
+        if self.monitor_thread and self.monitor_thread.is_alive():
             self.monitor_thread.join(timeout=5)
+            if self.monitor_thread.is_alive():
+                logger.warning("内存监控线程未能在5秒内退出")
+            else:
+                logger.info("内存监控线程已正常退出")
+        
+        # 清理资源
+        self.memory_history.clear()
+        self.callbacks.clear()
         logger.info("内存监控已停止")
     
     def add_callback(self, callback: Callable[[Dict], None]):
@@ -163,6 +171,59 @@ class MemoryMonitor:
             },
             'gc_stats': gc_stats,
             'gc_counts': gc.get_count(),
+        }
+    
+    def detect_memory_leak(self) -> Dict:
+        """
+        检测内存泄漏
+        
+        :return: 内存泄漏检测结果
+        """
+        if len(self.memory_history) < 10:  # 需要足够的历史数据
+            return {'leak_detected': False, 'reason': '历史数据不足'}
+        
+        # 计算最近10次检查的内存增长趋势
+        recent_history = self.memory_history[-10:]
+        rss_values = [entry['rss_mb'] for entry in recent_history]
+        
+        # 计算线性回归斜率
+        x = list(range(len(rss_values)))
+        n = len(x)
+        sum_x = sum(x)
+        sum_y = sum(rss_values)
+        sum_xy = sum(x[i] * rss_values[i] for i in range(n))
+        sum_x2 = sum(x[i] * x[i] for i in range(n))
+        
+        if n * sum_x2 - sum_x * sum_x == 0:
+            slope = 0
+        else:
+            slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
+        
+        # 计算内存增长总量
+        total_growth = rss_values[-1] - rss_values[0]
+        
+        # 判断是否存在内存泄漏
+        leak_detected = False
+        leak_reason = ""
+        
+        if slope > 5.0:  # 每次检查增长超过5MB
+            leak_detected = True
+            leak_reason = f"内存持续增长，斜率: {slope:.2f}MB/次"
+        elif total_growth > 50.0:  # 总增长超过50MB
+            leak_detected = True
+            leak_reason = f"内存总增长过大: {total_growth:.1f}MB"
+        elif rss_values[-1] > 500.0:  # 内存使用超过500MB
+            leak_detected = True
+            leak_reason = f"内存使用过高: {rss_values[-1]:.1f}MB"
+        
+        return {
+            'leak_detected': leak_detected,
+            'reason': leak_reason,
+            'slope': slope,
+            'total_growth': total_growth,
+            'current_memory': rss_values[-1],
+            'growth_rate_mb_per_check': slope,
+            'history_count': len(self.memory_history)
         }
 
 # 全局内存监控实例

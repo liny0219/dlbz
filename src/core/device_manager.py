@@ -101,6 +101,9 @@ class DeviceManager:
                     # OpenCV格式转换为PIL格式
                     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                     pil_img = Image.fromarray(img_rgb)
+                    # 及时释放OpenCV图像对象
+                    del img
+                    del img_rgb
                     return pil_img
                 elif isinstance(img, Image.Image):
                     return img
@@ -114,6 +117,12 @@ class DeviceManager:
         except Exception as e:
             logger.error(f"Error getting screenshot: {e}")
             return None
+        finally:
+            # 强制垃圾回收图像相关对象
+            if 'img' in locals():
+                del img
+            if 'img_rgb' in locals():
+                del img_rgb
 
     def get_screenshot_region(self, x1: int, y1: int, x2: int, y2: int) -> Optional[Image.Image]:
         """

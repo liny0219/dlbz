@@ -70,6 +70,10 @@ class MainWindow(tk.Tk):
         # 设备管理器只初始化一次
         self.device_manager = DeviceManager()
         self.device_manager.connect_device()
+        
+        # 初始化服务定位器并注册核心组件
+        self._init_service_locator()
+        
         self._build_menu()
         self._build_main_frame()
         self.settings_panel = SettingsPanel(self, config_files, self.save_settings)
@@ -91,6 +95,37 @@ class MainWindow(tk.Tk):
         # 启动自动内存优化
         self.start_memory_optimization()
 
+    def _init_service_locator(self):
+        """初始化服务定位器并注册核心组件"""
+        try:
+            from utils.service_locator import register_service
+            from core.ocr_handler import OCRHandler
+            from common.app import AppManager
+            from core.battle import Battle
+            from common.world import World
+            
+            # 创建并注册核心组件
+            self.ocr_handler = OCRHandler(self.device_manager)
+            self.app_manager = AppManager(self.device_manager)
+            
+            # 注册到服务定位器
+            register_service("device_manager", self.device_manager, DeviceManager)
+            register_service("ocr_handler", self.ocr_handler, OCRHandler)
+            register_service("app_manager", self.app_manager, AppManager)
+            
+            # 创建Battle和World实例（它们会自动注册到服务定位器）
+            self.battle = Battle(self.device_manager, self.ocr_handler, self.app_manager)
+            self.world = World(self.device_manager, self.ocr_handler, self.app_manager)
+            
+            # 设置Battle的World依赖（保持向后兼容）
+            self.battle.set_world(self.world)
+            
+            self.logger.info("服务定位器初始化完成")
+            
+        except Exception as e:
+            self.logger.error(f"初始化服务定位器失败: {e}")
+            raise
+
     def start_memory_monitoring(self):
         """启动内存监控"""
         try:
@@ -111,7 +146,14 @@ class MainWindow(tk.Tk):
 
     def _cleanup_on_exit(self):
         """程序退出时的清理函数"""
-        self.logger.info("程序退出，清理所有进程...")
+        self.logger.info("程序退出，清理所有资源...")
+        
+        # 清理文件句柄
+        try:
+            from utils.file_handle_manager import cleanup_file_handle_manager
+            cleanup_file_handle_manager()
+        except Exception as e:
+            self.logger.error(f"清理文件句柄失败: {e}")
         
         # 停止内存监控
         try:

@@ -15,116 +15,58 @@ import threading
 import concurrent.futures
 import gc
 from functools import lru_cache
+import logging
 
 class OCRHandler:
     def __init__(self, device_manager: DeviceManager, model_dir: Optional[str] = None, show_logger:bool = False) -> None:
-        if model_dir is None:
-            # 获取项目根目录
-            root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-            # 判断是否在开发环境（是否存在 src 目录）
-            if os.path.exists(os.path.join(root_dir, "src")):
-                # 开发环境：使用 src 平级的 ocr/model 目录
-                base_dir = os.path.join(root_dir, "ocr", "model")
-            else:
-                # 生产环境：使用相对路径 ocr/model 目录
-                base_dir = os.path.join("ocr", "model")
-            
-            # 为中文模型设置子目录
-            ch_det_model_dir = os.path.join(base_dir, "whl", "det", "ch", "ch_PP-OCRv4_det_infer")
-            ch_rec_model_dir = os.path.join(base_dir, "whl", "rec", "ch", "ch_PP-OCRv4_rec_infer")
-            ch_cls_model_dir = os.path.join(base_dir, "whl", "cls", "ch_ppocr_mobile_v2.0_cls_infer")
-            
-            # 为英文模型设置子目录
-            en_det_model_dir = os.path.join(base_dir, "whl", "det", "en", "en_PP-OCRv3_det_infer")
-            en_rec_model_dir = os.path.join(base_dir, "whl", "rec", "en", "en_PP-OCRv3_rec_infer")
-            en_cls_model_dir = os.path.join(base_dir, "whl", "cls", "ch_ppocr_mobile_v2.0_cls_infer")
-            
-            # 创建所有必要的目录
-            for dir_path in [ch_det_model_dir, ch_rec_model_dir, ch_cls_model_dir, 
-                           en_det_model_dir, en_rec_model_dir, en_cls_model_dir]:
-                os.makedirs(dir_path, exist_ok=True)
-        else:
-            # 如果提供了自定义路径，也使用相同的子目录结构
-            ch_det_model_dir = os.path.join(model_dir, "whl", "det", "ch", "ch_PP-OCRv4_det_infer")
-            ch_rec_model_dir = os.path.join(model_dir, "whl", "rec", "ch", "ch_PP-OCRv4_rec_infer")
-            ch_cls_model_dir = os.path.join(model_dir, "whl", "cls", "ch_ppocr_mobile_v2.0_cls_infer")
-            
-            en_det_model_dir = os.path.join(model_dir, "whl", "det", "en", "en_PP-OCRv3_det_infer")
-            en_rec_model_dir = os.path.join(model_dir, "whl", "rec", "en", "en_PP-OCRv3_rec_infer")
-            en_cls_model_dir = os.path.join(model_dir, "whl", "cls", "ch_ppocr_mobile_v2.0_cls_infer")
-
-        if show_logger:    
-            # 输出模型目录信息
-            logger.info("OCR模型目录配置:")
-            logger.info(f"中文模型:")
-            logger.info(f"  - 检测模型: {ch_det_model_dir}")
-            logger.info(f"  - 识别模型: {ch_rec_model_dir}")
-            logger.info(f"  - 分类模型: {ch_cls_model_dir}")
-            logger.info(f"英文模型:")
-            logger.info(f"  - 检测模型: {en_det_model_dir}")
-            logger.info(f"  - 识别模型: {en_rec_model_dir}")
-            logger.info(f"  - 分类模型: {en_cls_model_dir}")
-            
-        # 初始化中文OCR
-        self.ocr = PaddleOCR(
-            use_angle_cls=config.ocr.use_angle_cls,
-            lang=config.ocr.lang,
-            show_log=False,
-            det_model_dir=ch_det_model_dir,
-            rec_model_dir=ch_rec_model_dir,
-            cls_model_dir=ch_cls_model_dir
-        )
-        # 初始化英文数字OCR
-        self.ocr_digit = PaddleOCR(
-            rec_char_type='digit',
-            use_angle_cls=config.ocr.use_angle_cls,
-            lang='en',
-            det_model_dir=en_det_model_dir,
-            rec_model_dir=en_rec_model_dir,
-            cls_model_dir=en_cls_model_dir
-        )
+        """
+        初始化OCR处理器
+        :param device_manager: 设备管理器
+        :param model_dir: OCR模型目录
+        :param show_logger: 是否显示PaddleOCR日志
+        """
         self.device_manager = device_manager
+        
+        # 设置PaddleOCR日志级别
+        if not show_logger:
+            logging.getLogger("PaddleOCR").setLevel(logging.ERROR)
+        
+        # 初始化OCR模型
+        if model_dir is None:
+            model_dir = os.path.join(os.path.dirname(__file__), "..", "..", "ocr", "model")
+        
+        try:
+            # 初始化PaddleOCR
+            self.ocr = PaddleOCR(
+                use_angle_cls=True,
+                lang='ch',
+                det_model_dir=os.path.join(model_dir, "whl", "det", "ch", "ch_PP-OCRv4_det_infer"),
+                rec_model_dir=os.path.join(model_dir, "whl", "rec", "ch", "ch_PP-OCRv4_rec_infer"),
+                cls_model_dir=os.path.join(model_dir, "whl", "cls", "ch_ppocr_mobile_v2.0_cls_infer"),
+                show_log=False
+            )
+            
+            # 初始化数字识别模型
+            self.ocr_digit = PaddleOCR(
+                use_angle_cls=True,
+                lang='en',
+                det_model_dir=os.path.join(model_dir, "whl", "det", "en", "en_PP-OCRv3_det_infer"),
+                rec_model_dir=os.path.join(model_dir, "whl", "rec", "en", "en_PP-OCRv3_rec_infer"),
+                cls_model_dir=os.path.join(model_dir, "whl", "cls", "ch_ppocr_mobile_v2.0_cls_infer"),
+                show_log=False
+            )
+            
+            logger.info("OCR模型初始化成功")
+            
+        except Exception as e:
+            logger.error(f"OCR模型初始化失败: {e}")
+            raise
+        
         self.ocr_lock = threading.Lock()  # 新增：OCR推理锁
-        
-        # 添加OCR结果缓存
-        self._ocr_cache = {}
-        self._cache_max_size = 50  # 最大缓存条目数
-        self._cache_hits = 0
-        self._cache_misses = 0
-        
-        logger.debug("OCR handler initialized")
-
-    def _cleanup_cache(self):
-        """清理OCR缓存"""
-        self._ocr_cache.clear()
-        self._cache_hits = 0
-        self._cache_misses = 0
-        gc.collect()
-        logger.debug("OCR缓存已清理")
-
-    def _get_cache_key(self, image, region=None, threshold=0.8):
-        """生成缓存键"""
-        if isinstance(image, str):
-            # 如果是文件路径，使用文件路径和修改时间
-            try:
-                mtime = os.path.getmtime(image)
-                return f"file:{image}:{mtime}:{region}:{threshold}"
-            except:
-                return f"file:{image}:{region}:{threshold}"
-        elif isinstance(image, np.ndarray):
-            # 对于numpy数组，使用形状和前几个像素值作为键
-            shape = image.shape
-            if len(shape) >= 2:
-                # 使用图像中心点的RGB值作为特征
-                h, w = shape[:2]
-                center_pixel = image[h//2, w//2]
-                return f"array:{shape}:{center_pixel}:{region}:{threshold}"
-        return None
 
     def cleanup(self):
         """清理OCR处理器资源"""
         logger.info("清理OCR处理器资源...")
-        self._cleanup_cache()
         
         # 清理OCR模型（PaddleOCR没有显式的清理方法，但可以删除引用）
         if hasattr(self, 'ocr'):
@@ -145,18 +87,27 @@ class OCRHandler:
     ) -> bool:
         """
         检查截图OCR结果中是否全部匹配给定文案数组
-        :param image: 支持 PIL.Image、OpenCV numpy.ndarray、图片路径
         :param keywords: 需要匹配的文案字符串数组
-        :param threshold: 可信度阈值（可选，默认用配置）
-        :param region: (x1, y1, x2, y2) 可选，指定识别区域坐标，默认全屏
+        :param image: 支持 PIL.Image、OpenCV numpy.ndarray、图片路径
+        :param region: 可选，(x1, y1, x2, y2) 指定识别区域坐标，默认全屏
+        :param threshold: 可信度阈值
         :return: bool，是否全部匹配
         """
-        processed_image = None
         original_image = image
+        processed_image = None
+        
         try:
+            # 自动截图
             if image is None:
+                if not hasattr(self, "device_manager"):
+                    logger.error("OCRHandler未绑定device_manager，无法截图")
+                    return False
                 image = self.device_manager.get_screenshot()
-            # 裁剪区域
+            if image is None:
+                logger.warning("无法获取截图，无法进行文本匹配")
+                return False
+
+            # 区域裁剪
             if region is not None:
                 if isinstance(image, Image.Image):
                     processed_image = image.crop(region)
@@ -200,6 +151,9 @@ class OCRHandler:
         finally:
             # 及时释放图像对象，避免内存泄漏
             if processed_image is not None and processed_image is not original_image:
+                del processed_image
+            # 强制垃圾回收图像相关对象
+            if 'processed_image' in locals():
                 del processed_image
 
     def match_click_text(

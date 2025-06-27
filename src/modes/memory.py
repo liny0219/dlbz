@@ -39,7 +39,7 @@ class MemoryMode:
         self.battle = Battle(device_manager, ocr_handler, self.app_manager)
         
         # 初始化世界对象，包含战斗执行器等核心组件
-        self.world = World(device_manager, ocr_handler, self.battle, self.app_manager)
+        self.world = World(device_manager, ocr_handler, self.app_manager)
         
         # 设置Battle的world依赖
         self.battle.set_world(self.world)

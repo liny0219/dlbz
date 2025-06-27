@@ -5,6 +5,7 @@ from utils.get_asset_path import get_asset_path
 from typing import Dict, List, TypedDict, Optional, Union
 import logging
 import time
+from utils import logger
 
 # 兼容旧接口，返回config目录绝对路径
 def get_config_dir():
@@ -32,11 +33,18 @@ class ConfigCache:
                 del self._cache_times[file_path]
         return None
     
-    def set(self, file_path: str, data: Dict):
-        """设置缓存"""
-        # 检查缓存大小限制
+    def set(self, file_path: str, data: Dict) -> None:
+        """设置缓存数据"""
+        # 检查缓存大小，如果超过限制，清理更多旧条目
         if len(self._cache) >= self._max_cache_size:
-            self._evict_oldest()
+            # 清理一半的缓存条目，而不是只清理一个
+            items_to_remove = len(self._cache) // 2
+            sorted_items = sorted(self._cache_times.items(), key=lambda x: x[1])
+            for i in range(items_to_remove):
+                oldest_file = sorted_items[i][0]
+                del self._cache[oldest_file]
+                del self._cache_times[oldest_file]
+            logger.debug(f"配置缓存清理了 {items_to_remove} 个旧条目")
         
         self._cache[file_path] = data
         self._cache_times[file_path] = time.time()

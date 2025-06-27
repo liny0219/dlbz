@@ -144,7 +144,7 @@ class FengmoMode:
         self.ocr_handler = ocr_handler
         self.app_manager = AppManager(device_manager)
         self.battle = Battle(device_manager, ocr_handler, self.app_manager)
-        self.world = World(device_manager, ocr_handler, self.battle, self.app_manager)
+        self.world = World(device_manager, ocr_handler, self.app_manager)
         self.log_queue = log_queue  # 添加日志队列属性
         self.fengmo_config = config.fengmo
         self.city_name = self.fengmo_config.city

@@ -93,6 +93,13 @@ def setup_logger(append_log_func=None, log_format=None, datefmt=None, cleanup_on
     :param cleanup_on_start: 是否在启动时检查并清理日志目录
     :param enable_file_log: 是否启用文件日志写入，默认True
     """
+    # 获取文件句柄管理器
+    try:
+        from utils.file_handle_manager import get_file_handle_manager
+        file_manager = get_file_handle_manager()
+    except ImportError:
+        file_manager = None
+    
     # 在设置日志前先检查并清理日志目录
     if cleanup_on_start:
         cleanup_logs_dir()
@@ -123,6 +130,11 @@ def setup_logger(append_log_func=None, log_format=None, datefmt=None, cleanup_on
         file_handler = logging.FileHandler(log_file_path, encoding="utf-8")
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
+        
+        # 注册到文件句柄管理器
+        if file_manager:
+            file_manager.register_file_handler(file_handler)
+        
         # 记录日志系统启动信息
         logger.info(f"日志系统已启动，日志文件: {log_file_path}")
     else:
@@ -140,6 +152,60 @@ def setup_logger(append_log_func=None, log_format=None, datefmt=None, cleanup_on
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logger.propagate = False
+    
+    return logger
+
+def setup_logger_with_file_manager(log_queue, log_level, prefix="main"):
+    """
+    带文件句柄管理的日志配置函数
+    
+    :param log_queue: 日志队列
+    :param log_level: 日志级别
+    :param prefix: 日志文件前缀
+    :return: 配置的logger
+    """
+    from utils.file_handle_manager import get_file_handle_manager
+    from common.config import config
+    
+    file_manager = get_file_handle_manager()
+    
+    # 配置根logger
+    root_logger = logging.getLogger()
+    for h in root_logger.handlers[:]:
+        root_logger.removeHandler(h)
+    
+    # 读取配置文件的日志格式
+    log_format, datefmt = config.get_logging_format_and_datefmt(config.logging.format, getattr(config.logging, 'datefmt', None))
+    formatter = config.get_no_millisec_formatter(log_format, datefmt)
+    
+    # 配置队列handler（发送到主进程GUI）
+    if log_queue:
+        from gui.main_window import QueueLogHandler
+        queue_handler = QueueLogHandler(log_queue)
+        queue_handler.setLevel(logging.NOTSET)
+        queue_handler.setFormatter(formatter)
+        root_logger.addHandler(queue_handler)
+    
+    # 配置文件handler（写入本地日志文件）
+    logs_dir = "logs"
+    os.makedirs(logs_dir, exist_ok=True)
+    log_file_path = get_log_file_path(logs_dir, prefix)
+    file_handler = logging.FileHandler(log_file_path, encoding="utf-8")
+    file_handler.setFormatter(formatter)
+    root_logger.addHandler(file_handler)
+    
+    # 注册到文件句柄管理器
+    file_manager.register_file_handler(file_handler)
+    
+    # 设置日志级别
+    level = getattr(logging, str(log_level).upper(), logging.INFO)
+    root_logger.setLevel(level)
+    
+    # 同步dldbz logger
+    logger = logging.getLogger("dldbz")
+    logger.setLevel(level)
+    logger.handlers.clear()
+    logger.propagate = True
     
     return logger
 

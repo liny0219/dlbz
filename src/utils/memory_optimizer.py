@@ -47,8 +47,15 @@ class MemoryOptimizer:
             return
             
         self.optimizing = False
-        if self.optimize_thread:
+        if self.optimize_thread and self.optimize_thread.is_alive():
             self.optimize_thread.join(timeout=5)
+            if self.optimize_thread.is_alive():
+                logger.warning("内存优化线程未能在5秒内退出")
+            else:
+                logger.info("内存优化线程已正常退出")
+        
+        # 清理资源
+        self.optimization_callbacks.clear()
         logger.info("自动内存优化已停止")
     
     def add_optimization_callback(self, callback: Callable[[Dict], None]):

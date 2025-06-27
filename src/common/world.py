@@ -19,21 +19,42 @@ class World:
     世界地图玩法模块
     负责实现世界地图相关的自动化逻辑
     """
-    def __init__(self, device_manager: DeviceManager, ocr_handler: OCRHandler, battle: 'Battle', app_manager: AppManager) -> None:
+    def __init__(self, device_manager: DeviceManager, ocr_handler: OCRHandler, app_manager: AppManager) -> None:
         """
         :param device_manager: DeviceManager 实例
         :param ocr_handler: OCRHandler 实例
-        :param battle: Battle 实例
         :param app_manager: AppManager 实例
         """
         self.app_manager = app_manager
         self.device_manager = device_manager
         self.ocr_handler = ocr_handler
-        self.battle = battle
-        self.battle_executor = BattleCommandExecutor(battle, self)
+        # 移除对Battle的直接依赖，改为通过服务定位器获取
+        self.battle_executor = None  # 延迟初始化
         self.monsters = []
         self.monster_pos = []
         self.default_battle_config = ""
+        
+        # 注册到服务定位器
+        from utils.service_locator import register_service
+        register_service("world", self, type(self))
+    
+    def _get_battle(self):
+        """
+        通过服务定位器获取Battle实例
+        """
+        from utils.service_locator import get_typed_service
+        return get_typed_service("battle")
+    
+    def _get_battle_executor(self):
+        """
+        获取或创建BattleCommandExecutor实例
+        """
+        if self.battle_executor is None:
+            battle = self._get_battle()
+            if battle is not None:
+                from core.battle_command_executor import BattleCommandExecutor
+                self.battle_executor = BattleCommandExecutor(battle, self)
+        return self.battle_executor
     
     def set_monsters(self,monster_pos:list[tuple[int, int]],monsters:list[Monster],default_battle_config:str=""):
         self.monster_pos= monster_pos
@@ -682,9 +703,10 @@ class World:
                 if self.in_world(image):
                     logger.debug("[in_world_or_battle]小镇中")
                     return "in_world"
-                if self.battle.in_battle(image):
+                battle = self._get_battle()
+                if battle and battle.in_battle(image):
                     logger.debug("[in_world_or_battle]战斗中")
-                    if self.battle.check_battle_fail(image):
+                    if battle.check_battle_fail(image):
                         return "battle_fail"
                     return "in_battle"
                 else:
@@ -695,7 +717,7 @@ class World:
 
         
     def in_world_or_battle(self, callback:Callable[[Image.Image], None]|None=None, check_battle_command_done:bool|None=None,
-                           is_battle_success:bool|None=None,has_battle:bool|None=None)-> dict[str,bool|str]|None:
+                           is_battle_success:bool|None=None,has_battle:bool|None=None)-> dict[str,bool]|None:
         logger.debug("[in_world_or_battle]开始检查")
         
         if check_battle_command_done is None:
@@ -735,23 +757,27 @@ class World:
             elif check_in_world == "in_battle":
                 logger.debug("战斗场景中")
                 has_battle = True
-                if not check_battle_command_done and self.battle.in_round():
+                battle = self._get_battle()
+                battle_executor = self._get_battle_executor()
+                if not check_battle_command_done and battle and battle.in_round():
                     logger.info("执行战斗场景")
-                    monster = self.battle.find_enemy_ocr(self.monster_pos, self.monsters)
+                    monster = battle.find_enemy_ocr(self.monster_pos, self.monsters)
                     if monster is None:
                         logger.info("没有识别到敌人,使用默认战斗配置")
-                        is_battle_success = self.do_default_battle()['result']
-                    if monster:
-                        loadConfig = self.battle_executor.load_commands_from_txt(monster.battle_config)
+                        battle_result = self.do_default_battle()
+                        is_battle_success = bool(battle_result.get('result', False))
+                    if monster and battle_executor:
+                        loadConfig = battle_executor.load_commands_from_txt(monster.battle_config)
                         if not loadConfig:
                             logger.info("没有找到匹配敌人的战斗配置")
-                            is_battle_success = self.do_default_battle()['result']
+                            battle_result = self.do_default_battle()
+                            is_battle_success = bool(battle_result.get('result', False))
                         else:
                             logger.info("使用匹配敌人的战斗配置")
-                            is_battle_success = self.battle_executor.execute_all()['success']
+                            is_battle_success = bool(battle_executor.execute_all().get('success', False))
                     check_battle_command_done = True
-                if check_battle_command_done and self.battle.in_round():
-                    self.battle.auto_battle()
+                if check_battle_command_done and battle and battle.in_round():
+                    battle.auto_battle()
             else:
                 logger.info("异常")
                 return None
@@ -760,14 +786,28 @@ class World:
         """
         执行默认战斗
         """
-        loadConfig = self.battle_executor.load_commands_from_txt(self.default_battle_config)
+        battle_executor = self._get_battle_executor()
+        if not battle_executor:
+            battle = self._get_battle()
+            if battle:
+                logger.info("没有默认战斗配置,使用委托战斗")
+                battle.auto_battle()
+                return { "type": "auto_battle", "result": True}
+            else:
+                return { "type": "error", "result": False}
+        
+        loadConfig = battle_executor.load_commands_from_txt(self.default_battle_config)
         if not loadConfig:
-            logger.info("没有默认战斗配置,使用委托战斗")
-            self.battle.auto_battle()
-            return { "type": "auto_battle", "result": True}
+            battle = self._get_battle()
+            if battle:
+                logger.info("没有默认战斗配置,使用委托战斗")
+                battle.auto_battle()
+                return { "type": "auto_battle", "result": True}
+            else:
+                return { "type": "error", "result": False}
         else:
             logger.info("使用默认战斗配置")
-            result = self.battle_executor.execute_all()['success']
+            result = battle_executor.execute_all()['success']
             return { "type": "battle_executor", "result": result}
 
     def open_minimap(self):
