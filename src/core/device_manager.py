@@ -22,13 +22,30 @@ class DeviceManager:
     def cleanup(self):
         """清理设备管理器资源"""
         logger.info("清理设备管理器资源...")
-        if self.device:
-            try:
+        try:
+            if self.device:
                 # 关闭设备连接
+                try:
+                    # 尝试停止所有应用
+                    if hasattr(self.device, 'app_stop_all'):
+                        self.device.app_stop_all()
+                except Exception as e:
+                    logger.warning(f"停止应用时发生异常: {e}")
+                
+                # 清理设备引用
                 self.device = None
-            except Exception as e:
-                logger.warning(f"关闭设备连接时发生异常: {e}")
-        logger.info("设备管理器资源清理完成")
+            
+            # 清理配置引用
+            if hasattr(self, 'config'):
+                del self.config
+            
+            # 强制垃圾回收
+            gc.collect()
+            
+        except Exception as e:
+            logger.warning(f"清理设备管理器资源时发生异常: {e}")
+        finally:
+            logger.info("设备管理器资源清理完成")
     
     def connect_device(self, device_id: Optional[str] = None) -> bool:
         """

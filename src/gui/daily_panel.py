@@ -1,21 +1,19 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox
 import os
-import subprocess
-import multiprocessing
 import datetime
-import time
 from common.config import get_config_dir
 from utils.yaml_helper import save_yaml_with_type
 import yaml
 import logging
 import os
 import traceback
-import time
 from common.config import config
 from utils.logger import get_log_file_path
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
+from utils.process_manager import get_process_manager
+from utils.game_mutex_manager import get_game_mutex_manager
 
 class DailyPanel(ttk.Frame):
     """
@@ -26,6 +24,10 @@ class DailyPanel(ttk.Frame):
         super().__init__(parent, *args, **kwargs)
         self.parent = parent
         self.config_file = "daily.yaml"
+        
+        # 初始化进程管理器和游戏互斥管理器
+        self.process_manager = get_process_manager()
+        self.game_mutex_manager = get_game_mutex_manager()
         
         # 进程管理
         self.daily_process = None
@@ -277,31 +279,6 @@ class DailyPanel(ttk.Frame):
             messagebox.showwarning("提示", "请至少启用一个日常功能！")
             return
         
-        # 检查是否有其他玩法在运行
-        if hasattr(self.parent, 'check_running_processes'):
-            is_any_running, running_processes = self.parent.check_running_processes()
-            if is_any_running:
-                running_list = '\n'.join([f"• {process}" for process in running_processes])
-                result = messagebox.askyesno(
-                    "其他玩法正在运行", 
-                    f"检测到以下玩法正在运行:\n\n{running_list}\n\n是否停止所有正在运行的玩法并启动日常玩法？",
-                    icon="warning"
-                )
-                if result:
-                    stopped_processes = self.parent.stop_all_processes()
-                    if stopped_processes:
-                        stopped_list = ', '.join(stopped_processes)
-                        self.log_status(f"已停止: {stopped_list}")
-                    # 等待一小段时间确保进程完全停止
-                    import time
-                    time.sleep(1)
-                else:
-                    return
-        else:
-            if self.daily_process and self.daily_process.is_alive():
-                messagebox.showwarning("提示", "日常玩法已在运行中！")
-                return
-        
         # 自动保存配置
         self.save_config()
         
@@ -321,13 +298,6 @@ class DailyPanel(ttk.Frame):
         
         self.log_status(f"启用的功能: {', '.join(enabled_features)}")
         
-        # 更新按钮状态
-        self._set_daily_running_state()
-        
-        # 创建日志队列和启动进程
-        self.log_queue = multiprocessing.Queue()
-        log_level = getattr(self.parent, 'log_level_var', tk.StringVar(value="INFO")).get()
-        
         # 传递配置参数
         config_params = {
             "huatian_enabled": self.huatian_enabled_var.get(),
@@ -338,14 +308,27 @@ class DailyPanel(ttk.Frame):
             "guoyan_target_count": self.guoyan_target_var.get()
         }
         
-        self.daily_process = multiprocessing.Process(
-            target=run_daily_main,
-            args=(config_params, self.log_queue, log_level)
-        )
-        self.daily_process.start()
+        # 获取日志级别
+        log_level = getattr(self.parent, 'log_level_var', tk.StringVar(value="INFO")).get()
         
-        # 开始轮询日志队列
-        self.after(100, self.poll_daily_log_queue)
+        # 使用游戏互斥管理器启动
+        success, process, queue = self.game_mutex_manager.start_game_safely(
+            game_key="daily_process",
+            target_func=run_daily_main,
+            args=(config_params, None, log_level),  # 先传None，启动后会设置正确的队列
+            parent_widget=self.parent,
+            log_callback=self.log_status
+        )
+        
+        if success:
+            self.daily_process = process
+            self.log_queue = queue
+            # 更新按钮状态
+            self._set_daily_running_state()
+            # 开始轮询日志队列
+            self.after(100, self.poll_daily_log_queue)
+        else:
+            self.log_status("日常玩法启动失败")
 
     def poll_daily_log_queue(self):
         """轮询日常日志队列"""
@@ -374,19 +357,13 @@ class DailyPanel(ttk.Frame):
 
     def stop_daily(self):
         """停止日常玩法"""
-        if not self.daily_process or not self.daily_process.is_alive():
-            self.log_status("日常玩法未在运行")
+        success = self.game_mutex_manager.stop_game_safely(
+            game_key="daily_process",
+            log_callback=self.log_status
+        )
+        
+        if success:
             self._cleanup_daily()
-            return
-            
-        self.log_status("用户请求停止日常玩法")
-        
-        # 强制终止进程
-        self.daily_process.terminate()
-        self.daily_process.join()
-        
-        self.log_status("日常玩法进程已终止")
-        self._cleanup_daily()
 
     def _set_daily_running_state(self):
         """设置日常运行状态"""

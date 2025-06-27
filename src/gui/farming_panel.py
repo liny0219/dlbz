@@ -4,13 +4,13 @@
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox
 import yaml
 import os
 import datetime
-import multiprocessing
-import logging
 from common.config import get_config_dir
+from utils.process_manager import get_process_manager
+from utils.game_mutex_manager import get_game_mutex_manager
 
 
 class FarmingPanel(ttk.Frame):
@@ -21,6 +21,10 @@ class FarmingPanel(ttk.Frame):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
         self.parent = parent
+        
+        # 初始化进程管理器和游戏互斥管理器
+        self.process_manager = get_process_manager()
+        self.game_mutex_manager = get_game_mutex_manager()
         
         # 进程相关
         self.farming_process = None
@@ -132,32 +136,6 @@ class FarmingPanel(ttk.Frame):
 
     def start_farming(self):
         """开始刷野"""
-        # 检查是否有其他玩法在运行
-        if hasattr(self.parent, 'check_running_processes'):
-            is_any_running, running_processes = self.parent.check_running_processes()
-            if is_any_running:
-                running_list = '\n'.join([f"• {process}" for process in running_processes])
-                result = messagebox.askyesno(
-                    "其他玩法正在运行", 
-                    f"检测到以下玩法正在运行:\n\n{running_list}\n\n是否停止所有正在运行的玩法并启动刷野？",
-                    icon="warning"
-                )
-                if result:
-                    stopped_processes = self.parent.stop_all_processes()
-                    if stopped_processes:
-                        stopped_list = ', '.join(stopped_processes)
-                        self.log_status(f"已停止: {stopped_list}")
-                    # 等待一小段时间确保进程完全停止
-                    import time
-                    time.sleep(1)
-                else:
-                    return
-        else:
-            # 检查是否已有进程在运行
-            if self.farming_process and hasattr(self.farming_process, 'is_alive') and self.farming_process.is_alive():
-                messagebox.showwarning("提示", "刷野已在运行中！")
-                return
-        
         # 在启动玩法前检查并清理日志目录
         try:
             from utils.logger import cleanup_logs_dir
@@ -172,39 +150,35 @@ class FarmingPanel(ttk.Frame):
         self.log_status("刷野进程启动中...")
         self.log_status("持续运行模式: 将一直刷野直到手动停止")
         
-        # 更新按钮状态
-        self._set_farming_running_state()
-        
         # 重置统计数据
         self.reset_farming_stats()
         self.update_stats()
         
-        # 启动真正的刷野进程
-        try:
-            self.log_queue = multiprocessing.Queue()
-            
-            # 获取日志级别
-            log_level = "INFO"
-            if hasattr(self.parent, 'log_level_var'):
-                log_level = self.parent.log_level_var.get()
-            
-            # 启动刷野进程
-            from gui.main_window import run_farming_main
-            self.farming_process = multiprocessing.Process(
-                target=run_farming_main, 
-                args=(self.log_queue, log_level)
-            )
-            self.farming_process.start()
-            
+        # 获取日志级别
+        log_level = "INFO"
+        if hasattr(self.parent, 'log_level_var'):
+            log_level = self.parent.log_level_var.get()
+        
+        # 使用游戏互斥管理器启动
+        from gui.main_window import run_farming_main
+        success, process, queue = self.game_mutex_manager.start_game_safely(
+            game_key="farming_process",
+            target_func=run_farming_main,
+            args=(None, log_level),  # 先传None，启动后会设置正确的队列
+            parent_widget=self.parent,
+            log_callback=self.log_status
+        )
+        
+        if success:
+            self.farming_process = process
+            self.log_queue = queue
+            # 更新按钮状态
+            self._set_farming_running_state()
             self.log_status("刷野进程已启动，正在连接设备...")
-            
             # 开始轮询日志队列
             self.after(100, self.poll_log_queue)
-            
-        except Exception as e:
-            self.log_status(f"启动刷野进程失败: {e}")
-            messagebox.showerror("错误", f"启动刷野进程失败: {e}")
-            self._cleanup_farming()
+        else:
+            self.log_status("刷野进程启动失败")
 
     def poll_log_queue(self):
         """
@@ -266,29 +240,13 @@ class FarmingPanel(ttk.Frame):
 
     def stop_farming(self):
         """停止刷野"""
-        self.log_status("用户请求停止刷野")
+        success = self.game_mutex_manager.stop_game_safely(
+            game_key="farming_process",
+            log_callback=self.log_status
+        )
         
-        if self.farming_process and self.farming_process.is_alive():
-            try:
-                self.log_status("正在停止刷野进程...")
-                
-                # 先尝试优雅终止
-                self.farming_process.terminate()
-                
-                # 等待进程结束，最多等待5秒
-                self.farming_process.join(timeout=5)
-                if self.farming_process.is_alive():
-                    # 如果进程仍然存活，强制杀死
-                    self.log_status("进程未正常退出，强制结束...")
-                    self.farming_process.kill()
-                    self.farming_process.join(timeout=2)
-                
-                self.log_status("刷野进程已停止")
-                
-            except Exception as e:
-                self.log_status(f"停止刷野进程时发生异常: {e}")
-        
-        self._cleanup_farming()
+        if success:
+            self._cleanup_farming()
 
     def _set_farming_running_state(self):
         """设置刷野运行状态"""

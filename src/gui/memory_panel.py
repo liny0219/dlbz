@@ -2,12 +2,13 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import os
 import subprocess
-import multiprocessing
 import datetime
 from common.config import get_config_dir
 from utils.yaml_helper import save_yaml_with_type
 import yaml
 import logging
+from utils.process_manager import get_process_manager
+from utils.game_mutex_manager import get_game_mutex_manager
 
 class MemoryPanel(ttk.Frame):
     """
@@ -19,15 +20,27 @@ class MemoryPanel(ttk.Frame):
         self.parent = parent
         self.config_file = "memory_test.yaml"
         
-        # 进程管理（改为multiprocessing.Process）
-        self.battle_test_process = None
+        # 初始化进程管理器和游戏互斥管理器
+        self.process_manager = get_process_manager()
+        self.game_mutex_manager = get_game_mutex_manager()
+        
+        # 初始化变量
         self.memory_test_process = None
+        self.battle_test_process = None
         self.log_queue = None
         
         # 统计数据（只记录追忆之书相关）
         self.memory_total = 0
         self.memory_successful = 0
         self.memory_failed = 0
+        
+        # 配置变量
+        self.memory_script_var = tk.StringVar()
+        self.battle_script_var = tk.StringVar()
+        self.battle_count_var = tk.StringVar(value="1")
+        self.click_x_var = tk.StringVar(value="640")
+        self.click_y_var = tk.StringVar(value="360")
+        self.ui_wait_time_var = tk.StringVar(value="2")
         
         self.load_config()
         self._build_widgets()
@@ -289,32 +302,7 @@ class MemoryPanel(ttk.Frame):
 
     def start_test(self):
         """开始单次战斗测试"""
-        # 检查是否有其他玩法在运行
-        if hasattr(self.parent, 'check_running_processes'):
-            is_any_running, running_processes = self.parent.check_running_processes()
-            if is_any_running:
-                running_list = '\n'.join([f"• {process}" for process in running_processes])
-                result = messagebox.askyesno(
-                    "其他玩法正在运行", 
-                    f"检测到以下玩法正在运行:\n\n{running_list}\n\n是否停止所有正在运行的玩法并启动单次战斗测试？",
-                    icon="warning"
-                )
-                if result:
-                    stopped_processes = self.parent.stop_all_processes()
-                    if stopped_processes:
-                        stopped_list = ', '.join(stopped_processes)
-                        self.log_status(f"已停止: {stopped_list}")
-                    # 等待一小段时间确保进程完全停止
-                    import time
-                    time.sleep(1)
-                else:
-                    return
-        else:
-            # 检查是否已有任何测试在运行
-            if self._is_any_test_running():
-                messagebox.showwarning("提示", "已有测试在运行中！")
-                return
-            
+        # 使用游戏互斥管理器安全启动
         script_path = self.battle_script_var.get().strip()
         if not script_path:
             messagebox.showwarning("提示", "请先配置战斗脚本文件路径！")
@@ -327,21 +315,28 @@ class MemoryPanel(ttk.Frame):
         self.log_status("单次战斗测试进程启动中...")
         self.log_status(f"使用战斗脚本: {script_path}")
         
-        # 更新按钮状态（禁用开始按钮，启用停止按钮）
-        self._set_test_running_state()
-        self._set_battle_running_state()
-        
-        # 创建日志队列和启动进程
-        self.log_queue = multiprocessing.Queue()
+        # 获取日志级别
         log_level = getattr(self.parent, 'log_level_var', tk.StringVar(value="INFO")).get()
-        self.battle_test_process = multiprocessing.Process(
-            target=run_battle_test_main, 
-            args=(script_path, self.log_queue, log_level)
-        )
-        self.battle_test_process.start()
         
-        # 开始轮询日志队列
-        self.after(100, self.poll_battle_test_log_queue)
+        # 使用游戏互斥管理器启动
+        success, process, queue = self.game_mutex_manager.start_game_safely(
+            game_key="battle_test_process",
+            target_func=run_battle_test_main,
+            args=(script_path, None, log_level),  # 先传None，启动后会设置正确的队列
+            parent_widget=self.parent,
+            log_callback=self.log_status
+        )
+        
+        if success:
+            self.battle_test_process = process
+            self.log_queue = queue
+            # 更新按钮状态
+            self._set_test_running_state()
+            self._set_battle_running_state()
+            # 开始轮询日志队列
+            self.after(100, self.poll_battle_test_log_queue)
+        else:
+            self.log_status("单次战斗测试启动失败")
 
     def poll_battle_test_log_queue(self):
         """轮询单次战斗测试日志队列"""
@@ -403,19 +398,13 @@ class MemoryPanel(ttk.Frame):
 
     def stop_test(self):
         """停止单次战斗测试"""
-        if not self.battle_test_process or not self.battle_test_process.is_alive():
-            self.log_status("单次战斗测试未在运行")
+        success = self.game_mutex_manager.stop_game_safely(
+            game_key="battle_test_process",
+            log_callback=self.log_status
+        )
+        
+        if success:
             self._cleanup_battle_test()
-            return
-            
-        self.log_status("用户请求停止单次战斗测试")
-        
-        # 强制终止进程
-        self.battle_test_process.terminate()
-        self.battle_test_process.join()
-        
-        self.log_status("单次战斗测试进程已终止")
-        self._cleanup_battle_test()
 
     def on_battle_help(self):
         """打开战斗指令说明文件"""
@@ -491,70 +480,53 @@ class MemoryPanel(ttk.Frame):
 
     def start_memory(self):
         """开始追忆之书测试"""
-        # 检查是否有其他玩法在运行
-        if hasattr(self.parent, 'check_running_processes'):
-            is_any_running, running_processes = self.parent.check_running_processes()
-            if is_any_running:
-                running_list = '\n'.join([f"• {process}" for process in running_processes])
-                result = messagebox.askyesno(
-                    "其他玩法正在运行", 
-                    f"检测到以下玩法正在运行:\n\n{running_list}\n\n是否停止所有正在运行的玩法并启动追忆之书测试？",
-                    icon="warning"
-                )
-                if result:
-                    stopped_processes = self.parent.stop_all_processes()
-                    if stopped_processes:
-                        stopped_list = ', '.join(stopped_processes)
-                        self.log_status(f"已停止: {stopped_list}")
-                    # 等待一小段时间确保进程完全停止
-                    import time
-                    time.sleep(1)
-                else:
-                    return
-        else:
-            # 检查是否已有任何测试在运行
-            if self._is_any_test_running():
-                messagebox.showwarning("提示", "已有测试在运行中！")
-                return
-            
-        script_path = self.battle_script_var.get().strip()
+        # 使用游戏互斥管理器安全启动
+        script_path = self.memory_script_var.get().strip()
         if not script_path:
-            messagebox.showwarning("提示", "请先配置战斗脚本文件路径！")
+            messagebox.showwarning("提示", "请先配置追忆之书脚本文件路径！")
             return
         
-        battle_count = self.battle_count_var.get()
-        click_x = self.click_x_var.get()
-        click_y = self.click_y_var.get()
-        ui_wait_time = self.ui_wait_time_var.get()
-        
-        # 重置统计信息
-        self.reset_stats()
+        try:
+            battle_count = int(self.battle_count_var.get())
+            click_x = int(self.click_x_var.get())
+            click_y = int(self.click_y_var.get())
+            ui_wait_time = float(self.ui_wait_time_var.get())
+        except ValueError:
+            messagebox.showerror("错误", "请输入有效的数值！")
+            return
         
         # 自动保存配置
         self.save_config()
         
         self.log_status("=" * 50)
         self.log_status("追忆之书测试进程启动中...")
-        self.log_status(f"使用战斗脚本: {script_path}")
-        self.log_status(f"配置战斗次数: {battle_count} 次")
-        self.log_status(f"点击阅读坐标: ({click_x}, {click_y})")
-        self.log_status(f"UI等待时间: {ui_wait_time} 秒")
+        self.log_status(f"使用脚本: {script_path}")
+        self.log_status(f"战斗次数: {battle_count}")
+        self.log_status(f"点击坐标: ({click_x}, {click_y})")
+        self.log_status(f"UI等待时间: {ui_wait_time}秒")
         
-        # 更新按钮状态（禁用开始按钮，启用停止按钮）
-        self._set_test_running_state()
-        self._set_memory_running_state()
-        
-        # 创建日志队列和启动进程
-        self.log_queue = multiprocessing.Queue()
+        # 获取日志级别
         log_level = getattr(self.parent, 'log_level_var', tk.StringVar(value="INFO")).get()
-        self.memory_test_process = multiprocessing.Process(
-            target=run_memory_test_main,
-            args=(script_path, battle_count, click_x, click_y, ui_wait_time, self.log_queue, log_level)
-        )
-        self.memory_test_process.start()
         
-        # 开始轮询日志队列
-        self.after(100, self.poll_memory_test_log_queue)
+        # 使用游戏互斥管理器启动
+        success, process, queue = self.game_mutex_manager.start_game_safely(
+            game_key="memory_test_process",
+            target_func=run_memory_test_main,
+            args=(script_path, battle_count, click_x, click_y, ui_wait_time, None, log_level),  # 先传None，启动后会设置正确的队列
+            parent_widget=self.parent,
+            log_callback=self.log_status
+        )
+        
+        if success:
+            self.memory_test_process = process
+            self.log_queue = queue
+            # 更新按钮状态
+            self._set_test_running_state()
+            self._set_memory_running_state()
+            # 开始轮询日志队列
+            self.after(100, self.poll_memory_test_log_queue)
+        else:
+            self.log_status("追忆之书测试启动失败")
 
     def poll_memory_test_log_queue(self):
         """轮询追忆之书测试日志队列"""
@@ -591,19 +563,13 @@ class MemoryPanel(ttk.Frame):
 
     def stop_memory(self):
         """停止追忆之书测试"""
-        if not self.memory_test_process or not self.memory_test_process.is_alive():
-            self.log_status("追忆之书测试未在运行")
+        success = self.game_mutex_manager.stop_game_safely(
+            game_key="memory_test_process",
+            log_callback=self.log_status
+        )
+        
+        if success:
             self._cleanup_memory_test()
-            return
-            
-        self.log_status("用户请求停止追忆之书测试")
-        
-        # 强制终止进程
-        self.memory_test_process.terminate()
-        self.memory_test_process.join()
-        
-        self.log_status("追忆之书测试进程已终止")
-        self._cleanup_memory_test()
 
 # 子进程日志Handler（与main_window中的相同）
 class QueueLogHandler(logging.Handler):

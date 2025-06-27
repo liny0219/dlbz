@@ -54,6 +54,11 @@ class ManagedThread:
             return
             
         try:
+            # 确保线程已停止
+            if hasattr(self, 'thread') and self.thread and self.thread.is_alive():
+                self.stop_event.set()
+                self.thread.join(timeout=2)  # 等待2秒
+            
             # 清理共享数据引用
             if hasattr(self, 'shared_data'):
                 del self.shared_data

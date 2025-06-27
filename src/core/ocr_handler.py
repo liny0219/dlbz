@@ -151,22 +151,28 @@ class OCRHandler:
         :param region: (x1, y1, x2, y2) 可选，指定识别区域坐标，默认全屏
         :return: bool，是否全部匹配
         """
+        processed_image = None
+        original_image = image
         try:
             if image is None:
                 image = self.device_manager.get_screenshot()
             # 裁剪区域
             if region is not None:
                 if isinstance(image, Image.Image):
-                    image = image.crop(region)
+                    processed_image = image.crop(region)
                 elif isinstance(image, np.ndarray):
                     x1, y1, x2, y2 = region
-                    image = image[y1:y2, x1:x2]
+                    processed_image = image[y1:y2, x1:x2]
                 else:
                     logger.warning("region参数仅支持PIL.Image或np.ndarray类型图片裁剪")
-            if isinstance(image, Image.Image):
-                image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+                    processed_image = image
+            else:
+                processed_image = image
+                
+            if isinstance(processed_image, Image.Image):
+                processed_image = cv2.cvtColor(np.array(processed_image), cv2.COLOR_RGB2BGR)
             with self.ocr_lock:
-                result = self.ocr.ocr(image, cls=True)
+                result = self.ocr.ocr(processed_image, cls=True)
             if not result:
                 logger.warning("OCR无结果")
                 return False
@@ -191,6 +197,10 @@ class OCRHandler:
         except Exception as e:
             logger.error(f"OCR匹配失败: {str(e)}\n{traceback.format_exc()}")
             return False
+        finally:
+            # 及时释放图像对象，避免内存泄漏
+            if processed_image is not None and processed_image is not original_image:
+                del processed_image
 
     def match_click_text(
         self,

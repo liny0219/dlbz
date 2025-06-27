@@ -1,41 +1,43 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
-import yaml
 import os
 import sys
-import multiprocessing
 import logging
+import atexit
+import multiprocessing
+from typing import Optional
 from utils import logger
 from common.config import get_config_dir
-import traceback
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
 from modes.fengmo import FengmoMode
 from modes.farming import FarmingMode
 from utils.mark_coord import mark_coord
 from utils.logger import setup_logger
-from gui.monster_editor import MonsterEditor
 from gui.settings_panel import SettingsPanel
+from utils.process_manager import get_process_manager
+from utils.game_mutex_manager import get_game_mutex_manager
 
-CONFIG_FILES = [
+# 默认配置文件列表
+DEFAULT_CONFIG_FILES = [
     ("fengmo.yaml", "逢魔玩法"),
     ("device.yaml", "设备"),
-    ("battle.yaml", "战斗配置"),
-    ("settings.yaml", "全局设置"),
+    ("battle.yaml", "战斗设置"),
     ("logging.yaml", "日志"),
     ("ocr.yaml", "OCR"),
 ]
+
 LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 class MainWindow(tk.Tk):
     """
     主窗口，包含主界面和设置界面，玩法主流程用子进程启动/终止，支持日志级别动态调整
     """
-    def __init__(self, title:str, config_files=CONFIG_FILES):
+    def __init__(self, title:str, config_files=DEFAULT_CONFIG_FILES):
         super().__init__()
         self.title(title)
         self.geometry("800x600")
-        self.minsize(700, 400)
+        self.minsize(800, 600)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         # 通过setup_logger注册GUI日志Handler，禁用主进程文件日志写入
         self.logger = setup_logger(self.append_log, enable_file_log=False)
@@ -54,8 +56,16 @@ class MainWindow(tk.Tk):
             console_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
             default_logger.addHandler(console_handler)
         default_logger.setLevel(logging.INFO)
-        self.fengmo_process = None
-        self.log_queue = None
+        
+        # 使用进程管理器
+        self.process_manager = get_process_manager()
+        self.game_mutex_manager = get_game_mutex_manager()
+        
+        # 注册退出时的清理函数
+        atexit.register(self._cleanup_on_exit)
+        
+        self.fengmo_process: Optional[multiprocessing.Process] = None
+        self.log_queue: Optional[multiprocessing.Queue] = None
         self.log_level_var = tk.StringVar(value="INFO")
         # 设备管理器只初始化一次
         self.device_manager = DeviceManager()
@@ -68,6 +78,70 @@ class MainWindow(tk.Tk):
         self.loglevel_combo.bind("<<ComboboxSelected>>", self.on_log_level_change)
         # 启动时同步一次日志级别
         self.on_log_level_change()
+        
+        # 启动定期僵尸进程清理
+        self.schedule_zombie_cleanup()
+        
+        # 定期检查运行中的进程状态
+        self.after(5000, self.check_running_processes)
+        
+        # 启动内存监控
+        self.start_memory_monitoring()
+        
+        # 启动自动内存优化
+        self.start_memory_optimization()
+
+    def start_memory_monitoring(self):
+        """启动内存监控"""
+        try:
+            from utils.memory_monitor import start_memory_monitoring
+            start_memory_monitoring(check_interval=60, threshold_mb=200.0)  # 每分钟检查，200MB阈值
+            self.logger.info("内存监控已启动")
+        except Exception as e:
+            self.logger.error(f"启动内存监控失败: {e}")
+
+    def start_memory_optimization(self):
+        """启动自动内存优化"""
+        try:
+            from utils.memory_optimizer import start_auto_memory_optimization
+            start_auto_memory_optimization(interval=300)  # 每5分钟优化一次
+            self.logger.info("自动内存优化已启动")
+        except Exception as e:
+            self.logger.error(f"启动内存优化失败: {e}")
+
+    def _cleanup_on_exit(self):
+        """程序退出时的清理函数"""
+        self.logger.info("程序退出，清理所有进程...")
+        
+        # 停止内存监控
+        try:
+            from utils.memory_monitor import stop_memory_monitoring
+            stop_memory_monitoring()
+        except Exception as e:
+            self.logger.error(f"停止内存监控失败: {e}")
+        
+        # 停止内存优化
+        try:
+            from utils.memory_optimizer import stop_auto_memory_optimization, cleanup_memory_optimizer
+            stop_auto_memory_optimization()
+            cleanup_memory_optimizer()
+        except Exception as e:
+            self.logger.error(f"停止内存优化失败: {e}")
+        
+        self.process_manager.stop_all_processes()
+        self.process_manager.cleanup_zombie_processes()
+
+    def schedule_zombie_cleanup(self):
+        """定期清理僵尸进程"""
+        try:
+            zombie_count = self.process_manager.cleanup_zombie_processes()
+            if zombie_count > 0:
+                self.append_log(f"定期清理了 {zombie_count} 个僵尸进程")
+        except Exception as e:
+            self.logger.error(f"定期清理僵尸进程时发生异常: {e}")
+        
+        # 每30秒检查一次
+        self.after(30000, self.schedule_zombie_cleanup)
 
     def append_log(self, msg):
         self.log_text.configure(state='normal')
@@ -204,151 +278,66 @@ class MainWindow(tk.Tk):
             h.setLevel(log_level)
 
     def check_running_processes(self):
-        """
-        检查所有玩法进程是否在运行
-        :return: (is_any_running, running_processes_list)
-        """
-        running_processes = []
-        
-        # 检查主窗口的逢魔/刷野进程
-        if self.fengmo_process and self.fengmo_process.is_alive():
-            running_processes.append("逢魔/刷野玩法")
-        
-        # 检查追忆之书进程
-        if hasattr(self, 'memory_editor_panel'):
-            if hasattr(self.memory_editor_panel, 'battle_test_process') and \
-               self.memory_editor_panel.battle_test_process and \
-               self.memory_editor_panel.battle_test_process.is_alive():
-                running_processes.append("单次战斗测试")
+        """检查运行中的进程状态"""
+        try:
+            # 使用游戏互斥管理器检查
+            running_games = self.game_mutex_manager.get_running_games()
+            if running_games:
+                self.status_label.config(text=f"状态: {', '.join(running_games)}运行中...")
+            else:
+                self.status_label.config(text="状态: 未运行")
+                self.start_btn.config(state=tk.NORMAL)
+                self.stop_btn.config(state=tk.DISABLED)
             
-            if hasattr(self.memory_editor_panel, 'memory_test_process') and \
-               self.memory_editor_panel.memory_test_process and \
-               self.memory_editor_panel.memory_test_process.is_alive():
-                running_processes.append("追忆之书测试")
-        
-        # 检查日常进程
-        if hasattr(self, 'daily_editor_panel'):
-            if hasattr(self.daily_editor_panel, 'daily_process') and \
-               self.daily_editor_panel.daily_process and \
-               self.daily_editor_panel.daily_process.is_alive():
-                running_processes.append("日常玩法")
-        
-        # 检查刷野进程
-        if hasattr(self, 'farming_editor_panel'):
-            if hasattr(self.farming_editor_panel, 'farming_process') and \
-               self.farming_editor_panel.farming_process and \
-               self.farming_editor_panel.farming_process.is_alive():
-                running_processes.append("自动刷野")
-        
-        return len(running_processes) > 0, running_processes
+            # 继续定期检查
+            self.after(5000, self.check_running_processes)
+        except Exception as e:
+            self.append_log(f"检查进程状态失败: {e}")
 
     def stop_all_processes(self):
-        """
-        停止所有正在运行的玩法进程
-        """
-        stopped_processes = []
-        
-        # 停止主窗口的逢魔/刷野进程
-        if self.fengmo_process and self.fengmo_process.is_alive():
-            try:
-                self.fengmo_process.terminate()
-                self.fengmo_process.join(timeout=5)
-                if self.fengmo_process.is_alive():
-                    self.fengmo_process.kill()
-                    self.fengmo_process.join(timeout=2)
-                stopped_processes.append("逢魔/刷野玩法")
-            except Exception as e:
-                self.append_log(f"停止逢魔/刷野进程时发生异常: {e}")
-        
-        # 停止追忆之书进程
-        if hasattr(self, 'memory_editor_panel'):
-            if hasattr(self.memory_editor_panel, 'battle_test_process') and \
-               self.memory_editor_panel.battle_test_process and \
-               self.memory_editor_panel.battle_test_process.is_alive():
-                try:
-                    self.memory_editor_panel.battle_test_process.terminate()
-                    self.memory_editor_panel.battle_test_process.join(timeout=5)
-                    stopped_processes.append("单次战斗测试")
-                except Exception as e:
-                    self.append_log(f"停止单次战斗测试进程时发生异常: {e}")
+        """停止所有进程"""
+        try:
+            # 使用游戏互斥管理器停止所有游戏
+            stopped_count = self.game_mutex_manager.stop_all_games()
             
-            if hasattr(self.memory_editor_panel, 'memory_test_process') and \
-               self.memory_editor_panel.memory_test_process and \
-               self.memory_editor_panel.memory_test_process.is_alive():
-                try:
-                    self.memory_editor_panel.memory_test_process.terminate()
-                    self.memory_editor_panel.memory_test_process.join(timeout=5)
-                    stopped_processes.append("追忆之书测试")
-                except Exception as e:
-                    self.append_log(f"停止追忆之书测试进程时发生异常: {e}")
-        
-        # 停止日常进程
-        if hasattr(self, 'daily_editor_panel'):
-            if hasattr(self.daily_editor_panel, 'daily_process') and \
-               self.daily_editor_panel.daily_process and \
-               self.daily_editor_panel.daily_process.is_alive():
-                try:
-                    self.daily_editor_panel.daily_process.terminate()
-                    self.daily_editor_panel.daily_process.join(timeout=5)
-                    stopped_processes.append("日常玩法")
-                except Exception as e:
-                    self.append_log(f"停止日常玩法进程时发生异常: {e}")
-        
-        # 停止刷野进程
-        if hasattr(self, 'farming_editor_panel'):
-            if hasattr(self.farming_editor_panel, 'farming_process') and \
-               self.farming_editor_panel.farming_process and \
-               self.farming_editor_panel.farming_process.is_alive():
-                try:
-                    self.farming_editor_panel.farming_process.terminate()
-                    self.farming_editor_panel.farming_process.join(timeout=5)
-                    stopped_processes.append("自动刷野")
-                except Exception as e:
-                    self.append_log(f"停止自动刷野进程时发生异常: {e}")
-        
-        # 重置UI状态
-        self.status_label.config(text="状态: 已停止所有玩法")
-        self.start_btn.config(state=tk.NORMAL)
-        self.stop_btn.config(state=tk.DISABLED)
-        
-        return stopped_processes
+            # 清理本地引用
+            self.fengmo_process = None
+            self.log_queue = None
+            
+            # 更新UI状态
+            self.status_label.config(text="状态: 已停止")
+            self.start_btn.config(state=tk.NORMAL)
+            self.stop_btn.config(state=tk.DISABLED)
+            
+            return stopped_count
+        except Exception as e:
+            self.append_log(f"停止所有进程失败: {e}")
+            return 0
 
     def on_start(self):
-        # 检查是否有其他玩法在运行
-        is_any_running, running_processes = self.check_running_processes()
-        if is_any_running:
-            running_list = '\n'.join([f"• {process}" for process in running_processes])
-            result = messagebox.askyesno(
-                "其他玩法正在运行", 
-                f"检测到以下玩法正在运行:\n\n{running_list}\n\n是否停止所有正在运行的玩法并启动逢魔玩法？",
-                icon="warning"
-            )
-            if result:
-                stopped_processes = self.stop_all_processes()
-                if stopped_processes:
-                    stopped_list = ', '.join(stopped_processes)
-                    self.append_log(f"已停止: {stopped_list}")
-                # 等待一小段时间确保进程完全停止
-                import time
-                time.sleep(1)
-            else:
-                return
+        """启动逢魔玩法"""
+        # 使用游戏互斥管理器安全启动
+        log_level = self.log_level_var.get()
+        success, process, queue = self.game_mutex_manager.start_game_safely(
+            game_key="fengmo_process",
+            target_func=run_fengmo_main,
+            args=(None, log_level),  # 先传None，启动后会设置正确的队列
+            parent_widget=self,
+            log_callback=self.append_log
+        )
         
-        # 在启动玩法前检查并清理日志目录
-        from utils.logger import cleanup_logs_dir
-        cleanup_logs_dir()
-        
-        self.start_btn.config(state=tk.DISABLED)
-        self.stop_btn.config(state=tk.NORMAL)
-        self.status_label.config(text="状态: 正在初始化...")
-        self.append_log("逢魔玩法进程启动中...")
-        self.update_report_data("")
-        self.log_queue = multiprocessing.Queue()
-        log_level = self.log_level_var.get()  # 获取最新日志级别
-        self.fengmo_process = multiprocessing.Process(target=run_fengmo_main, args=(self.log_queue, log_level))
-        self.fengmo_process.start()
-        self.status_label.config(text="状态: 逢魔玩法运行中... (点击停止可终止)")
-        self.after(100, self.poll_log_queue)
+        if success:
+            self.fengmo_process = process
+            self.log_queue = queue
+            self.start_btn.config(state=tk.DISABLED)
+            self.stop_btn.config(state=tk.NORMAL)
+            self.status_label.config(text="状态: 逢魔玩法运行中... (点击停止可终止)")
+            self.after(100, self.poll_log_queue)
+        else:
+            # 启动失败，恢复UI状态
+            self.start_btn.config(state=tk.NORMAL)
+            self.stop_btn.config(state=tk.DISABLED)
+            self.status_label.config(text="状态: 启动失败")
 
     def poll_log_queue(self):
         try:
@@ -369,38 +358,31 @@ class MainWindow(tk.Tk):
             return
 
     def on_stop(self):
-        if self.fengmo_process and self.fengmo_process.is_alive():
-            self.append_log("正在停止玩法进程...")
+        """停止逢魔玩法"""
+        success = self.game_mutex_manager.stop_game_safely(
+            game_key="fengmo_process",
+            log_callback=self.append_log
+        )
+        
+        if success:
+            # 清理引用
+            self.fengmo_process = None
+            self.log_queue = None
             
-            # 先尝试优雅终止
-            self.fengmo_process.terminate()
-            
-            # 等待进程结束，最多等待5秒
-            try:
-                self.fengmo_process.join(timeout=5)
-                if self.fengmo_process.is_alive():
-                    # 如果进程仍然存活，强制杀死
-                    self.append_log("进程未正常退出，强制结束...")
-                    self.fengmo_process.kill()
-                    self.fengmo_process.join(timeout=2)
-            except Exception as e:
-                self.append_log(f"停止进程时发生异常: {e}")
-            
+            # 更新UI状态
             self.status_label.config(text="状态: 已停止")
             self.start_btn.config(state=tk.NORMAL)
             self.stop_btn.config(state=tk.DISABLED)
-            self.logger.info("玩法进程已终止")
-            self.append_log("玩法进程已终止")
         else:
+            self.append_log("玩法进程未运行")
             self.status_label.config(text="状态: 未运行")
             self.start_btn.config(state=tk.NORMAL)
             self.stop_btn.config(state=tk.DISABLED)
-            self.append_log("玩法进程未运行")
 
     def save_settings(self):
         """保存所有配置到文件"""
         config_dir = get_config_dir()
-        for fname, _ in CONFIG_FILES:
+        for fname, _ in DEFAULT_CONFIG_FILES:
             if fname == "fengmo_cities.yaml":
                 continue
             fpath = os.path.join(config_dir, fname)
@@ -413,47 +395,19 @@ class MainWindow(tk.Tk):
         # 移除GUI Handler，防止内存泄漏
         self.logger.handlers = [h for h in self.logger.handlers if h.__class__.__name__ != 'GuiLogHandler']
         
-        # 检查并关闭逢魔进程
-        if self.fengmo_process and self.fengmo_process.is_alive():
-            if not messagebox.askokcancel("退出", "玩法正在运行，确定要强制退出吗？"):
+        # 检查是否有游戏在运行
+        if self.game_mutex_manager.is_any_game_running():
+            if not messagebox.askokcancel("退出", "有游戏正在运行，确定要强制退出吗？"):
                 return
-            self.fengmo_process.terminate()
-            self.fengmo_process.join()
-            self.append_log("玩法进程已终止")
-        
-        # 检查并关闭追忆之书进程
-        if hasattr(self, 'memory_editor_panel'):
-            if hasattr(self.memory_editor_panel, 'battle_test_process') and \
-               self.memory_editor_panel.battle_test_process and \
-               self.memory_editor_panel.battle_test_process.is_alive():
-                self.memory_editor_panel.battle_test_process.terminate()
-                self.memory_editor_panel.battle_test_process.join()
-                self.append_log("单次战斗测试进程已终止")
             
-            if hasattr(self.memory_editor_panel, 'memory_test_process') and \
-               self.memory_editor_panel.memory_test_process and \
-               self.memory_editor_panel.memory_test_process.is_alive():
-                self.memory_editor_panel.memory_test_process.terminate()
-                self.memory_editor_panel.memory_test_process.join()
-                self.append_log("追忆之书测试进程已终止")
+            # 使用游戏互斥管理器清理所有游戏
+            stopped_count = self.game_mutex_manager.stop_all_games()
+            self.append_log(f"已终止 {stopped_count} 个游戏")
         
-        # 检查并关闭日常进程
-        if hasattr(self, 'daily_editor_panel'):
-            if hasattr(self.daily_editor_panel, 'daily_process') and \
-               self.daily_editor_panel.daily_process and \
-               self.daily_editor_panel.daily_process.is_alive():
-                self.daily_editor_panel.daily_process.terminate()
-                self.daily_editor_panel.daily_process.join()
-                self.append_log("日常玩法进程已终止")
-        
-        # 检查并关闭刷野进程
-        if hasattr(self, 'farming_editor_panel'):
-            if hasattr(self.farming_editor_panel, 'farming_process') and \
-               self.farming_editor_panel.farming_process and \
-               self.farming_editor_panel.farming_process.is_alive():
-                self.farming_editor_panel.farming_process.terminate()
-                self.farming_editor_panel.farming_process.join()
-                self.append_log("自动刷野进程已终止")
+        # 清理僵尸进程
+        zombie_count = self.process_manager.cleanup_zombie_processes()
+        if zombie_count > 0:
+            self.append_log(f"清理了 {zombie_count} 个僵尸进程")
         
         self.destroy()
         os._exit(0)
@@ -509,7 +463,33 @@ def run_fengmo_main(log_queue, log_level):
     from utils.logger import get_log_file_path
     import os
     import time
+    import signal
+    import sys
     fix_stdio_if_none()
+    
+    # 注册信号处理器
+    def cleanup_and_exit(signum, frame):
+        logger.info(f"子进程收到信号 {signum}，正在清理资源...")
+        # 清理资源
+        if 'device_manager' in locals():
+            try:
+                device_manager.cleanup()
+            except:
+                pass
+        if 'ocr_handler' in locals():
+            try:
+                ocr_handler.cleanup()
+            except:
+                pass
+        if 'fengmo_mode' in locals():
+            try:
+                fengmo_mode.cleanup()
+            except:
+                pass
+        sys.exit(0)
+    
+    signal.signal(signal.SIGTERM, cleanup_and_exit)
+    signal.signal(signal.SIGINT, cleanup_and_exit)
     
     # 先移除所有 root logger handler，防止默认 handler 的 stream 为 None
     root_logger = logging.getLogger()
@@ -543,6 +523,7 @@ def run_fengmo_main(log_queue, log_level):
     logger.setLevel(level)
     logger.handlers.clear()
     logger.propagate = True
+    
     try:
         logger.info(f"[子进程] 日志级别: {log_level}")
         logger.info("玩法子进程已启动，等待业务执行...")
@@ -566,6 +547,9 @@ def run_fengmo_main(log_queue, log_level):
                 log_queue.put(f"[子进程异常] {e}\n{tb}")
         except Exception as ee:
             print(f"日志队列异常: {ee}\n{traceback.format_exc()}")
+    finally:
+        # 确保资源被清理
+        cleanup_and_exit(None, None)
 
 def run_farming_main(log_queue, log_level):
     """

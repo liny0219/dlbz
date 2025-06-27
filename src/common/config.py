@@ -14,10 +14,11 @@ def get_config_dir():
 class ConfigCache:
     """配置缓存管理器，避免重复读取配置文件"""
     
-    def __init__(self, cache_ttl=300):  # 5分钟缓存时间
+    def __init__(self, cache_ttl=300, max_cache_size=50):  # 5分钟缓存时间，最大50个文件
         self._cache = {}
         self._cache_times = {}
         self._cache_ttl = cache_ttl
+        self._max_cache_size = max_cache_size
     
     def get(self, file_path: str) -> Optional[Dict]:
         """获取缓存的配置"""
@@ -33,8 +34,22 @@ class ConfigCache:
     
     def set(self, file_path: str, data: Dict):
         """设置缓存"""
+        # 检查缓存大小限制
+        if len(self._cache) >= self._max_cache_size:
+            self._evict_oldest()
+        
         self._cache[file_path] = data
         self._cache_times[file_path] = time.time()
+    
+    def _evict_oldest(self):
+        """淘汰最旧的缓存条目"""
+        if not self._cache_times:
+            return
+        
+        # 找到最旧的条目
+        oldest_file = min(self._cache_times.keys(), key=lambda k: self._cache_times[k])
+        del self._cache[oldest_file]
+        del self._cache_times[oldest_file]
     
     def clear(self):
         """清空缓存"""
@@ -45,6 +60,7 @@ class ConfigCache:
         """获取缓存信息"""
         return {
             'cache_size': len(self._cache),
+            'max_cache_size': self._max_cache_size,
             'cache_ttl': self._cache_ttl,
             'cached_files': list(self._cache.keys())
         }
