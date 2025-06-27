@@ -319,9 +319,6 @@ class DailyMode:
                 logger.info(f"{huatian_type}重启次数{count}, 耗时{restart_elapsed_time:.0f}秒")
                 self._send_stats_update(huatian_type, restart_elapsed_time)
         
-        # 测试模式：直接设置找到目标（注释掉OCR逻辑时使用）
-        # target_found = True
-        
         # 找到目标后，标记为已找到
         self.huatian_stats[huatian_type]["target_found"] = True
         

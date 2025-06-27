@@ -88,20 +88,28 @@ class World:
             time.sleep(2)
             self.open_minimap()
             sleep_until(self.in_minimap)
-            if self.find_map_boss() is not None:
-                logger.info(f"[read_map_state]识别到三阶段")
-                self.closeUI()
-                return 'boss'
-            if self.find_map_treasure() is not None or self.find_map_cure() is not None or self.find_map_monster() is not None:
-                logger.info(f"[read_map_state]识别到二阶段")
-                self.closeUI()
-                return 'box'
-            logger.info(f"[read_map_state]识别到一阶段")
+            state = self.get_fengmo_state()
             self.closeUI()
-            return 'collect'
+            if state is not None:
+                return state
         logger.info(f"[read_map_state]在城镇中")
         self.closeUI()
         return 'in_world'
+    
+    def get_fengmo_state(self,image:Image.Image|None=None) -> str|None:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在逢魔中")
+            return None
+        if self.find_map_boss() is not None:
+            logger.info(f"[check_fengmo_state]识别到三阶段")
+            return 'boss'
+        if self.find_map_treasure() is not None or self.find_map_cure() is not None or self.find_map_monster() is not None:
+            logger.info(f"[check_fengmo_state]识别到二阶段")
+            return 'box'
+        logger.info(f"[check_fengmo_state]识别到一阶段")
+        return 'collect'
         
     def in_world(self, image: Optional[Image.Image] = None) -> bool:
         """
@@ -295,6 +303,100 @@ class World:
         else:
             logger.debug("没有治疗点")
             return None
+        
+    def find_all_item(self,image:Image.Image|None=None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否发现所有逢魔之影")
+            return False
+        points_colors = [
+                    (558, 306, 'E0D5D3', 1),
+                    (502, 305, 'ECE2E0', 1),
+                    (528, 315, 'F8EEEC', 1),
+                    (621, 320, 'EBDFDF', 1),
+                    (728, 311, 'E7DEE1', 1),
+                    (604, 483, '36667C', 1),
+                    (684, 485, '2D5D73', 1),
+                ]
+                # 批量判断
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results:
+            logger.debug("检测到发现所有逢魔之影")
+            return True
+        else:
+            logger.debug("没有发现所有逢魔之影")
+            return False
+        
+    def get_item(self,image:Image.Image|None=None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否获得道具")
+            return False
+        points_colors = [
+                    (688, 258, 'FFFFFF', 1), 
+                    (689, 275, 'FFFFFF', 1), 
+                    (632, 274, 'FFFFFF', 1),
+                    (602, 434, '306378', 1),
+                    (684, 438, '275B71', 1),
+                ]
+                # 批量判断
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results:
+            logger.debug("检测到获得道具")
+            return True
+        else:
+            logger.debug("没有获得道具")
+            return False
+        
+    def check_found_boss(self,image:Image.Image|None=None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否找到boss")
+            return False
+        points_colors = [
+            (512, 484, '575757', 1),
+            (727, 487, '23576F', 1),
+            (706, 242, 'F3EDEF', 1),
+            (707, 254, 'EEE8EA', 1),
+            (707, 258, 'EFE9EB', 1),
+            (314, 374, 'F5EBEC', 1),
+            (772, 380, 'F5EFF1', 1),
+            (940, 377, 'F6EDEE', 1),
+            (616, 311, 'F9E9E9', 1),
+        ]
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results:
+            logger.debug("检测到找到boss")
+            return True
+        else:
+            logger.debug("没有找到boss")
+            return False
+        
+    def check_exit_fengmo(self,image:Image.Image|None=None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否退出逢魔")
+            return False
+        points_colors = [
+                    (642, 332, 'FFF2F1', 1),
+                    (608, 328, 'F2E2E2', 1),
+                    (562, 334, 'FFEDEB', 1),
+                    (542, 301, 'EDE4DD', 1),
+                    (696, 298, 'D7CDCB', 1),
+                    (456, 484, '5B5B5B', 1),
+                    (776, 483, '3C6B7F', 1),
+                ]
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results:
+            logger.debug("检测到获得道具")
+            return True
+        else:
+            logger.debug("没有获得道具")
+            return False
     
     def read_fengmo_depth(self):
         text_list = self.ocr_handler.recognize_text(region=(615, 343, 663,380), rec_char_type='digit',scale=5)
@@ -401,17 +503,6 @@ class World:
         if not in_world:
             logger.debug("不在城镇中")
             return False
-        while True:
-            time.sleep(0.2)
-            logger.debug("打开小地图")
-            self.open_minimap()
-            logger.debug("等待小地图")
-            in_minimap = self.in_minimap()
-            if not in_minimap:
-                continue
-            else:
-                logger.debug("在小地图中")
-                break
         self.open_minimap()
         in_minimap = sleep_until(self.in_minimap)
         if not in_minimap:
@@ -440,17 +531,6 @@ class World:
         if not in_world:
             logger.debug("不在城镇中")
             return False
-        while True:
-            time.sleep(0.2)
-            logger.debug("打开小地图")
-            self.open_minimap()
-            logger.debug("等待小地图")
-            in_minimap = self.in_minimap()
-            if not in_minimap:
-                continue
-            else:
-                logger.debug("在小地图中")
-                break
         self.open_minimap()
         in_minimap = sleep_until(self.in_minimap)
         if not in_minimap:
@@ -602,7 +682,7 @@ class World:
                 if self.in_world(image):
                     logger.debug("[in_world_or_battle]小镇中")
                     return "in_world"
-                elif self.battle.in_battle(image):
+                if self.battle.in_battle(image):
                     logger.debug("[in_world_or_battle]战斗中")
                     if self.battle.check_battle_fail(image):
                         return "battle_fail"
@@ -614,13 +694,23 @@ class World:
                     image = self.device_manager.get_screenshot()
 
         
-    def in_world_or_battle(self, callback:Callable[[Image.Image], None]|None=None)-> dict[str,bool|str]|None:
+    def in_world_or_battle(self, callback:Callable[[Image.Image], None]|None=None, check_battle_command_done:bool|None=None,
+                           is_battle_success:bool|None=None,has_battle:bool|None=None)-> dict[str,bool|str]|None:
         logger.debug("[in_world_or_battle]开始检查")
         
-        check_battle_command_done = False
-        is_battle_success = True
-        has_battle = False
+        if check_battle_command_done is None:
+            check_battle_command_done = False
+        if is_battle_success is None:
+            is_battle_success = True
+        if has_battle is None:
+            has_battle = False
         while True:
+            screenshot = self.device_manager.get_screenshot()
+            if screenshot is None:
+                logger.warning("[in_world_or_battle]获取截图失败")
+                return { "in_world":False, "in_battle":False,"app_alive":False, 'is_battle_success':False}
+            if callback is not None and screenshot is not None:
+                callback(screenshot)
             check_in_world = sleep_until_app_running(lambda: self.check_in_world_or_battle(callback=callback),
                                                      app_manager=self.app_manager, function_name="in_world_or_battle")
             if check_in_world == 'battle_fail':
@@ -633,12 +723,13 @@ class World:
                 result = { "in_world":True, "in_battle":has_battle,"app_alive":True, 'is_battle_success':is_battle_success }
                 if has_battle:
                     time.sleep(0.5)
-                    check_in_world = sleep_until_app_running(lambda: self.check_in_world_or_battle(callback=callback) ,app_manager=self.app_manager, function_name="in_world_or_battle")
-                    if check_in_world == "in_world":
+                    check_in_world = sleep_until(lambda: self.in_world() )
+                    if check_in_world:
                         return result
                     else:
                         logger.debug(f"战斗场景后，识别错误到城镇中{check_in_world},重新检查")
-                        return self.in_world_or_battle(callback=callback)
+                        return self.in_world_or_battle(callback=callback, check_battle_command_done=check_battle_command_done,
+                                                       is_battle_success=is_battle_success,has_battle=has_battle)
                 else:
                     return result
             elif check_in_world == "in_battle":
@@ -723,16 +814,30 @@ class World:
     def click_confirm_pos(self):
         self.device_manager.click(800,485)
     
+    def click_confirm_yes(self, image:Image.Image|None=None, click:bool = True):
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        find = self.ocr_handler.match_image(image, "assets/confirm_yes.png")
+        if find:
+            logger.info("[click_confirm_yes]检测到按钮-是")
+            if click:
+                self.device_manager.click(find[0],find[1])
+                time.sleep(0.2)
+                logger.info("[click_confirm_yes]点击按钮-是")
+            return True
+        else:
+            return False
+        
     def click_confirm(self, image:Image.Image|None=None, click:bool = True):
         if image is None:
             image = self.device_manager.get_screenshot()
         find = self.ocr_handler.match_image(image, "assets/confirm.png")
         if find:
-            logger.info("检测到按钮-是")
+            logger.info("[click_confirm]检测到按钮-是")
             if click:
                 self.device_manager.click(find[0],find[1])
                 time.sleep(0.2)
-                logger.info("点击按钮-是")
+                logger.info("[click_confirm]点击按钮-是")
             return True
         else:
             return False
@@ -923,13 +1028,3 @@ class World:
             time.sleep(0.5)
             self.closeUI()
             time.sleep(0.5)
-    
-    def check_mini_map_pos(self,x:int,y:int,color:str,range:int=1):
-        self.device_manager.click(1060,100)
-        time.sleep(1)
-        sleep_until(self.in_minimap,timeout=5)
-        screenshot = self.device_manager.get_screenshot()
-        if screenshot is None:
-            return False
-        result = self.ocr_handler.match_point_color(screenshot,[(x,y,color,range)],0.9)
-        return result

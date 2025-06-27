@@ -2,7 +2,7 @@ rest_in_inn: false
 vip_cure: true
 city: 托托哈哈岛
 depth: 3
-find_point_wait_time: 0.5
+find_point_wait_time: 0.2
 wait_map_time: 0.5
 wait_ui_time: 0.3
-default_battle_config: ''
+default_battle_config: D:/dldbz/config/battle_scripts/捡垃圾重启.txt

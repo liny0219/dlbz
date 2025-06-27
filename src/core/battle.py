@@ -80,7 +80,7 @@ class Battle:
         ]
         # 批量判断
         results = self.ocr_handler.match_point_color(image, points_colors)
-        if results and self.world is not None and self.world.click_confirm(image, click=False):
+        if results and self.world is not None and self.world.click_confirm_yes(image, click=False):
             logger.debug("检测到在战斗回合中全灭")
             time.sleep(self.wait_time)
             return True
@@ -828,24 +828,28 @@ class Battle:
     def check_battle_fail(self, image: Image.Image|None = None, type = 'tip'):
         if image is None:
            image = self.device_manager.get_screenshot()
+        if self.world is None:
+            return False
         if not self.all_dead(image):
             return False
-        time.sleep(0.2)
-        self.device_manager.click(480,480)
-        time.sleep(0.5)
-        self.device_manager.click(800,480)
-        time.sleep(0.5)
-        if type == 'tip':
-            start_time = time.time()
-            while True:
-                if time.time() - start_time > 3:
-                    logger.info(f"[check_battle_fail]tip confirm 超时")
-                    break
+        logger.info(f"[check_battle_fail]检测到被全灭")
+        start_time = time.time()
+        while not self.world.in_world():
+            if time.time() - start_time > 10:
+                logger.info(f"[check_battle_fail]全灭返回世界超时")
+                return False
+            self.device_manager.click(480,480)
+            logger.info(f"[check_battle_fail]点击放弃")
+            time.sleep(0.5)
+            self.device_manager.click(800,480)
+            logger.info(f"[check_battle_fail]点击确认")
+            time.sleep(0.5)
+            if type == 'tip':
+                logger.info(f"[check_battle_fail]tip confirm")
                 if self.world is not None:
-                    self.world.click_confirm()
-                    return True
+                    self.world.click_confirm_yes()
         return True
-            
+    
     def press_in_round(self, timeout: float = 15) -> bool:
         try:
             logger.info("等待战斗开始")

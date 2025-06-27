@@ -60,7 +60,7 @@ class FengmoSettingsTab(ttk.Frame):
         # 逢魔点等待时间
         self.wait_var = tk.StringVar(value=str(config_data.get("find_point_wait_time", 1.5)))
         ttk.Label(config_frame, text="逢魔点等待时间", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-        wait_spin = tk.Spinbox(config_frame, from_=0.5, to=5, increment=0.1, textvariable=self.wait_var, width=input_width)
+        wait_spin = tk.Spinbox(config_frame, from_=0.1, to=5, increment=0.1, textvariable=self.wait_var, width=input_width)
         wait_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
         row += 1
 

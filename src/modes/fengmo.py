@@ -390,6 +390,15 @@ class FengmoMode:
                             if not in_minimap:
                                 logger.info(f"[collect_junk_phase]小地图未打开")
                             else:
+                                state = self.world.get_fengmo_state()
+                                if state == 'boss':
+                                    self.state_data.step = Step.FIND_BOSS
+                                    self.world.closeUI()
+                                    return
+                                if state == 'box':
+                                    self.state_data.step = Step.FIND_BOX
+                                    self.world.closeUI()
+                                    return
                                 logger.info(f"[collect_junk_phase]点击小地图: {check_point}")
                                 self.device_manager.click(*check_point.pos)
                             self.wait_map()
@@ -567,6 +576,11 @@ class FengmoMode:
                 continue
             logger.info(f"[find_boss_phase]查找Boss点")
             find_map_boss = sleep_until(self.world.find_map_boss,timeout=6)
+            if find_map_boss is None:
+                logger.info(f"[find_boss_phase]找不到boss感叹号可能被自己挡住,退出重来")
+                self.world.exit_fengmo(self.entrance_pos,callback=self.check_enter_fengmo)
+                self.state_data.step = Step.State_FAIL
+                return
             if find_map_boss:
                 closest_point = self.find_closest_point(find_map_boss, self.check_points)
                 self.state_data.current_point = closest_point
@@ -660,8 +674,6 @@ class FengmoMode:
             cure = self.world.find_map_cure(screenshot)
             if cure:
                 find_points.extend([cure])
-            if self.state_data.current_point is None:
-                return None
             closest_find_points = []
             for find_point in find_points:
                 closest_find_points.append(self.find_closest_point((find_point[0],find_point[1]), self.check_points))
@@ -700,71 +712,27 @@ class FengmoMode:
         if screenshot is None:
             screenshot = self.device_manager.get_screenshot()
         try:
-            # 使用新的属性访问器，避免类型注解问题
-            state_data = self.state_data
             try:
+                if self.world.click_confirm(screenshot):
+                    logger.info(f"[check_info]click_confirm")
+                    time.sleep(self.wait_ui_time)
+                    return
                 if self.battle.battle_end(screenshot):
                     logger.info(f"[check_info]战斗结算")
-                    self.world.dclick_tirm()
+                    self.world.dclick_tirm(3)
                     time.sleep(self.wait_ui_time)
-                    if sleep_until(self.battle.battle_award,timeout=self.wait_map_time):
-                        self.world.dclick_tirm()
-                        time.sleep(self.wait_ui_time)
-                    if sleep_until(self.battle.battle_end,timeout=self.wait_map_time):
-                        self.world.dclick_tirm()
-                        time.sleep(self.wait_ui_time)
-                        return
-                region = (80, 0, 1280, 720)
-                results = self.ocr_handler.recognize_text(region=region, image=screenshot)
-                in_fengmo = False
-                if state_data.step in [Step.COLLECT_JUNK,Step.FIND_BOX,Step.FIND_BOSS,Step.FIGHT_BOSS]:
-                    in_fengmo = True
-                
-                find_text = None
-                for r in results:
-                    text = r['text']
-                    if "已发现所有的逢魔之影" in text:
-                        state_data.step = Step.FIND_BOX
-                        find_text = CheckInfoResult.FOUND_POINTS
-                        break
-                    if "获得道具" in text:
-                        find_text = CheckInfoResult.FOUND_TREASURE
-                        break
-                    if "完全恢复了" in text:
-                        if in_fengmo:
-                            find_text = CheckInfoResult.FOUND_CURE
-                            break
-                    if "逢魔之主已在区域某处出现" in text:
-                        state_data.step = Step.FIND_BOSS
-                        find_text = CheckInfoResult.FOUND_BOSS
-                        break
-                    if "已发现逢魔之主" in text:
-                        state_data.step = Step.FIGHT_BOSS
-                        time.sleep(self.wait_ui_time)
-                        logger.info(f"[check_info]找到boss,点击确认")
-                        self.world.click_confirm_pos()
-                        break
-                    if "用户协议与隐私政策" in text:
-                        logger.info(f"[check_info]找到用户协议,点击确认")
-                        time.sleep(self.wait_ui_time)
-                        self.device_manager.click(640, 600)
-                        break
-                    if "将重置进行状况" in text:
-                        logger.info(f"[check_info]找到逢魔入口,退出点击确认")
-                        time.sleep(1)
-                        self.world.click_confirm_pos()
-                        state_data.map_fail = True
-                        break
-                    if "无法连接网络" in text:
-                        time.sleep(self.wait_ui_time)
-                        self.ocr_handler.match_click_text(["重试"], region=region, image=screenshot)
-                        logger.info("网络断连重试")
-                        break
-                if find_text:
-                    logger.info(f"[check_info]找到文本: {find_text}")
-                    time.sleep(self.wait_ui_time)
-                    self.world.dclick_tirm(2)
-                    
+                    return
+                if self.world.check_exit_fengmo(screenshot):
+                    logger.info(f"[check_info]退出逢魔")
+                    self.state_data.map_fail = True
+                    self.state_data.step = Step.State_FAIL
+                    self.world.click_confirm_yes()
+                    return
+                if self.world.check_found_boss(screenshot):
+                    logger.info(f"[check_info]找到boss")
+                    self.state_data.step = Step.FIGHT_BOSS
+                    self.world.click_confirm_yes()
+                    return
             except Exception as e:
                 logger.info(f"[check_info]处理截图时发生异常: {e}")
         except Exception as e:
