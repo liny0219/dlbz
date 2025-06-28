@@ -83,15 +83,34 @@ class Battle:
         if image is None:
             logger.warning("无法获取截图，无法判断是否全灭")
             return False
-        points_colors = [
+        points_colors_vip = [
             (622, 177, 'FEFAF9', 1),
             (621, 189, 'FFFEFD', 1),
             (622, 198, 'FFFEFF', 1),
             (612, 205, 'FEFEFE', 1),
             (630, 206, 'FBFFFF', 1)
         ]
+        points_colors_no_vip = [
+            (461, 484, '5C5C5C', 1),
+            (818, 485, '37677D', 1),
+            (669, 210, 'FEFEFE', 1),
+            (670, 235, 'FFFFFF', 1),
+            (612, 237, 'FFFFFF', 1),
+            (612, 219, 'F3F3F3', 1),
+        ]
+        points_colors_failed = [
+            (612, 210, 'FFFFFF', 1),
+            (630, 210, 'FFFFFD', 1),
+            (671, 231, 'FFFFFD', 1),
+            (609, 219, 'FFFFFF', 1),
+            (621, 490, '39697F', 1),
+        ]
         # 批量判断
-        results = self.ocr_handler.match_point_color(image, points_colors)
+        results = self.ocr_handler.match_point_color(image, points_colors_vip)
+        if not results:
+            results = self.ocr_handler.match_point_color(image, points_colors_no_vip)
+        if not results:
+            results = self.ocr_handler.match_point_color(image, points_colors_failed)
         world = self.world or self._get_world()
         if results and world and world.click_confirm_yes(image, click=False):
             logger.debug("检测到在战斗回合中全灭")
@@ -811,9 +830,9 @@ class Battle:
                 logger.info("[wait_in_round_or_world] 战斗结算")
                 self.world.dclick_tirm(6)
             if callback:
-                logger.info("[wait_in_round_or_world] 执行回调")
+                logger.debug("[wait_in_round_or_world] 执行回调")
                 result = callback(screenshot)
-                logger.info(f"[wait_in_round_or_world] 执行回调结果: {result}")
+                logger.debug(f"[wait_in_round_or_world] 执行回调结果: {result}")
                 if result is not None:
                     return result
             time.sleep(self.wait_time)
@@ -835,6 +854,7 @@ class Battle:
                 logger.error("[wait_done] 无法获取截图")
                 return 'exception'
             if self.world.in_world(screenshot):
+                logger.info("[wait_done] 进入世界")
                 return 'in_world'
             if self.in_round(screenshot):
                 logger.info("[in_round] in_round")
@@ -843,9 +863,9 @@ class Battle:
                 logger.info("[wait_done] 战斗结算")
                 self.world.dclick_tirm(6)
             if callback:
-                logger.info("[wait_done] 执行回调")
+                logger.debug("[wait_done] 执行回调")
                 result = callback(screenshot)
-                logger.info(f"[wait_done] 执行回调结果: {result}")
+                logger.debug(f"[wait_done] 执行回调结果: {result}")
                 if result is not None:
                     return result
             time.sleep(self.wait_time)
@@ -877,8 +897,8 @@ class Battle:
     
     def press_in_round(self, timeout: float = 15) -> bool:
         try:
-            logger.info("等待战斗开始")
-            logger.info(f"长按按下,等待跳过")
+            logger.debug("等待战斗开始")
+            logger.debug(f"长按按下,等待跳过")
             if self.device_manager.device is None:
                 logger.error("设备未连接")
                 return False
@@ -886,14 +906,14 @@ class Battle:
             start_time = time.time()
             while not self.in_round():
                 if time.time() - start_time > timeout:
-                    logger.info("[Battle] 等待战斗开始超时")
+                    logger.debug("[press_in_round] 等待超时")
                     return False
                 time.sleep(1)
-            logger.info(f"长按抬起")
+            logger.debug(f"长按抬起")
             self.device_manager.press_up(100,20)
             time.sleep(0.5)
         except Exception as e:
-            logger.warning(f"等待战斗开始失败: {e}")
+            logger.warning(f"[press_in_round] 失败: {e}")
             return False
         return True
     

@@ -833,12 +833,12 @@ class World:
             if screenshot is None:
                 logger.warning("[in_world_or_battle]获取截图失败")
                 return { "in_world":False, "in_battle":False,"app_alive":False, 'is_battle_success':False}
-            logger.info(f"[in_world_or_battle]检查状态callback")
+            logger.debug(f"[in_world_or_battle]检查状态callback")
             if callback is not None and screenshot is not None:
                 callback(screenshot)
             check_in_world = sleep_until_app_running(lambda: self.check_in_world_or_battle(callback=callback),
                                                      app_manager=self.app_manager, function_name="in_world_or_battle")
-            logger.info(f"[in_world_or_battle]检查状态{check_in_world}")
+            logger.debug(f"[in_world_or_battle]检查状态{check_in_world}")
             if check_in_world == 'battle_fail':
                 is_battle_success = False
                 continue
