@@ -808,9 +808,12 @@ class Battle:
             if self.world.in_world(screenshot):
                 return 'in_world'
             if self.battle_end(screenshot) or self.battle_award(screenshot):
+                logger.info("[wait_in_round_or_world] 战斗结算")
                 self.world.dclick_tirm(6)
             if callback:
+                logger.info("[wait_in_round_or_world] 执行回调")
                 result = callback(screenshot)
+                logger.info(f"[wait_in_round_or_world] 执行回调结果: {result}")
                 if result is not None:
                     return result
             time.sleep(self.wait_time)
@@ -837,9 +840,12 @@ class Battle:
                 logger.info("[in_round] in_round")
                 return 'in_round'
             if self.battle_end(screenshot) or self.battle_award(screenshot):
+                logger.info("[wait_done] 战斗结算")
                 self.world.dclick_tirm(6)
             if callback:
+                logger.info("[wait_done] 执行回调")
                 result = callback(screenshot)
+                logger.info(f"[wait_done] 执行回调结果: {result}")
                 if result is not None:
                     return result
             time.sleep(self.wait_time)

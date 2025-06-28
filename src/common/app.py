@@ -14,11 +14,29 @@ class AppManager:
     """
     def __init__(self, device_manager: DeviceManager) -> None:
         self.device_manager = device_manager
-        # 硬编码游戏包名，支持官服和B服
+        # 从配置中读取游戏包名，支持官服和B服
         self.app_packages = ['com.netease.ma167', 'com.netease.ma167.bilibili']
         self.current_package = None
         self._initialized = True
+        # 从配置中更新app_packages
+        self._update_app_packages_from_config()
 
+    def _update_app_packages_from_config(self):
+        """
+        从配置中更新app_packages列表
+        """
+        try:
+            configured_package = config.device.app_packages
+            if configured_package:
+                # 如果配置的包名在支持的包名列表中，将其设为优先
+                if configured_package in self.app_packages:
+                    # 重新排序，将配置的包名放在第一位
+                    self.app_packages = [configured_package] + [pkg for pkg in self.app_packages if pkg != configured_package]
+                    logger.info(f"从配置中读取到app_packages: {configured_package}")
+                else:
+                    logger.warning(f"配置的app_packages {configured_package} 不在支持的包名列表中")
+        except Exception as e:
+            logger.error(f"从配置中读取app_packages失败: {e}")
 
     def get_app_package(self):
         if not self.device_manager.device:
@@ -56,7 +74,7 @@ class AppManager:
 
     def start_app(self,show_log:bool=False) -> None:
         """
-        启动游戏App，优先启动官服，失败则尝试B服
+        启动游戏App，优先启动配置中指定的服务器
         """
         try:
             if not self.device_manager.device:
@@ -75,7 +93,7 @@ class AppManager:
                 time.sleep(3)
                 return
             
-            # 尝试启动游戏，优先官服
+            # 尝试启动游戏，优先配置中指定的服务器
             for package in self.app_packages:
                 try:
                     self.device_manager.device.app_start(package)

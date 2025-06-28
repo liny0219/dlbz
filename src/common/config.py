@@ -84,6 +84,7 @@ class DeviceConfig(BaseModel):
     connection_timeout: int = 30
     retry_count: int = 3
     adb_address: str = "127.0.0.1:5555"
+    app_packages: str = "com.netease.ma167"
 
 class LoggingConfig(BaseModel):
     level: str = "INFO"

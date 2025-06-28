@@ -868,17 +868,17 @@ class World:
                     monster = battle.find_enemy_ocr(self.monster_pos, self.monsters)
                     if monster is None:
                         logger.info("没有识别到敌人,使用默认战斗配置")
-                        battle_result = self.do_default_battle()
+                        battle_result = self.do_default_battle(callback=callback)
                         is_battle_success = bool(battle_result.get('result', False))
                     if monster and battle_executor:
                         loadConfig = battle_executor.load_commands_from_txt(monster.battle_config)
                         if not loadConfig:
                             logger.info("没有找到匹配敌人的战斗配置")
-                            battle_result = self.do_default_battle()
+                            battle_result = self.do_default_battle(callback=callback)
                             is_battle_success = bool(battle_result.get('result', False))
                         else:
                             logger.info("使用匹配敌人的战斗配置")
-                            is_battle_success = bool(battle_executor.execute_all().get('success', False))
+                            is_battle_success = bool(battle_executor.execute_all(callback=callback).get('success', False))
                     check_battle_command_done = True
                 if check_battle_command_done and battle and battle.in_round():
                     battle.auto_battle()
@@ -886,7 +886,7 @@ class World:
                 logger.info("异常")
                 return None
             
-    def do_default_battle(self) -> dict:
+    def do_default_battle(self, callback:Callable[[Image.Image], str|None]|None = None) -> dict:
         """
         执行默认战斗
         """
@@ -911,7 +911,7 @@ class World:
                 return { "type": "error", "result": False}
         else:
             logger.info("使用默认战斗配置")
-            result = battle_executor.execute_all()['success']
+            result = battle_executor.execute_all(callback=callback)['success']
             return { "type": "battle_executor", "result": result}
 
     def open_minimap(self):

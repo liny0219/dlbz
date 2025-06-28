@@ -1,8 +1,9 @@
 from __future__ import annotations
 import logging
-from typing import List, Dict, Any
+from typing import Callable, List, Dict, Any
 from core.battle import Battle
 from typing import TYPE_CHECKING
+from PIL import Image
 if TYPE_CHECKING:
     from common.world import World
 class BattleCommandExecutor:
@@ -98,7 +99,7 @@ class BattleCommandExecutor:
             self.logger.error(f"加载TXT战斗指令配置失败: {e}")
             return False
 
-    def execute_all(self) -> dict[str,bool|str]:
+    def execute_all(self, callback:Callable[[Image.Image], str|None]|None = None) -> dict[str,bool|str]:
         """
         顺序执行所有指令，遇到异常自动记录并继续
         支持通过修改 _current_index 来回退到指定命令位置
@@ -120,7 +121,7 @@ class BattleCommandExecutor:
                     return { 'success': False,"state":'exit_app'}
                 if not result:
                     self.battle.reset_round()
-                    result = self.battle.wait_in_round_or_world(timeout=30)
+                    result = self.battle.wait_in_round_or_world(callback=callback,timeout=30)
                     if result in ['in_round']:
                         self.logger.info(f"指令执行异常:{cmd}")
                         self.battle.exit_battle()
@@ -133,7 +134,7 @@ class BattleCommandExecutor:
                     check_dead_cmd = None
                 if cmd.get('type') == 'Attack':
                     self.logger.info(f"等待战斗回合结束")
-                    result = self.battle.wait_done()
+                    result = self.battle.wait_done(callback=callback)
                     if result in ['wait_done_timeout', 'exception']:
                         self.logger.info(f"回合异常:{cmd}{result}")
                         return { 'success': False,"state":'exception'}
