@@ -120,8 +120,7 @@ class BattleCommandExecutor:
                     return { 'success': False,"state":'exit_app'}
                 if not result:
                     self.battle.reset_round()
-                    result = self.battle.wait_in_round_or_world(lambda screenshot:"in_world" if self.world.in_world(screenshot) else None, 
-                                                                timeout=30)
+                    result = self.battle.wait_in_round_or_world(timeout=30)
                     if result in ['in_round']:
                         self.logger.info(f"指令执行异常:{cmd}")
                         self.battle.exit_battle()
@@ -134,7 +133,7 @@ class BattleCommandExecutor:
                     check_dead_cmd = None
                 if cmd.get('type') == 'Attack':
                     self.logger.info(f"等待战斗回合结束")
-                    result = self.battle.wait_done(lambda screenshot: "in_world" if self.world.in_world(screenshot) else None)
+                    result = self.battle.wait_done()
                     if result in ['wait_done_timeout', 'exception']:
                         self.logger.info(f"回合异常:{cmd}{result}")
                         return { 'success': False,"state":'exception'}
@@ -144,7 +143,9 @@ class BattleCommandExecutor:
                         self.battle.exit_battle()
                         return { 'success': False,"state":'dead'}
                     self.logger.info(f"战斗回合结束, result: {result}")
-                
+                    if result in ['in_world']:
+                        self.logger.info(f"指令执行异常:{cmd}{result}.但是进入世界,默认为战斗提前结束")
+                        return { 'success': True,"state":'normal'}
                 # 处理循环逻辑
                 if cmd.get('type') == 'LoopS':
                     self._handle_loop_start(idx)

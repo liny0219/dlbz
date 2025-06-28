@@ -1,41 +1,37 @@
-import time
-from paddleocr import PaddleOCR
-from utils import logger
-import yaml
+import os
+import gc
 import cv2
+import threading
+import traceback
+from typing import List, Optional, Tuple, Union, Any
 import numpy as np
 from PIL import Image, ImageDraw
-from typing import List, Any, Union, Optional, Tuple
-import os
-from core.device_manager import DeviceManager
-from common.config import config
+from utils.frozen_fix import fix_frozen_environment, safe_import_paddleocr
+from utils import logger
 from utils.get_asset_path import get_asset_path
-import traceback
-import threading
 import concurrent.futures
-import gc
-from functools import lru_cache
-import logging
+import sys
 
 class OCRHandler:
-    def __init__(self, device_manager: DeviceManager, model_dir: Optional[str] = None, show_logger:bool = False) -> None:
+    def __init__(self, device_manager, model_dir: Optional[str] = None, show_logger:bool = False) -> None:
         """
         初始化OCR处理器
-        :param device_manager: 设备管理器
-        :param model_dir: OCR模型目录
-        :param show_logger: 是否显示PaddleOCR日志
+        :param device_manager: 设备管理器实例
+        :param model_dir: 模型目录路径，如果为None则使用默认路径
+        :param show_logger: 是否显示OCR日志
         """
         self.device_manager = device_manager
         
-        # 设置PaddleOCR日志级别
-        if not show_logger:
-            logging.getLogger("PaddleOCR").setLevel(logging.ERROR)
+        # 修复打包环境问题
+        fix_frozen_environment()
         
-        # 初始化OCR模型
         if model_dir is None:
             model_dir = os.path.join(os.path.dirname(__file__), "..", "..", "ocr", "model")
         
         try:
+            # 安全导入PaddleOCR
+            PaddleOCR = safe_import_paddleocr()
+            
             # 初始化PaddleOCR
             self.ocr = PaddleOCR(
                 use_angle_cls=True,
@@ -60,7 +56,20 @@ class OCRHandler:
             
         except Exception as e:
             logger.error(f"OCR模型初始化失败: {e}")
-            raise
+            # 如果是打包环境，尝试更简单的初始化方式
+            if getattr(sys, 'frozen', False):
+                try:
+                    logger.info("尝试使用简化模式初始化OCR...")
+                    # 使用默认参数，不指定具体模型路径
+                    PaddleOCR = safe_import_paddleocr()
+                    self.ocr = PaddleOCR(use_angle_cls=True, lang='ch', show_log=False)
+                    self.ocr_digit = PaddleOCR(use_angle_cls=True, lang='en', show_log=False)
+                    logger.info("OCR模型简化模式初始化成功")
+                except Exception as e2:
+                    logger.error(f"OCR模型简化模式初始化也失败: {e2}")
+                    raise e2
+            else:
+                raise
         
         self.ocr_lock = threading.Lock()  # 新增：OCR推理锁
 

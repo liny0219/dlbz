@@ -215,8 +215,7 @@ class DailyMode:
             # 分别处理花田1和花田2，独立统计
             if self.huatian1_enabled:
                 huatian1_start_time = time.time()
-                if not self._check_huatian_target("花田1", huatian1_pos, ocr_region, huatian1_start_time):
-                    return
+                self._check_huatian_target("花田1", huatian1_pos, ocr_region, huatian1_start_time)
                 huatian1_elapsed_time = time.time() - huatian1_start_time
                 self.huatian_stats["huatian1"]["total_time"] = huatian1_elapsed_time  # 覆盖，因为是一次完整的执行耗时
                 logger.info(f"[花田1] 执行完成，重启次数: {self.huatian_stats['huatian1']['restart_count']} 耗时: {huatian1_elapsed_time:.0f}秒")
@@ -225,9 +224,9 @@ class DailyMode:
                 self._send_stats_update("huatian1", huatian1_elapsed_time, target_found=target_found)
             
             if self.huatian2_enabled:
+                time.sleep(2)
                 huatian2_start_time = time.time()
-                if not self._check_huatian_target("花田2", huatian2_pos, ocr_region, huatian2_start_time):
-                    return
+                self._check_huatian_target("花田2", huatian2_pos, ocr_region, huatian2_start_time)
                 huatian2_elapsed_time = time.time() - huatian2_start_time
                 self.huatian_stats["huatian2"]["total_time"] = huatian2_elapsed_time  # 覆盖，因为是一次完整的执行耗时
                 logger.info(f"[花田2] 执行完成，重启次数: {self.huatian_stats['huatian2']['restart_count']} 耗时: {huatian2_elapsed_time:.0f}秒")

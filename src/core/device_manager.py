@@ -160,112 +160,104 @@ class DeviceManager:
 
     def click(self, x: int, y: int) -> None:
         """
-        点击指定坐标
-        :param x: x坐标
-        :param y: y坐标
+        点击指定坐标，并输出日志
+        :param x: 横坐标
+        :param y: 纵坐标
         """
         try:
-            if self.device is None:
-                logger.error("Device not connected")
-                return
-            self.device.click(x, y)
-            logger.debug(f"Clicked at ({x}, {y})")
+            if self.device:
+                logger.info(f"[click]点击坐标 ({x}, {y})")
+                self.device.click(x, y)
+            else:
+                logger.error("设备未连接，无法点击")
         except Exception as e:
-            logger.error(f"Failed to click at ({x}, {y}): {str(e)}\n{traceback.format_exc()}")
+            logger.error(f"点击坐标 ({x}, {y}) 失败: {str(e)}\n{traceback.format_exc()}") 
 
     def double_click(self, x: int, y: int) -> None:
         """
-        双击指定坐标
-        :param x: x坐标
-        :param y: y坐标
+        点击指定坐标，并输出日志
+        :param x: 横坐标
+        :param y: 纵坐标
         """
         try:
-            if self.device is None:
-                logger.error("Device not connected")
-                return
-            self.device.double_click(x, y)
-            logger.debug(f"Double clicked at ({x}, {y})")
+            if self.device:
+                logger.info(f"[double_click]双击坐标 ({x}, {y})")
+                self.device.double_click(x, y)
+            else:
+                logger.error("设备未连接，无法点击")
         except Exception as e:
-            logger.error(f"Failed to double click at ({x}, {y}): {str(e)}\n{traceback.format_exc()}")
-
+            logger.error(f"点击坐标 ({x}, {y}) 失败: {str(e)}\n{traceback.format_exc()}") 
+    
     def long_click(self, x: int, y: int, duration: float = 0.5):
         """
         长按指定坐标
-        :param x: x坐标
-        :param y: y坐标
-        :param duration: 长按持续时间（秒）
+        :param x: 横坐标
+        :param y: 纵坐标
+        :param duration: 长按时间 (秒)
         """
-        try:
-            if self.device is None:
-                logger.error("Device not connected")
-                return
-            self.device.long_click(x, y, duration=duration)
-            logger.debug(f"Long clicked at ({x}, {y}) for {duration}s")
-        except Exception as e:
-            logger.error(f"Failed to long click at ({x}, {y}): {str(e)}\n{traceback.format_exc()}")
-
+        if not self.device:
+            logger.error("设备未连接，无法长按")
+            return
+        logger.info(f"[long_click]长按: {duration} 秒")
+        self.device.long_click(x, y, duration)
+    
     def press_down(self, x: int, y: int):
         """
         按下指定坐标
-        :param x: x坐标
-        :param y: y坐标
+        :param x: 横坐标
+        :param y: 纵坐标
         """
-        try:
-            if self.device is None:
-                logger.error("Device not connected")
-                return
-            self.device.long_click(x, y, duration=0.1)
-            logger.debug(f"Pressed down at ({x}, {y})")
-        except Exception as e:
-            logger.error(f"Failed to press down at ({x}, {y}): {str(e)}\n{traceback.format_exc()}")
+        if self.device is None:
+            logger.error("设备未连接，无法按下")
+            return
+        logger.info(f"[press_down]按下: {x}, {y}")
+        self.device.touch.down(x, y)
 
     def press_move(self, x: int, y: int):
         """
-        移动到指定坐标
-        :param x: x坐标
-        :param y: y坐标
+        按下并移动指定坐标
+        :param x: 横坐标
+        :param y: 纵坐标
         """
-        try:
-            if self.device is None:
-                logger.error("Device not connected")
-                return
-            self.device.swipe(x, y, x, y, duration=0.1)
-            logger.debug(f"Moved to ({x}, {y})")
-        except Exception as e:
-            logger.error(f"Failed to move to ({x}, {y}): {str(e)}\n{traceback.format_exc()}")
+        if self.device is None:
+            logger.error("设备未连接，无法按下并移动")
+            return
+        logger.info(f"[press_move]按下并移动: {x}, {y}")
+        self.device.touch.move(x, y)
 
     def press_up(self, x: int, y: int):
         """
-        在指定坐标释放
-        :param x: x坐标
-        :param y: y坐标
+        抬起指定坐标
+        :param x: 横坐标
+        :param y: 纵坐标
         """
-        try:
-            if self.device is None:
-                logger.error("Device not connected")
-                return
-            # 这里可能需要根据具体的uiautomator2 API调整
-            logger.debug(f"Released at ({x}, {y})")
-        except Exception as e:
-            logger.error(f"Failed to release at ({x}, {y}): {str(e)}\n{traceback.format_exc()}")
+        if self.device is None:
+            logger.error("设备未连接，无法抬起")
+            return
+        logger.info(f"[press_up]抬起: {x}, {y}")
+        self.device.touch.up(x, y)
 
     def press_and_drag_step(self, start:tuple, end:tuple,drag_press_time:float=0.1,drag_wait_time:float=0.3):
         """
-        拖拽操作
+        长按和拖动指定坐标
         :param start: 起始坐标 (x, y)
         :param end: 结束坐标 (x, y)
-        :param drag_press_time: 按下时间
-        :param drag_wait_time: 拖拽等待时间
+        :param drag_press_time: 长按时间 (秒)
+        :param drag_wait_time: 拖动时间 (秒)
+        :param duration: 拖动时间 (秒)
         """
-        try:
-            if self.device is None:
-                logger.error("Device not connected")
-                return
-            self.device.drag(start[0], start[1], end[0], end[1], duration=drag_press_time)
-            time.sleep(drag_wait_time)
-            logger.debug(f"Dragged from {start} to {end}")
-        except Exception as e:
-            logger.error(f"Failed to drag from {start} to {end}: {str(e)}\n{traceback.format_exc()}")
+        if not self.device:
+            logger.error("设备未连接，无法长按和拖动")
+            return
+        start_x, start_y = start
+        end_x, end_y = end
+        logger.info(f"[press_and_drag_step]长按: {drag_press_time} 秒")
+        self.device.touch.down(start_x, start_y)
+        time.sleep(drag_press_time)
+        logger.info(f"[press_and_drag_step]拖动: {start} -> {end} {drag_wait_time} 秒")
+        self.device.touch.move(end_x, end_y)
+        time.sleep(drag_wait_time)
+        self.device.touch.up(end_x, end_y)
 
     def save_screenshot(self, img_or_path: Union[Image.Image, str], save_path: Optional[str] = None) -> None:
         """

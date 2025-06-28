@@ -35,10 +35,15 @@ class MainWindow(tk.Tk):
     """
     def __init__(self, title:str, config_files=DEFAULT_CONFIG_FILES):
         super().__init__()
+        
+        # 修复标准输出流问题（特别是在打包环境中）
+        fix_stdio_if_none()
+        
         self.title(title)
         self.geometry("800x600")
         self.minsize(800, 600)
         self.protocol("WM_DELETE_WINDOW", self.on_close)
+        
         # 通过setup_logger注册GUI日志Handler，禁用主进程文件日志写入
         self.logger = setup_logger(self.append_log, enable_file_log=False)
         
@@ -491,13 +496,40 @@ class GuiLogHandler(logging.Handler):
             pass
 
 def fix_stdio_if_none():
+    """修复标准输出流为None的问题，特别是在打包环境中"""
     import sys
+    import os
+    
+    # 检查是否为打包环境
+    is_frozen = getattr(sys, 'frozen', False)
+    
     if sys.stdout is None:
-        import io
-        sys.stdout = io.StringIO()
+        if is_frozen:
+            # 在打包环境中，重定向到null设备
+            sys.stdout = open(os.devnull, 'w')
+        else:
+            # 在开发环境中，使用StringIO
+            import io
+            sys.stdout = io.StringIO()
+    
     if sys.stderr is None:
-        import io
-        sys.stderr = io.StringIO()
+        if is_frozen:
+            # 在打包环境中，重定向到null设备
+            sys.stderr = open(os.devnull, 'w')
+        else:
+            # 在开发环境中，使用StringIO
+            import io
+            sys.stderr = io.StringIO()
+    
+    # 确保tqdm能够正常工作
+    try:
+        import tqdm
+        # 设置tqdm的默认输出流
+        if hasattr(tqdm, 'tqdm'):
+            # 使用更安全的方式设置tqdm默认输出
+            tqdm.tqdm.monitor_interval = 0  # 禁用监控以避免输出问题
+    except ImportError:
+        pass
 
 def run_fengmo_main(log_queue, log_level):
     import logging

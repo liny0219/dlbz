@@ -38,14 +38,14 @@ class World:
         from utils.service_locator import register_service
         register_service("world", self, type(self))
     
-    def _get_battle(self):
+    def _get_battle(self) -> "Battle|None":
         """
         通过服务定位器获取Battle实例
         """
         from utils.service_locator import get_typed_service
         return get_typed_service("battle")
     
-    def _get_battle_executor(self):
+    def _get_battle_executor(self) -> "BattleCommandExecutor|None":
         """
         获取或创建BattleCommandExecutor实例
         """
@@ -65,15 +65,15 @@ class World:
         self.app_manager.close_app()
         if show_log:
             logger.info(f"[read_map_state]读取界面状态")
-        max_count = 2
-        count = 0
-        while count < max_count:
-            time.sleep(1)
+
+        while True:
+            time.sleep(2)
             in_world = self.in_world()
             if in_world:
-                count += 1
-            else:
-                count = 0
+                time.sleep(0.3)
+                check_in_world = self.in_world()
+                if check_in_world:
+                    break
             if not in_world:
                 self.app_manager.start_app()
                 self.device_manager.click(100,100)
@@ -395,8 +395,32 @@ class World:
         else:
             logger.debug("没有找到boss")
             return False
+    
+    def check_net_state(self, image:Image.Image|None=None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断网络状态")
+            return False
+        points_colors = [
+                    (559, 284, 'E6E6E6', 1),
+                    (696, 285, 'C7C7C7', 1), 
+                    (383, 323, 'F7F6F4', 1), 
+                    (514, 332, 'E7E6E4', 1),
+                    (708, 334, 'F2F1EF', 1), 
+                    (493, 334, 'BDB9B8', 1), 
+                    (436, 417, '28281E', 1),
+                    (801, 416, '28281C', 1), 
+                ]
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results:
+            logger.debug("检测到网络断开")
+            return True
+        else:
+            logger.debug("没有检测到网络断开")
+            return False
         
-    def check_exit_fengmo(self,image:Image.Image|None=None) -> bool:
+    def check_exit_fengmo(self, image:Image.Image|None=None) -> bool:
         if image is None:
             image = self.device_manager.get_screenshot()
         if image is None:
@@ -575,6 +599,81 @@ class World:
         sleep_until(lambda: self.ocr_handler.match_click_text(["涉入"],region=(760,465,835,499)),function_name="涉入")
         time.sleep(5)
         return True
+    
+    def none_cure(self,image:Image.Image|None=None) -> bool:
+        """
+        判断是否没有恢复次数
+        """
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否没有恢复次数")
+            return False
+        points_colors = [
+                    (641, 474, '506671', 1),
+                    (490, 281, 'E5E9EC', 1),
+                    (616, 284, 'E5E5E7', 1),
+                    (732, 276, 'E1DFE2', 1),
+                    (548, 315, 'EEEAE9', 1),
+                    (710, 317, 'F3EFF0', 1),
+                    (726, 352, 'F6F6F8', 1),
+                    (539, 349, 'FAF2EF', 1),
+                ]
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results:
+            logger.debug("检测到没有恢复次数")
+            return True
+        else:
+            logger.debug("有恢复次数")
+            return False
+    
+    def has_cure(self,image:Image.Image|None=None) -> bool:
+        """
+        判断是否还有恢复次数
+        """
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否还有恢复次数")
+            return False
+        points_colors = [
+                    (502, 483, '5D5D5D', 1),
+                    (776, 485, '37677D', 1),
+                    (526, 289, 'EEEEF0', 1),
+                    (580, 298, 'F5F5F7', 1),
+                    (697, 292, 'E9E9EB', 1),
+                    (824, 293, 'DCDCDE', 1),
+                ]
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results:
+            logger.debug("检测到还有恢复次数")
+            return True
+        else:
+            logger.debug("没有恢复次数")
+            return False
+        
+    def cure_finish(self,image:Image.Image|None=None) -> bool:
+        """
+        判断是否治疗完成
+        """
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否治疗完成")
+            return False
+        points_colors = [
+                    (502, 310, 'E8E2E4', 1),
+                    (606, 309, 'E8DEDD', 1),
+                    (637, 316, 'FEECEC', 1),
+                    (742, 305, 'EFEAE7', 1),
+                ]
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results:
+            logger.debug("检测到治疗完成")
+            return True
+        else:
+            logger.debug("没有治疗完成")
+            return False
 
     def vip_cure(self,vip_cure:bool=False):
         """
@@ -587,27 +686,31 @@ class World:
         time.sleep(0.2)
         logger.info(f"[vip_cure]使用vip治疗")
         self.device_manager.click(1222, 525)
-        def check_cure():
-            screenshot = self.device_manager.get_screenshot()
-            result = self.ocr_handler.recognize_text(screenshot)
-            for r in result:
-                if "将恢复旅团所有人的全部" in r['text']:
-                    logger.info('是否月卡恢复')
-                    time.sleep(1)
-                    self.click_confirm_pos()
-                    logger.info('点击确认')
-                    return 'confirm_cure'
-                if "已用完所有的全恢复次数" in r['text']:
-                    logger.info('已用完所有月卡恢复次数')
-                    self.click_confirm_pos()
-                    return 'none_cure'
-        result = sleep_until(check_cure,function_name="check_cure")
-        if result == 'none_cure':
-            return result
-        time.sleep(5)
-        sleep_until(lambda:self.ocr_handler.match_click_text(["完全恢复了"]),function_name="vip治疗 完全恢复了")
         time.sleep(1)
-        return 'finish_cure'
+        result = ''
+        start_time = time.time()
+        while not self.in_world():
+            if time.time() - start_time > 20:
+                logger.info('[vip_cure]vip治疗超时')
+                return 'timeout'
+            screenshot = self.device_manager.get_screenshot()
+            if self.has_cure(screenshot):
+                logger.info('[vip_cure]是否月卡恢复')
+                time.sleep(1)
+                self.click_confirm_yes()
+                logger.info('[vip_cure]点击确认')
+                result = 'confirm_cure'
+            if self.none_cure(screenshot):
+                logger.info('[vip_cure]已用完所有月卡恢复次数')
+                self.click_confirm()
+                logger.info('[vip_cure]点击确认')
+                result = 'none_cure'
+            if self.cure_finish(screenshot):
+                logger.info('[vip_cure]治疗完成')
+                self.click_confirm()
+                result = 'finish_cure'
+            time.sleep(0.2)
+        return result
 
     def select_fengmo_mode(self,depth:int,callback:Callable[[], str|None]|None = None):
         """
@@ -718,8 +821,7 @@ class World:
         
     def in_world_or_battle(self, callback:Callable[[Image.Image], None]|None=None, check_battle_command_done:bool|None=None,
                            is_battle_success:bool|None=None,has_battle:bool|None=None)-> dict[str,bool]|None:
-        logger.debug("[in_world_or_battle]开始检查")
-        
+        logger.info("[in_world_or_battle]开始检查")
         if check_battle_command_done is None:
             check_battle_command_done = False
         if is_battle_success is None:
@@ -731,10 +833,12 @@ class World:
             if screenshot is None:
                 logger.warning("[in_world_or_battle]获取截图失败")
                 return { "in_world":False, "in_battle":False,"app_alive":False, 'is_battle_success':False}
+            logger.info(f"[in_world_or_battle]检查状态callback")
             if callback is not None and screenshot is not None:
                 callback(screenshot)
             check_in_world = sleep_until_app_running(lambda: self.check_in_world_or_battle(callback=callback),
                                                      app_manager=self.app_manager, function_name="in_world_or_battle")
+            logger.info(f"[in_world_or_battle]检查状态{check_in_world}")
             if check_in_world == 'battle_fail':
                 is_battle_success = False
                 continue
@@ -745,7 +849,7 @@ class World:
                 result = { "in_world":True, "in_battle":has_battle,"app_alive":True, 'is_battle_success':is_battle_success }
                 if has_battle:
                     time.sleep(0.5)
-                    check_in_world = sleep_until(lambda: self.in_world() )
+                    check_in_world = sleep_until(self.in_world,timeout=5)
                     if check_in_world:
                         return result
                     else:

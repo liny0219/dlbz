@@ -800,11 +800,15 @@ class Battle:
             if time.time() - start_time > timeout:
                 return 'wait_done_timeout'
             screenshot = self.device_manager.get_screenshot()
-            if screenshot is None:
+            if screenshot is None or not self.world:
                 logger.error("[wait_in_round_or_world] 无法获取截图")
                 return 'exception'
             if self.in_round(screenshot):
                 return 'in_round'
+            if self.world.in_world(screenshot):
+                return 'in_world'
+            if self.battle_end(screenshot) or self.battle_award(screenshot):
+                self.world.dclick_tirm(6)
             if callback:
                 result = callback(screenshot)
                 if result is not None:
@@ -824,14 +828,16 @@ class Battle:
                 return 'wait_done_timeout'
             screenshot = self.device_manager.get_screenshot()
             logger.debug(f"[wait_done] 等待战斗结束")
-            if screenshot is None:
+            if screenshot is None or not self.world:
                 logger.error("[wait_done] 无法获取截图")
                 return 'exception'
+            if self.world.in_world(screenshot):
+                return 'in_world'
             if self.in_round(screenshot):
                 logger.info("[in_round] in_round")
                 return 'in_round'
-            if not self.in_battle(screenshot):
-                return 'not_in_battle'
+            if self.battle_end(screenshot) or self.battle_award(screenshot):
+                self.world.dclick_tirm(6)
             if callback:
                 result = callback(screenshot)
                 if result is not None:

@@ -729,9 +729,13 @@ class FengmoMode:
                     self.world.click_confirm_yes()
                     return
                 if self.world.check_found_boss(screenshot):
-                    logger.info(f"[check_info]找到boss")
+                    logger.info(f"[check_info]找到boss,点击确认")
                     self.state_data.step = Step.FIGHT_BOSS
                     self.world.click_confirm_yes()
+                    return
+                if self.world.check_net_state(screenshot):
+                    logger.info(f"[check_info]网络断开,点击重试")
+                    self.device_manager.click(771, 417)
                     return
             except Exception as e:
                 logger.info(f"[check_info]处理截图时发生异常: {e}")
