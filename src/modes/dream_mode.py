@@ -50,11 +50,6 @@ class DreamMode:
         
         # 坐标配置（需要根据实际游戏界面调整）
         self.coordinates = {
-            # 开始游戏相关
-            'recruit1_btn': (966, 440),
-            'recruit2_btn': (966, 470),
-            'game_start': (988, 576),
-            
             # 丢骰子相关
             'dice_select': (1135, 592),
             'dice_confirm': (641, 290),
@@ -285,38 +280,37 @@ class DreamMode:
         start_pos = self.find_image("assets/dream/kaishi.png")
         if start_pos:
             self.log_message("找到开始游戏界面")
-            self.process_start_game(start_pos)
+            # 点击开始游戏按钮
+            self.click_position(*start_pos)
+            self.delay(self.click_wait_interval)
             return True
+
+        recruit_btn_1 = self.check_recruit_1()
+        if recruit_btn_1:
+            self.click_position(*recruit_btn_1)
+            self.delay(self.click_wait_interval)
+            self.process_recruit()
+            self.delay(self.click_wait_interval)
+            return True
+
+        recruit_btn_2 = self.check_recruit_2()
+        if recruit_btn_2:
+            self.click_position(*recruit_btn_2)
+            self.delay(self.click_wait_interval)
+            self.process_recruit()
+            self.delay(self.click_wait_interval)
+            return True
+
+        game_start = self.check_game_start()
+        if game_start:
+            self.click_position(*game_start)
+            self.delay(self.click_wait_interval)
+            self.delay(6.0)
+            self.log_message("开始游戏流程完成")
+            return True
+        
         return False
-
-    def process_start_game(self, pos:Tuple[int,int]):
-        """处理开始游戏流程"""
-        self.log_message("开始处理开始游戏")
-        
-        # 点击开始游戏按钮
-        self.click_position(*pos)
-        self.delay(self.click_wait_interval)
-        
-        recruit1_btn = self.coordinates['recruit1_btn']
-        self.click_position(*recruit1_btn)
-        self.delay(self.click_wait_interval)
-        self.process_recruit()
-
-        self.delay(self.click_wait_interval)
-        recruit2_btn = self.coordinates['recruit2_btn']
-        self.click_position(*recruit2_btn)
-        self.delay(self.click_wait_interval)
-        self.process_recruit()
-        self.delay(self.click_wait_interval)
-
-        game_start = self.coordinates['game_start']
-        self.click_position(*game_start)
-        self.delay(self.click_wait_interval)
-        
-        # 等待12秒让游戏加载
-        self.delay(6.0)
-        
-        self.log_message("开始游戏流程完成")
+     
 
     def check_recruit_interface(self) -> bool:
         """
@@ -331,6 +325,43 @@ class DreamMode:
             self.process_recruit()
             return True
         return False
+    
+    def check_recruit_1(self) -> Optional[Tuple[int, int]]:
+        """
+        检查并处理招募界面
+        
+        :return: 是否处理了招募界面
+        """
+        # 查找招募相关图片
+        recruit_pos = self.find_image("assets/dream/zhaomu_1.png")
+        if recruit_pos:
+            self.log_message("找到招募1界面")
+            return recruit_pos
+        return None
+    
+    def check_recruit_2(self) -> Optional[Tuple[int, int]]:
+        """
+        检查并处理招募界面
+        
+        :return: 是否处理了招募界面
+        """
+        # 查找招募相关图片
+        recruit_pos = self.find_image("assets/dream/zhaomu_2.png")
+        if recruit_pos:
+            self.log_message("找到招募2界面")
+            return recruit_pos
+        return None
+    
+    def check_game_start(self) -> Optional[Tuple[int, int]]:
+        """
+        检查并处理游戏开始界面
+        :return: 是否处理了游戏开始界面
+        """
+        game_start_pos = self.find_image("assets/dream/game_start.png")
+        if game_start_pos:
+            self.log_message("找到游戏开始界面")
+            return game_start_pos
+        return None
 
     def process_recruit(self):
         """处理招募流程"""
@@ -514,7 +545,6 @@ class DreamMode:
         self.delay(self.click_wait_interval)
         
         self.log_message("事件处理完成")
-        self.update_stats("successful_events")
 
     def check_event_follow_grid(self) -> bool:
         """
@@ -587,6 +617,7 @@ class DreamMode:
             x, y = self.coordinates['battle_settlement']
             self.click_position(x, y)
             self.delay(self.click_wait_interval)
+            self.update_stats("successful_battles")
             self.log_message("战斗流程完成")
             self.delay(0.5)
 
