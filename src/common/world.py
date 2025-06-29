@@ -532,9 +532,11 @@ class World:
         logger.debug("点击跳过")
         self.click_tirm(3)
         logger.debug("点击是")
-        sleep_until(lambda: self.ocr_handler.match_click_text(["是"]), function_name="旅馆 是")
-        logger.debug("等待完全恢复")
-        sleep_until(lambda: self.ocr_handler.match_click_text(["精力完全恢复了"]), function_name="旅馆 精力完全恢复了")
+        sleep_until(lambda: self.click_confirm_yes(wait_time=0.3), function_name="旅馆 是")
+        if sleep_until(self.cure_finish):
+            logger.info("治疗完成")
+            time.sleep(0.3)
+            self.click_confirm()
         logger.debug("等待返回城镇")
         sleep_until(self.in_world)
         logger.debug("打开小地图")
@@ -970,7 +972,7 @@ class World:
     def click_confirm_pos(self):
         self.device_manager.click(800,485)
     
-    def click_confirm_yes(self, image:Image.Image|None=None, click:bool = True):
+    def click_confirm_yes(self, image:Image.Image|None=None, click:bool = True, wait_time:float=0.2):
         if image is None:
             image = self.device_manager.get_screenshot()
         find = self.ocr_handler.match_image(image, "assets/confirm_yes.png")
@@ -978,7 +980,7 @@ class World:
             logger.info("[click_confirm_yes]检测到按钮-是")
             if click:
                 self.device_manager.click(find[0],find[1])
-                time.sleep(0.2)
+                time.sleep(wait_time)
                 logger.info("[click_confirm_yes]点击按钮-是")
             return True
         else:

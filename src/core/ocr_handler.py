@@ -26,8 +26,30 @@ class OCRHandler:
         fix_frozen_environment()
         
         if model_dir is None:
-            model_dir = os.path.join(os.path.dirname(__file__), "..", "..", "ocr", "model")
-        
+            # 获取项目根目录
+            root_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            # 判断是否在开发环境（是否存在 src 目录）
+            if os.path.exists(os.path.join(root_dir, "src")):
+                # 开发环境：使用 src 平级的 ocr/model 目录
+                base_dir = os.path.join(root_dir, "ocr", "model")
+            else:
+                # 生产环境：使用相对路径 ocr/model 目录
+                base_dir = os.path.join("ocr", "model")
+            
+            # 为中文模型设置子目录
+            ch_det_model_dir = os.path.join(base_dir, "whl", "det", "ch", "ch_PP-OCRv4_det_infer")
+            ch_rec_model_dir = os.path.join(base_dir, "whl", "rec", "ch", "ch_PP-OCRv4_rec_infer")
+            ch_cls_model_dir = os.path.join(base_dir, "whl", "cls", "ch_ppocr_mobile_v2.0_cls_infer")
+            
+            # 为英文模型设置子目录
+            en_det_model_dir = os.path.join(base_dir, "whl", "det", "en", "en_PP-OCRv3_det_infer")
+            en_rec_model_dir = os.path.join(base_dir, "whl", "rec", "en", "en_PP-OCRv3_rec_infer")
+            en_cls_model_dir = os.path.join(base_dir, "whl", "cls", "ch_ppocr_mobile_v2.0_cls_infer")
+            
+            # 创建所有必要的目录
+            for dir_path in [ch_det_model_dir, ch_rec_model_dir, ch_cls_model_dir, 
+                           en_det_model_dir, en_rec_model_dir, en_cls_model_dir]:
+                os.makedirs(dir_path, exist_ok=True)
         try:
             # 安全导入PaddleOCR
             PaddleOCR = safe_import_paddleocr()
@@ -36,9 +58,9 @@ class OCRHandler:
             self.ocr = PaddleOCR(
                 use_angle_cls=True,
                 lang='ch',
-                det_model_dir=os.path.join(model_dir, "whl", "det", "ch", "ch_PP-OCRv4_det_infer"),
-                rec_model_dir=os.path.join(model_dir, "whl", "rec", "ch", "ch_PP-OCRv4_rec_infer"),
-                cls_model_dir=os.path.join(model_dir, "whl", "cls", "ch_ppocr_mobile_v2.0_cls_infer"),
+                det_model_dir=ch_det_model_dir,
+                rec_model_dir=ch_rec_model_dir,
+                cls_model_dir=ch_cls_model_dir,
                 show_log=False
             )
             
@@ -46,9 +68,9 @@ class OCRHandler:
             self.ocr_digit = PaddleOCR(
                 use_angle_cls=True,
                 lang='en',
-                det_model_dir=os.path.join(model_dir, "whl", "det", "en", "en_PP-OCRv3_det_infer"),
-                rec_model_dir=os.path.join(model_dir, "whl", "rec", "en", "en_PP-OCRv3_rec_infer"),
-                cls_model_dir=os.path.join(model_dir, "whl", "cls", "ch_ppocr_mobile_v2.0_cls_infer"),
+                det_model_dir=en_det_model_dir,
+                rec_model_dir=en_rec_model_dir,
+                cls_model_dir=en_cls_model_dir,
                 show_log=False
             )
             

@@ -144,7 +144,7 @@ class DreamMode:
                 total_minutes = self.stats["total_time"] / 60
                 
                 report = f"""REPORT_DATA__
-总循环次数: {self.stats["total_loops"]} 次
+轮次: {self.stats["total_loops"]} 次
 成功招募: {self.stats["successful_recruits"]} 次
 成功战斗: {self.stats["successful_battles"]} 次
 成功事件: {self.stats["successful_events"]} 次
@@ -165,7 +165,7 @@ class DreamMode:
                 total_minutes = self.stats["total_time"] / 60
                 
                 report = f"""REPORT_DATA__
-总循环次数: {self.stats["total_loops"]} 次
+轮次: {self.stats["total_loops"]} 次
 成功招募: {self.stats["successful_recruits"]} 次
 成功战斗: {self.stats["successful_battles"]} 次
 成功事件: {self.stats["successful_events"]} 次
@@ -303,7 +303,7 @@ class DreamMode:
         if recruit_btn_1:
             self.click_position(*recruit_btn_1)
             self.delay(self.click_wait_interval)
-            self.process_recruit()
+            self.process_recruit(report=False)
             self.delay(self.click_wait_interval)
             return True
 
@@ -311,7 +311,7 @@ class DreamMode:
         if recruit_btn_2:
             self.click_position(*recruit_btn_2)
             self.delay(self.click_wait_interval)
-            self.process_recruit()
+            self.process_recruit(report=False)
             self.delay(self.click_wait_interval)
             return True
 
@@ -401,7 +401,7 @@ class DreamMode:
             return game_start_pos
         return None
 
-    def process_recruit(self):
+    def process_recruit(self, report: bool = True):
         """处理招募流程"""
         self.log_message("开始处理招募")
 
@@ -412,7 +412,8 @@ class DreamMode:
         self.delay(self.click_wait_interval)
         
         self.log_message("招募流程完成")
-        self.update_stats("successful_recruits")
+        if report:
+            self.update_stats("successful_recruits")
 
     def check_dice_interface(self) -> bool:
         """

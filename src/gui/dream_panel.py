@@ -293,7 +293,7 @@ class DreamPanel(ttk.Frame):
         try:
             lines = report_str.strip().split('\n')
             for line in lines:
-                if line.startswith("总循环次数:"):
+                if line.startswith("轮次:"):
                     loop_count = int(line.split(':')[1].strip().replace('次', ''))
                     self.dream_stats["total_loops"] = loop_count
                 elif line.startswith("成功招募:"):
@@ -353,7 +353,7 @@ class DreamPanel(ttk.Frame):
         self.stats_text.config(state='normal')
         self.stats_text.delete(1.0, tk.END)
         
-        stats_content = f"""总循环次数: {self.dream_stats["total_loops"]} 次
+        stats_content = f"""轮次: {self.dream_stats["total_loops"]} 次
 成功招募: {self.dream_stats["successful_recruits"]} 次
 成功战斗: {self.dream_stats["successful_battles"]} 次
 成功事件: {self.dream_stats["successful_events"]} 次
