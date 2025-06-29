@@ -284,6 +284,20 @@ class DreamMode:
             self.click_position(*start_pos)
             self.delay(self.click_wait_interval)
             return True
+        
+        start_buff = self.check_start_buff()
+        if start_buff:
+            self.log_message("找到起始buff界面")
+            self.click_position(*start_buff)
+            self.delay(self.click_wait_interval)
+            return True
+        
+        start_buff_next = self.check_start_buff_next()
+        if start_buff_next:
+            self.log_message("找到起始buff界面")
+            self.click_position(*start_buff_next)
+            self.delay(self.click_wait_interval)
+            return True
 
         recruit_btn_1 = self.check_recruit_1()
         if recruit_btn_1:
@@ -325,6 +339,30 @@ class DreamMode:
             self.process_recruit()
             return True
         return False
+    
+    def check_start_buff_next(self) -> Optional[Tuple[int, int]]:
+        """
+        检查并处理起始buff界面
+        
+        :return: 是否处理了起始buff界面
+        """
+        start_buff_pos = self.find_image("assets/dream/start_buff_next.png")
+        if start_buff_pos:
+            self.log_message("找到起始buff界面")
+            return start_buff_pos
+        return None
+    
+    def check_start_buff(self) -> Optional[Tuple[int, int]]:
+        """
+        检查并处理起始buff界面
+        
+        :return: 是否处理了起始buff界面
+        """
+        start_buff_pos = self.find_image("assets/dream/start_buff.png")
+        if start_buff_pos:
+            self.log_message("找到起始buff界面")
+            return start_buff_pos
+        return None
     
     def check_recruit_1(self) -> Optional[Tuple[int, int]]:
         """
