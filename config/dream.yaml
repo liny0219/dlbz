@@ -1,0 +1,7 @@
+enabled: true
+max_loops: 10000
+loop_delay: 0.06
+image_threshold: 0.8
+battle_threshold: 0.7
+settlement_threshold: 0.6
+click_wait_interval: 1

@@ -1,6 +1,4 @@
 import time
-from tracemalloc import start
-from typing import Optional
 from core.device_manager import DeviceManager
 from utils import logger
 from utils.singleton import singleton
@@ -60,8 +58,6 @@ class AppManager:
             if self.current_package:
                 if current_package == self.current_package:
                     return True
-                else:
-                    self.current_package = None
             for package in self.app_packages:
                 if current_package == package:
                     self.current_package = package

@@ -270,7 +270,7 @@ class World:
         """
         if image is None:
             image = self.device_manager.get_screenshot()
-        find_list = self.ocr_handler.match_image_multi(image, "assets/fengmo_point.png", threshold=0.9)
+        find_list = self.ocr_handler.match_image_multi(image, "assets/fengmo/fengmo_point.png", threshold=0.9)
         # 过滤在禁止范围内的点
         forbidden_range = (936,36,1208,195)
         # 打印禁止范围和点的坐标，用于调试
@@ -317,7 +317,7 @@ class World:
         """
         if image is None:
             image = self.device_manager.get_screenshot()
-        find = self.ocr_handler.match_image(image, "assets/fengmo_point_cure.png")
+        find = self.ocr_handler.match_image(image, "assets/fengmo/fengmo_point_cure.png")
         if find:
             logger.debug("检测到治疗点")
             return find
@@ -402,7 +402,8 @@ class World:
         if image is None:
             logger.warning("无法获取截图，无法判断网络状态")
             return False
-        points_colors = [
+        # 网络断开
+        points_colors_error_1 = [
                     (559, 284, 'E6E6E6', 1),
                     (696, 285, 'C7C7C7', 1), 
                     (383, 323, 'F7F6F4', 1), 
@@ -412,7 +413,18 @@ class World:
                     (436, 417, '28281E', 1),
                     (801, 416, '28281C', 1), 
                 ]
-        results = self.ocr_handler.match_point_color(image, points_colors)
+        # 获取域名资讯通讯失败
+        points_colors_error_2 = [
+            (523, 283, 'EFEDEE', 1),
+            (670, 288, 'F4F3F1', 1),
+            (824, 327, 'CDCCCA', 1),
+            (366, 328, 'F1F0EE', 1),
+            (607, 416, '28281E', 1),
+            (698, 416, '2A281C', 1),
+        ]
+        results = self.ocr_handler.match_point_color(image, points_colors_error_1)
+        if not results:
+            results = self.ocr_handler.match_point_color(image, points_colors_error_2)
         if results:
             logger.debug("检测到网络断开")
             return True
@@ -747,7 +759,7 @@ class World:
         """
         if image is None:
             image = self.device_manager.get_screenshot()
-        find = self.ocr_handler.match_image_multi(image, "assets/map_treasure.png")
+        find = self.ocr_handler.match_image_multi(image, "assets/fengmo/map_treasure.png")
         if find:
             logger.debug("发现的地图宝箱点")
             return [(int(x), int(y)) for x, y, _ in find]
@@ -761,7 +773,7 @@ class World:
         """
         if image is None:
             image = self.device_manager.get_screenshot()
-        find = self.ocr_handler.match_image(image, "assets/map_cure.png")
+        find = self.ocr_handler.match_image(image, "assets/fengmo/map_cure.png")
         if find:
             logger.debug("发现的地图治疗点")
             return find
@@ -775,7 +787,7 @@ class World:
         """
         if image is None:
             image = self.device_manager.get_screenshot()
-        find = self.ocr_handler.match_image(image, "assets/map_monster.png")
+        find = self.ocr_handler.match_image(image, "assets/fengmo/map_monster.png")
         if find:
             logger.debug("发现的地图怪物点")
             return find
@@ -789,7 +801,7 @@ class World:
         """
         if image is None:
             image = self.device_manager.get_screenshot()
-        find = self.ocr_handler.match_image(image, "assets/map_boss.png")
+        find = self.ocr_handler.match_image(image, "assets/fengmo/map_boss.png")
         if find:
             logger.debug("发现的地图Boss点")
             return find
@@ -1068,7 +1080,7 @@ class World:
         logger.info(f"开始搜索地图: {map_name}")
         
         # 检查是否在世界中
-        in_world = sleep_until(self.in_world, timeout=5)
+        in_world = sleep_until(self.in_world,timeout=60)
         if not in_world:
             logger.info("不在世界中，无法传送")
             return False

@@ -210,6 +210,7 @@ class MainWindow(tk.Tk):
         menubar.add_command(label="自动刷野", command=self.show_farming_editor)
         menubar.add_command(label="追忆之书", command=self.show_memory_editor)
         menubar.add_command(label="日常", command=self.show_daily_editor)
+        menubar.add_command(label="梦境", command=self.show_dream_editor)
         menubar.add_command(label="设置", command=self.show_settings)
 
     def _build_main_frame(self):
@@ -254,6 +255,8 @@ class MainWindow(tk.Tk):
             self.daily_editor_panel.pack_forget()
         if hasattr(self, 'farming_editor_panel'):
             self.farming_editor_panel.pack_forget()
+        if hasattr(self, 'dream_editor_panel'):
+            self.dream_editor_panel.pack_forget()
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
     def show_settings(self):
@@ -264,6 +267,8 @@ class MainWindow(tk.Tk):
             self.daily_editor_panel.pack_forget()
         if hasattr(self, 'farming_editor_panel'):
             self.farming_editor_panel.pack_forget()
+        if hasattr(self, 'dream_editor_panel'):
+            self.dream_editor_panel.pack_forget()
         self.settings_panel.pack(fill=tk.BOTH, expand=True)
 
     def show_memory_editor(self):
@@ -275,6 +280,8 @@ class MainWindow(tk.Tk):
             self.daily_editor_panel.pack_forget()
         if hasattr(self, 'farming_editor_panel'):
             self.farming_editor_panel.pack_forget()
+        if hasattr(self, 'dream_editor_panel'):
+            self.dream_editor_panel.pack_forget()
         if not hasattr(self, 'memory_editor_panel'):
             from gui.memory_panel import MemoryPanel
             self.memory_editor_panel = MemoryPanel(self)
@@ -289,6 +296,8 @@ class MainWindow(tk.Tk):
             self.memory_editor_panel.pack_forget()
         if hasattr(self, 'farming_editor_panel'):
             self.farming_editor_panel.pack_forget()
+        if hasattr(self, 'dream_editor_panel'):
+            self.dream_editor_panel.pack_forget()
         if not hasattr(self, 'daily_editor_panel'):
             from gui.daily_panel import DailyPanel
             self.daily_editor_panel = DailyPanel(self)
@@ -303,10 +312,28 @@ class MainWindow(tk.Tk):
             self.memory_editor_panel.pack_forget()
         if hasattr(self, 'daily_editor_panel'):
             self.daily_editor_panel.pack_forget()
+        if hasattr(self, 'dream_editor_panel'):
+            self.dream_editor_panel.pack_forget()
         if not hasattr(self, 'farming_editor_panel'):
             from gui.farming_panel import FarmingPanel
             self.farming_editor_panel = FarmingPanel(self)
         self.farming_editor_panel.pack(fill=tk.BOTH, expand=True)
+
+    def show_dream_editor(self):
+        """显示梦境界面"""
+        self.main_frame.pack_forget()
+        if hasattr(self, 'settings_panel'):
+            self.settings_panel.pack_forget()
+        if hasattr(self, 'memory_editor_panel'):
+            self.memory_editor_panel.pack_forget()
+        if hasattr(self, 'daily_editor_panel'):
+            self.daily_editor_panel.pack_forget()
+        if hasattr(self, 'farming_editor_panel'):
+            self.farming_editor_panel.pack_forget()
+        if not hasattr(self, 'dream_editor_panel'):
+            from gui.dream_panel import DreamPanel
+            self.dream_editor_panel = DreamPanel(self)
+        self.dream_editor_panel.pack(fill=tk.BOTH, expand=True)
 
     def on_log_level_change(self, event=None):
         """日志级别下拉框变更时，动态设置主进程logger级别，并同步所有Handler"""
