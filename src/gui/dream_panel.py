@@ -74,7 +74,11 @@ class DreamPanel(ttk.Frame):
             "image_threshold": 0.8,
             "battle_threshold": 0.7,
             "settlement_threshold": 0.6,
-            "click_wait_interval": 0.5
+            "click_wait_interval": 0.5,
+            "enable_skip_coord": False,
+            "skip_coord_x": 0,
+            "skip_coord_y": 0,
+            "skip_count": 1
         }
         
         # 如果配置文件存在，加载配置
@@ -100,7 +104,11 @@ class DreamPanel(ttk.Frame):
             "image_threshold": self.config_data.get("image_threshold", 0.8),
             "battle_threshold": self.config_data.get("battle_threshold", 0.7),
             "settlement_threshold": self.config_data.get("settlement_threshold", 0.6),
-            "click_wait_interval": self.click_wait_interval_var.get()
+            "click_wait_interval": self.click_wait_interval_var.get(),
+            "enable_skip_coord": self.enable_skip_coord_var.get(),
+            "skip_coord_x": self.skip_coord_x_var.get(),
+            "skip_coord_y": self.skip_coord_y_var.get(),
+            "skip_count": self.skip_count_var.get()
         }
         
         try:
@@ -153,6 +161,36 @@ class DreamPanel(ttk.Frame):
         click_wait_spin = tk.Spinbox(config_frame, from_=0.6, to=2.0, increment=0.1, 
                                     textvariable=self.click_wait_interval_var, width=8, format="%.1f")
         click_wait_spin.pack(side=tk.LEFT)
+
+        # 跳过坐标配置
+        skip_frame = ttk.Frame(dream_frame)
+        skip_frame.pack(fill=tk.X, pady=5)
+        
+        # 启用跳过坐标
+        self.enable_skip_coord_var = tk.BooleanVar(value=self.config_data.get("enable_skip_coord", False))
+        enable_skip_check = ttk.Checkbutton(skip_frame, text="启用跳过坐标", variable=self.enable_skip_coord_var)
+        enable_skip_check.pack(side=tk.LEFT, padx=(0, 20))
+        
+        # 跳过坐标X
+        ttk.Label(skip_frame, text="跳过坐标X:").pack(side=tk.LEFT, padx=(0, 5))
+        self.skip_coord_x_var = tk.IntVar(value=self.config_data.get("skip_coord_x", 142))
+        skip_coord_x_spin = tk.Spinbox(skip_frame, from_=0, to=1920, increment=1, 
+                                      textvariable=self.skip_coord_x_var, width=6)
+        skip_coord_x_spin.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # 跳过坐标Y
+        ttk.Label(skip_frame, text="跳过坐标Y:").pack(side=tk.LEFT, padx=(0, 5))
+        self.skip_coord_y_var = tk.IntVar(value=self.config_data.get("skip_coord_y", 0))
+        skip_coord_y_spin = tk.Spinbox(skip_frame, from_=0, to=1080, increment=1, 
+                                      textvariable=self.skip_coord_y_var, width=6)
+        skip_coord_y_spin.pack(side=tk.LEFT, padx=(0, 10))
+        
+        # 跳过次数
+        ttk.Label(skip_frame, text="跳过次数:").pack(side=tk.LEFT, padx=(0, 5))
+        self.skip_count_var = tk.IntVar(value=self.config_data.get("skip_count", 1))
+        skip_count_spin = tk.Spinbox(skip_frame, from_=1, to=10, increment=1, 
+                                    textvariable=self.skip_count_var, width=4)
+        skip_count_spin.pack(side=tk.LEFT)
 
         # 按钮区域
         button_frame = ttk.Frame(dream_frame)
@@ -229,7 +267,11 @@ class DreamPanel(ttk.Frame):
             "image_threshold": self.config_data.get("image_threshold", 0.8),
             "battle_threshold": self.config_data.get("battle_threshold", 0.7),
             "settlement_threshold": self.config_data.get("settlement_threshold", 0.6),
-            "click_wait_interval": self.click_wait_interval_var.get()
+            "click_wait_interval": self.click_wait_interval_var.get(),
+            "enable_skip_coord": self.enable_skip_coord_var.get(),
+            "skip_coord_x": self.skip_coord_x_var.get(),
+            "skip_coord_y": self.skip_coord_y_var.get(),
+            "skip_count": self.skip_count_var.get()
         }
         
         # 获取日志级别

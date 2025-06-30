@@ -265,13 +265,34 @@ class DreamMode:
         if "click_wait_interval" in config_params:
             self.click_wait_interval = config_params["click_wait_interval"]
         
+        # 跳过坐标配置
+        if "enable_skip_coord" in config_params:
+            self.enable_skip_coord = config_params["enable_skip_coord"]
+        else:
+            self.enable_skip_coord = False
+            
+        if "skip_coord_x" in config_params:
+            self.skip_coord_x = config_params["skip_coord_x"]
+        else:
+            self.skip_coord_x = 0
+            
+        if "skip_coord_y" in config_params:
+            self.skip_coord_y = config_params["skip_coord_y"]
+        else:
+            self.skip_coord_y = 0
+            
+        if "skip_count" in config_params:
+            self.skip_count = config_params["skip_count"]
+        else:
+            self.skip_count = 1
+        
         if "coordinates" in config_params:
             # 更新坐标配置
             for key, value in config_params["coordinates"].items():
                 if isinstance(value, list) and len(value) == 2:
                     self.coordinates[key] = tuple(value)
         
-        self.logger.info(f"配置已更新: max_loops={self.max_loops}, image_threshold={self.image_threshold}, click_wait_interval={self.click_wait_interval}")
+        self.logger.info(f"配置已更新: max_loops={self.max_loops}, image_threshold={self.image_threshold}, click_wait_interval={self.click_wait_interval}, enable_skip_coord={self.enable_skip_coord}, skip_coord=({self.skip_coord_x}, {self.skip_coord_y}), skip_count={self.skip_count}")
 
     def check_start_game(self) -> bool:
         """
@@ -427,6 +448,10 @@ class DreamMode:
                     return False
                 self.click_position(*game_exit_btn)
                 self.delay(self.click_wait_interval)
+                if self.enable_skip_coord:
+                    for i in range(self.skip_count):
+                        self.click_position(self.skip_coord_x, self.skip_coord_y)
+                        self.delay(self.click_wait_interval)
                 sleep_until(self.world.click_confirm_yes)
                 self.delay(self.click_wait_interval)
                 return True
@@ -465,7 +490,10 @@ class DreamMode:
                 
                 self.click_position(*game_exit_btn)
                 self.delay(self.click_wait_interval)
-                
+                if self.enable_skip_coord:
+                    for i in range(self.skip_count):
+                        self.click_position(self.skip_coord_x, self.skip_coord_y)
+                        self.delay(self.click_wait_interval)
                 sleep_until(self.world.click_confirm_yes)
                 self.delay(self.click_wait_interval)
                 return
@@ -663,6 +691,10 @@ class DreamMode:
             self.log_message("找到放弃游戏界面")
             self.click_position(*give_up_pos)
             self.delay(self.click_wait_interval)
+            if self.enable_skip_coord:
+                for i in range(self.skip_count):
+                    self.click_position(self.skip_coord_x, self.skip_coord_y)
+                    self.delay(self.click_wait_interval)
             sleep_until(self.world.click_confirm_yes)
             self.delay(self.click_wait_interval)
             return True
