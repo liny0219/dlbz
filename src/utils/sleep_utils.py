@@ -21,11 +21,11 @@ def sleep_until(condition_func, timeout: float = 30.0, interval: float = 0.1, fu
     while time.time() - start_time < timeout:
         result = condition_func()
         if result:
-            logger.debug("条件已满足，跳出等待")
+            logger.info(f"条件已满足，跳出等待{condition_func.__name__} {function_name} {result}")
             return result
         logger.debug("条件未满足，sleep...")
         time.sleep(interval)
-    logger.info(f"等待超时，条件未满足:{condition_func.__name__}")
+    logger.info(f"等待超时，条件未满足:{condition_func.__name__} {function_name}")
     return None 
 
 def sleep_until_app_running(condition_func, timeout: float = 30.0, 
@@ -40,7 +40,7 @@ def sleep_until_app_running(condition_func, timeout: float = 30.0,
     while time.time() - start_time < timeout:
         result = condition_func()
         if result:
-            logger.debug("条件已满足，跳出等待")
+            logger.info(f"条件已满足，跳出等待{condition_func.__name__} {function_name} {result}")
             return result
         logger.debug("条件未满足，sleep...")
         time.sleep(interval)
@@ -48,5 +48,5 @@ def sleep_until_app_running(condition_func, timeout: float = 30.0,
             if not app_manager.is_app_running():
                 logger.debug("App未运行，跳出等待")
                 return 'app_not_running'
-    logger.debug(f"等待超时，条件未满足:{condition_func.__name__}")
+    logger.info(f"等待超时，条件未满足:{condition_func.__name__} {function_name}")
     return None 

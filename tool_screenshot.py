@@ -6,8 +6,8 @@ from src.core.device_manager import DeviceManager
 from src.core.ocr_handler import OCRHandler
 
 # 示例参数（可根据实际需求修改）
-x1, y1, x2, y2 = 941, 557,1036, 589  # 截图区域坐标
-save_path = 'assets/dream/start_buff_next.png'  # 图片保存路径
+x1, y1, x2, y2 = 1058, 624,1186, 655  # 截图区域坐标
+save_path = 'assets/dream/battle_skip.png'  # 图片保存路径
 is_append = False
 def screenshot_and_save(x1, y1, x2, y2, save_path):
     """

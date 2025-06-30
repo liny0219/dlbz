@@ -137,7 +137,7 @@ class Battle:
         # 批量判断
         results = self.ocr_handler.match_point_color(image, points_colors)
         if results:
-            logger.debug("检测到在战斗结算")
+            logger.info("在战斗结算")
             return True
         else:
             logger.debug("不在战斗结算")
@@ -161,7 +161,7 @@ class Battle:
         # 批量判断
         results = self.ocr_handler.match_point_color(image, points_colors)
         if results:
-            logger.debug("检测到在战斗奖励")
+            logger.info("在战斗奖励")
             return True
         else:
             logger.debug("不在战斗奖励")
@@ -204,7 +204,8 @@ class Battle:
             (1061,639, "FFFFFF", 1),
             (1060,659, "FFFFFF", 1),
             (1133,650, "FFFFFF", 1),
-            (1131,665, "FFFFFF", 1)
+            (1131,665, "FFFFFF", 1),
+            (954, 652, '011017', 1),
         ]
         # 批量判断
         results = self.ocr_handler.match_point_color(image, points_colors)
@@ -560,13 +561,13 @@ class Battle:
         enemy_pos = None
         timeout = self.cast_skill_timeout
         if index < 1 or index > 4:
-            logger.error(f"[Battle] 角色索引错误，index: {index}")
+            logger.info(f"[Battle] 角色索引错误，index: {index}")
             return False
         if role_id < 0 or role_id > 4:
-            logger.error(f"[Battle] 作用角色索引错误，role_id: {role_id}")
+            logger.info(f"[Battle] 作用角色索引错误，role_id: {role_id}")
             return False
         if bp < 0 or bp > 3:
-            logger.error(f"[Battle] 宠物bp错误，bp: {bp}")
+            logger.info(f"[Battle] 宠物bp错误，bp: {bp}")
             return False
         if x != 0 and y != 9:
             enemy_pos = [x, y]
@@ -674,10 +675,10 @@ class Battle:
         timeout = self.cast_sp_timeout
         enemy_pos = None
         if index < 1 or index > 4:
-            logger.error(f"[Battle] 角色索引错误，index: {index}")
+            logger.info(f"[Battle] 角色索引错误，index: {index}")
             return False
         if role_id < 0 or role_id > 4:
-            logger.error(f"[Battle] 作用角色索引错误，role_id: {role_id}")
+            logger.info(f"[Battle] 作用角色索引错误，role_id: {role_id}")
             return False
         if x != 0 and y != 9:
             enemy_pos = [x, y]
@@ -857,7 +858,7 @@ class Battle:
                 logger.info("[wait_done] 进入世界")
                 return 'in_world'
             if self.in_round(screenshot):
-                logger.info("[in_round] in_round")
+                logger.info("[wait_done] in_round")
                 return 'in_round'
             if self.battle_end(screenshot) or self.battle_award(screenshot):
                 logger.info("[wait_done] 战斗结算")

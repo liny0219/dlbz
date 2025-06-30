@@ -8,6 +8,9 @@ import logging
 from typing import Tuple, Optional
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
+from common.world import World
+from common.app import AppManager
+from utils.sleep_utils import sleep_until
 
 class DreamMode:
     """
@@ -27,6 +30,10 @@ class DreamMode:
         self.ocr_handler = ocr_handler
         self.log_queue = log_queue
         self.logger = logging.getLogger("dldbz.dream")
+        
+        # 初始化AppManager和World对象
+        self.app_manager = AppManager(device_manager)
+        self.world = World(device_manager, ocr_handler, self.app_manager)
         
         # 初始化变量
         self.loop_count = 0
@@ -64,9 +71,6 @@ class DreamMode:
             'auto_battle_confirm': (1096, 653),
             'battle_settlement': (1152, 598),
             
-            # 放弃游戏相关
-            'give_up_confirm': (800, 480),
-            
             # 奖励结算相关
             'reward_confirm': (640, 580),
         }
@@ -101,7 +105,10 @@ class DreamMode:
             
         image = self.device_manager.get_screenshot()
         self.logger.info(f"查找图片: {image_name}, 阈值: {threshold}")
-        return self.ocr_handler.match_image(image, image_name, threshold)
+        result = self.ocr_handler.match_image(image, image_name, threshold)
+        if result:
+            time.sleep(self.click_wait_interval)
+        return result
 
     def click_position(self, x: int, y: int):
         """
@@ -420,8 +427,7 @@ class DreamMode:
                     return False
                 self.click_position(*game_exit_btn)
                 self.delay(self.click_wait_interval)
-                exit_comfirm = self.coordinates['give_up_confirm']
-                self.click_position(*exit_comfirm)
+                sleep_until(self.world.click_confirm_yes)
                 self.delay(self.click_wait_interval)
                 return True
 
@@ -460,9 +466,7 @@ class DreamMode:
                 self.click_position(*game_exit_btn)
                 self.delay(self.click_wait_interval)
                 
-                # 点击确认放弃
-                x, y = self.coordinates['give_up_confirm']
-                self.click_position(x, y)
+                sleep_until(self.world.click_confirm_yes)
                 self.delay(self.click_wait_interval)
                 return
         except ValueError:
@@ -603,6 +607,12 @@ class DreamMode:
         
         :return: 是否处理了战斗格子
         """
+        battle_skip = self.find_image("assets/dream/battle_skip.png")
+        if battle_skip:
+            self.log_message("找到战斗跳过")
+            self.click_position(*battle_skip)
+            self.delay(self.click_wait_interval)
+            return True
         # 查找战斗相关图片
         battle_pos = self.find_image("assets/dream/battle_start.png")
         if battle_pos:
@@ -653,9 +663,7 @@ class DreamMode:
             self.log_message("找到放弃游戏界面")
             self.click_position(*give_up_pos)
             self.delay(self.click_wait_interval)
-            # 点击确认放弃
-            x, y = self.coordinates['give_up_confirm']
-            self.click_position(x, y)
+            sleep_until(self.world.click_confirm_yes)
             self.delay(self.click_wait_interval)
             return True
         return False
