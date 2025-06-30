@@ -81,7 +81,11 @@ class BattleTestMode:
             
             # 加载战斗指令
             logger.info("正在加载战斗指令...")
-            load_result = self.world.battle_executor.load_commands_from_txt(script_path)
+            battle_executor = self.world._get_battle_executor()
+            if battle_executor is None:
+                logger.error("战斗执行器初始化失败")
+                return
+            load_result = battle_executor.load_commands_from_txt(script_path)
             
             if not load_result:
                 logger.error("战斗指令加载失败")
@@ -90,7 +94,7 @@ class BattleTestMode:
             logger.info("战斗指令加载成功，开始执行...")
             
             # 执行战斗指令
-            execute_result = self.world.battle_executor.execute_all()
+            execute_result = battle_executor.execute_all()
             
             if execute_result:
                 logger.info("战斗测试执行成功")

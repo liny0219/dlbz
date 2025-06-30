@@ -481,7 +481,7 @@ class MemoryPanel(ttk.Frame):
     def start_memory(self):
         """开始追忆之书测试"""
         # 使用游戏互斥管理器安全启动
-        script_path = self.memory_script_var.get().strip()
+        script_path = self.battle_script_var.get().strip()
         if not script_path:
             messagebox.showwarning("提示", "请先配置追忆之书脚本文件路径！")
             return

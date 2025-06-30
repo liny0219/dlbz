@@ -213,10 +213,6 @@ class DreamMode:
                 if self.check_dice_interface():
                     continue
                 
-                # 检查招募界面
-                if self.check_recruit_interface():
-                    continue
-                
                 # 检查各种格子类型
                 if self.check_grid_types():
                     continue
@@ -323,21 +319,6 @@ class DreamMode:
             self.log_message("开始游戏流程完成")
             return True
         
-        return False
-     
-
-    def check_recruit_interface(self) -> bool:
-        """
-        检查并处理招募界面
-        
-        :return: 是否处理了招募界面
-        """
-        # 查找招募相关图片
-        recruit_pos = self.find_image("assets/dream/zhaomu.png")
-        if recruit_pos:
-            self.log_message("找到招募界面")
-            self.process_recruit()
-            return True
         return False
     
     def check_start_buff_next(self) -> Optional[Tuple[int, int]]:
@@ -548,7 +529,7 @@ class DreamMode:
         :return: 是否处理了招募格子
         """
         # 查找招募相关图片
-        recruit_pos = self.find_image("zhaomu.png")
+        recruit_pos = self.find_image("assets/dream/zhaomu.png")
         if recruit_pos:
             self.log_message("找到招募格子")
             self.process_recruit()

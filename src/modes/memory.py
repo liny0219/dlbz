@@ -102,7 +102,11 @@ class MemoryMode:
                     # 等待战斗开始
                     self.battle.press_in_round(timeout=15)
                     # 执行单次战斗
-                    self.world.battle_executor.execute_all()
+                    battle_executor = self.world._get_battle_executor()
+                    if battle_executor is None:
+                        logger.error("战斗执行器初始化失败")
+                        return
+                    battle_executor.execute_all()
                     in_battle = self.battle.in_battle()
                     if in_battle:
                         self.battle.exit_battle()
@@ -179,7 +183,11 @@ class MemoryMode:
             logger.info(f"正在加载战斗脚本: {script_path}")
             
             # 使用世界对象中的战斗执行器加载指令
-            load_result = self.world.battle_executor.load_commands_from_txt(script_path)
+            battle_executor = self.world._get_battle_executor()
+            if battle_executor is None:
+                logger.error("战斗执行器初始化失败")
+                return False
+            load_result = battle_executor.load_commands_from_txt(script_path)
             
             if load_result:
                 logger.info("战斗脚本加载成功")

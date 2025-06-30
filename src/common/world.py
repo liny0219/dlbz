@@ -66,8 +66,10 @@ class World:
         if show_log:
             logger.info(f"[read_map_state]读取界面状态")
 
+        sleep_until(lambda: not self.app_manager.is_app_running(),timeout=10)
+
         while True:
-            time.sleep(2)
+            time.sleep(1)
             in_world = self.in_world()
             if in_world:
                 time.sleep(0.3)
