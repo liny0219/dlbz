@@ -530,7 +530,7 @@ class World:
         self.device_manager.click(*in_inn)
         time.sleep(1)
         logger.debug("点击跳过")
-        self.click_tirm(3)
+        self.click_tirm(5,0.2)
         logger.debug("点击是")
         sleep_until(lambda: self.click_confirm_yes(wait_time=0.3), function_name="旅馆 是")
         if sleep_until(self.cure_finish):
