@@ -578,8 +578,9 @@ class FengmoMode:
             find_map_boss = sleep_until(self.world.find_map_boss,timeout=6)
             if find_map_boss is None:
                 logger.info(f"[find_boss_phase]找不到boss感叹号可能被自己挡住,退出重来")
-                self.world.exit_fengmo(self.entrance_pos,callback=self.check_enter_fengmo)
+                self.world.closeUI()
                 self.state_data.step = Step.State_FAIL
+                self.world.exit_fengmo(self.entrance_pos,callback=self.check_enter_fengmo)
                 return
             if find_map_boss:
                 closest_point = self.find_closest_point(find_map_boss, self.check_points)

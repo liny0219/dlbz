@@ -1,3 +1,6 @@
+v1.8.7
+bugfix: 修复逢魔boss阶段,找不到boss被挡住,没有关闭小地图
+
 v1.8.6
 bugfix: 修复被ai改坏的本地模型加载
 feature: 梦境之书招募统计校正
