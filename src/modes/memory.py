@@ -4,12 +4,14 @@
 """
 
 import time
+from core import battle
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
 from utils.logger import logger
 from common.world import World
 from core.battle import Battle
 from common.app import AppManager
+from PIL import Image
 
 class MemoryMode:
     """
@@ -107,7 +109,10 @@ class MemoryMode:
                         logger.error("战斗执行器初始化失败")
                         return
                     battle_executor.reset_index()
-                    battle_executor.execute_all()
+                    def callback(image:Image.Image):
+                        if not self.battle.in_battle():
+                            return 'end'
+                    battle_executor.execute_all(callback=callback)
                     in_battle = self.battle.in_battle()
                     if in_battle:
                         self.battle.exit_battle()

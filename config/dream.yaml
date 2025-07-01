@@ -5,3 +5,7 @@ image_threshold: 0.8
 battle_threshold: 0.7
 settlement_threshold: 0.6
 click_wait_interval: 0.6
+enable_skip_coord: true
+skip_coord_x: 680
+skip_coord_y: 585
+skip_count: 1

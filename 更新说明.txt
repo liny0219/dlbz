@@ -1,3 +1,8 @@
+v1.8.13
+feature: 优化日常功能
+feature: 优化追忆之书跳过对话
+feature: 优化梦境之书
+
 v1.8.12
 bufgix: 修复追忆之书的bug
 

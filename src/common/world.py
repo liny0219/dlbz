@@ -1005,10 +1005,12 @@ class World:
     def get_map_name(self):
         sleep_until(self.in_world,timeout=5)
         time.sleep(0.5)
+        sleep_until(self.in_world,timeout=5)
+        time.sleep(0.5)
         self.open_minimap()
         sleep_until(self.in_minimap,timeout=5)
         count = 0
-        max_count = 3
+        max_count = 5
         while count < max_count:
             time.sleep(0.5)
             screenshot = self.device_manager.get_screenshot()

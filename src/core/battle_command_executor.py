@@ -135,6 +135,8 @@ class BattleCommandExecutor:
                 if cmd.get('type') == 'Attack':
                     self.logger.info(f"等待战斗回合结束")
                     result = self.battle.wait_done(callback=callback)
+                    if result == 'end':
+                        return { 'success': True,"state":'end'}
                     if result in ['wait_done_timeout', 'exception']:
                         self.logger.info(f"回合异常:{cmd}{result}")
                         return { 'success': False,"state":'exception'}

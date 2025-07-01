@@ -1,6 +1,9 @@
 #炎龙轴 第1场战斗 
 BattleStart
 #第1回合
+#点击boss
+Click,177,396
+Wait,0.5
 Role,1,3,0
 Role,2,3,0
 Role,3,3,0
@@ -22,6 +25,7 @@ Role,1,4,2
 XRoleEx,2,3,3
 
 XRole,3,2,2
+
 Role,4,3,0
 
 Attack
@@ -31,10 +35,9 @@ Attack
 Pet,2
 
 XSP,1
+Role,2,3,3
 Boost
-#点击boss
-Click,177,396
-Wait,0.5
+
 Attack
 #第5回合
 SP,4

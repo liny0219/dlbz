@@ -143,30 +143,6 @@ class Battle:
             logger.debug("不在战斗结算")
             return False
     
-    def battle_award(self, image: Optional[Image.Image] = None) -> bool:
-        if image is None:
-            image = self.device_manager.get_screenshot()
-        if image is None:
-            logger.warning("无法获取截图，无法判断是否战斗奖励")
-            return False
-        
-        points_colors = [
-            (610, 91, 'EFF1EE', 1), 
-            (669, 104, 'EDECEA', 1), 
-            (669, 112, 'EFF0EB', 1), 
-            (626, 104, 'EDEDEB', 1), 
-            (612, 100, 'F2F2F0', 1),
-            (615, 113, 'EFEFED', 1), 
-        ]
-        # 批量判断
-        results = self.ocr_handler.match_point_color(image, points_colors)
-        if results:
-            logger.info("在战斗奖励")
-            return True
-        else:
-            logger.debug("不在战斗奖励")
-            return False
-
     def in_battle(self, image: Optional[Image.Image] = None) -> bool:
         """
         判断当前是否在战斗中。
@@ -827,7 +803,7 @@ class Battle:
                 return 'in_round'
             if self.world.in_world(screenshot):
                 return 'in_world'
-            if self.battle_end(screenshot) or self.battle_award(screenshot):
+            if self.battle_end(screenshot):
                 logger.info("[wait_in_round_or_world] 战斗结算")
                 self.world.dclick_tirm(6)
             if callback:
@@ -860,7 +836,7 @@ class Battle:
             if self.in_round(screenshot):
                 logger.info("[wait_done] in_round")
                 return 'in_round'
-            if self.battle_end(screenshot) or self.battle_award(screenshot):
+            if self.battle_end(screenshot):
                 logger.info("[wait_done] 战斗结算")
                 self.world.dclick_tirm(6)
             if callback:
