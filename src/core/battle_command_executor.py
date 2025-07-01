@@ -228,6 +228,12 @@ class BattleCommandExecutor:
         else:
             self.logger.warning(f"未知指令类型: {cmd_type}")
 
+    def reset_index(self):
+        """
+        重置当前指令索引
+        """
+        self._current_index = 0
+
     def reset(self):
         """
         重置指令队列和执行状态，便于复用

@@ -106,6 +106,7 @@ class MemoryMode:
                     if battle_executor is None:
                         logger.error("战斗执行器初始化失败")
                         return
+                    battle_executor.reset_index()
                     battle_executor.execute_all()
                     in_battle = self.battle.in_battle()
                     if in_battle:
