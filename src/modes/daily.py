@@ -278,34 +278,41 @@ class DailyMode:
             
             # 点击花田位置
             self.device_manager.click(position[0], position[1])
-            time.sleep(1.5)
-            
-            # 获取截图
-            screenshot = self.device_manager.get_screenshot()
-            if screenshot is None:
-                logger.error("无法获取截图")
-                return False
-            
-            # OCR识别目标数量
-            ocr_result = self.ocr_handler.recognize_text(screenshot, ocr_region, rec_char_type='digit')
 
-            if ocr_result is None or len(ocr_result) == 0:
-                logger.error("无法识别目标数量")
+            count = 0
+            loop = True
+            error = True
+            while count < 5 and loop and not target_found:
+                count += 1
+                time.sleep(1.5)
+                
+                # 获取截图
+                screenshot = self.device_manager.get_screenshot()
+                if screenshot is None:
+                    logger.error("无法获取截图")
+                    return False
+                
+                # OCR识别目标数量
+                ocr_result = self.ocr_handler.recognize_text(screenshot, ocr_region, rec_char_type='digit')
+
+                if ocr_result is None or len(ocr_result) == 0:
+                    logger.error("无法识别目标数量")
+                    continue
+                else:
+                    loop = False
+                    error = False
+                    for line in ocr_result:
+                        logger.info(f"找到{huatian_name}目标数量: {line['text']}")
+                        if target_count_str in line['text']:
+                            logger.info(f"{huatian_name}目标数量匹配: {self.huatian_target_count}")
+                            target_found = True
+                            time.sleep(1)
+                            self.device_manager.click(640, 430)
+                            break
+            if error:
                 return False
-            else:
-                for line in ocr_result:
-                    logger.info(f"找到{huatian_name}目标数量: {line['text']}")
-                    if target_count_str in line['text']:
-                        logger.info(f"{huatian_name}目标数量匹配: {self.huatian_target_count}")
-                        target_found = True
-                        # 保存成功识别的截图
-                        self._save_ocr_screenshot(screenshot, huatian_type, success=True)
-                        self.device_manager.click(640, 430)
-                        break
-            
             # 如果没有找到目标，保存普通截图并重启
             if not target_found:
-                self._save_ocr_screenshot(screenshot, huatian_type, success=False)
                 logger.info(f"未找到{huatian_name}目标数量，重启等待")
                 self.world.restart_wait_in_world()
                 
@@ -369,32 +376,36 @@ class DailyMode:
                     self.world.move_mini_map(452, 238)
                     in_target = True
                 self.device_manager.click(360, 385)
-                time.sleep(1.5)
-                # 获取截图
-                screenshot = self.device_manager.get_screenshot()
-                if screenshot is None:
-                    logger.error("无法获取截图")
+                count = 0
+                loop = True
+                error = True
+                while count < 5 and loop and not target_found:
+                    time.sleep(1.5)
+                    count += 1
+                    # 获取截图
+                    screenshot = self.device_manager.get_screenshot()
+                    if screenshot is None:
+                        logger.error("无法获取截图")
+                        return False
+                    # OCR识别目标数量
+                    ocr_result = self.ocr_handler.recognize_text(screenshot, ocr_region, rec_char_type='digit')
+                    
+                    if ocr_result is None or len(ocr_result) == 0:
+                        logger.error("无法识别目标数量")
+                        continue
+                    else:
+                        loop = False
+                        error = False
+                        for line in ocr_result:
+                            logger.info(f"找到果炎目标数量: {line['text']}")
+                            if target_count_str in line['text']:
+                                logger.info(f"果炎目标数量: {self.guoyan_target_count}")
+                                target_found = True
+                                time.sleep(1)
+                                self.device_manager.click(640, 430)
+                                break
+                if error:
                     return False
-                # OCR识别目标数量
-                ocr_result = self.ocr_handler.recognize_text(screenshot, ocr_region, rec_char_type='digit')
-                
-                if ocr_result is None or len(ocr_result) == 0:
-                    logger.error("无法识别目标数量")
-                    return False
-                else:
-                    for line in ocr_result:
-                        logger.info(f"找到果炎目标数量: {line['text']}")
-                        if target_count_str in line['text']:
-                            logger.info(f"果炎目标数量: {self.guoyan_target_count}")
-                            target_found = True
-                            # 保存成功识别的截图
-                            self._save_ocr_screenshot(screenshot, "guoyan", success=True)
-                            self.device_manager.click(640, 430)
-                            break
-                
-                # 如果没有找到目标，保存普通截图
-                if not target_found:
-                    self._save_ocr_screenshot(screenshot, "guoyan", success=False)
                 if not target_found:
                     logger.info(f"未找到果炎目标数量，重启等待")
                     self.world.restart_wait_in_world()

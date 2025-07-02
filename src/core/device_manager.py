@@ -158,7 +158,7 @@ class DeviceManager:
         except Exception as e:
             logger.error(f"Failed to save image: {str(e)}\n{traceback.format_exc()}")
 
-    def click(self, x: int, y: int) -> None:
+    def click(self, x: int, y: int, log:bool=False) -> None:
         """
         点击指定坐标，并输出日志
         :param x: 横坐标
@@ -166,7 +166,8 @@ class DeviceManager:
         """
         try:
             if self.device:
-                logger.info(f"[click]点击坐标 ({x}, {y})")
+                if log:
+                    logger.info(f"[click]点击坐标 ({x}, {y})")
                 self.device.click(x, y)
             else:
                 logger.error("设备未连接，无法点击")
