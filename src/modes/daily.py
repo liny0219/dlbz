@@ -296,13 +296,13 @@ class DailyMode:
                 ocr_result = self.ocr_handler.recognize_text(screenshot, ocr_region, rec_char_type='digit')
 
                 if ocr_result is None or len(ocr_result) == 0:
-                    logger.error("无法识别目标数量")
+                    logger.error("无法识别数量")
                     continue
                 else:
                     loop = False
                     error = False
                     for line in ocr_result:
-                        logger.info(f"找到{huatian_name}目标数量: {line['text']}")
+                        logger.info(f"找到{huatian_name}数量: {line['text']}")
                         if target_count_str in line['text']:
                             logger.info(f"{huatian_name}目标数量匹配: {self.huatian_target_count}")
                             target_found = True
@@ -391,13 +391,13 @@ class DailyMode:
                     ocr_result = self.ocr_handler.recognize_text(screenshot, ocr_region, rec_char_type='digit')
                     
                     if ocr_result is None or len(ocr_result) == 0:
-                        logger.error("无法识别目标数量")
+                        logger.error("无法识别数量")
                         continue
                     else:
                         loop = False
                         error = False
                         for line in ocr_result:
-                            logger.info(f"找到果炎目标数量: {line['text']}")
+                            logger.info(f"找到果炎数量: {line['text']}")
                             if target_count_str in line['text']:
                                 logger.info(f"果炎目标数量: {self.guoyan_target_count}")
                                 target_found = True
