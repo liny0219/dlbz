@@ -235,15 +235,7 @@ class DailyPanel(ttk.Frame):
                                     command=self.save_config)
         save_config_btn.pack(side=tk.LEFT, padx=(0, 10))
 
-        # 重置统计按钮
-        reset_stats_btn = ttk.Button(button_frame, text="重置统计", 
-                                    command=self.reset_stats)
-        reset_stats_btn.pack(side=tk.LEFT)
 
-        # 重置目标找到状态按钮
-        reset_target_status_btn = ttk.Button(button_frame, text="重置目标找到状态", 
-                                    command=self.reset_target_status)
-        reset_target_status_btn.pack(side=tk.LEFT)
 
         # 统计信息展示区域
         stats_frame = ttk.LabelFrame(self, text="日常统计", padding=(10, 10))
@@ -278,6 +270,10 @@ class DailyPanel(ttk.Frame):
         if not huatian_any_enabled and not guoyan_enabled:
             messagebox.showwarning("提示", "请至少启用一个日常功能！")
             return
+        
+        # 重置所有统计与状态
+        self.log_status("重置所有统计与状态...")
+        self._reset_all_stats_and_status()
         
         # 自动保存配置
         self.save_config()
@@ -446,38 +442,32 @@ class DailyPanel(ttk.Frame):
         
         self.update_stats()
 
-    def increment_huatian_stats(self, elapsed_time=0.0):
-        """增加花田统计数据（保持向后兼容）"""
-        # 为了向后兼容，默认更新花田1
-        self.update_huatian_stats("huatian1", elapsed_time=elapsed_time)
 
-    def increment_guoyan_stats(self, elapsed_time=0.0):
-        """增加果炎统计数据（保持向后兼容）"""
-        self.update_guoyan_stats(elapsed_time=elapsed_time)
 
-    def reset_stats(self):
-        """重置统计数据"""
-        if messagebox.askyesno("确认", "确定要重置所有统计数据吗？"):
-            # 只重置统计数据，不影响目标找到状态
-            self.huatian_stats["huatian1"]["restart_count"] = 0
-            self.huatian_stats["huatian1"]["total_time"] = 0.0
-            self.huatian_stats["huatian2"]["restart_count"] = 0
-            self.huatian_stats["huatian2"]["total_time"] = 0.0
-            self.guoyan_stats["restart_count"] = 0
-            self.guoyan_stats["total_time"] = 0.0
-            
-            self.update_stats()
-            self.log_status("统计数据已重置")
 
-    def reset_target_status(self):
-        """重置目标找到状态"""
-        if messagebox.askyesno("确认", "确定要重置目标找到状态吗？"):
-            self.huatian_stats["huatian1"]["target_found"] = False
-            self.huatian_stats["huatian2"]["target_found"] = False
-            self.guoyan_stats["target_found"] = False
-            
-            self.update_stats()
-            self.log_status("目标找到状态已重置")
+
+    def _reset_all_stats_and_status(self):
+        """重置所有统计与状态（内部方法，无需确认）"""
+        # 重置花田1统计
+        self.huatian_stats["huatian1"]["restart_count"] = 0
+        self.huatian_stats["huatian1"]["total_time"] = 0.0
+        self.huatian_stats["huatian1"]["target_found"] = False
+        
+        # 重置花田2统计
+        self.huatian_stats["huatian2"]["restart_count"] = 0
+        self.huatian_stats["huatian2"]["total_time"] = 0.0
+        self.huatian_stats["huatian2"]["target_found"] = False
+        
+        # 重置果炎统计
+        self.guoyan_stats["restart_count"] = 0
+        self.guoyan_stats["total_time"] = 0.0
+        self.guoyan_stats["target_found"] = False
+        
+        # 更新显示
+        self.update_stats()
+        self.log_status("所有统计与状态已重置")
+
+
 
     def format_time(self, seconds):
         """格式化时间显示"""

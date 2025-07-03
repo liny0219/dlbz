@@ -152,18 +152,19 @@ class DailyMode:
             if not self.huatian_enabled and not self.guoyan_enabled:
                 logger.warning("未启用任何日常功能，退出执行")
                 return
+            
+            # 重置所有统计信息（在开始执行前）
+            logger.info("重置所有统计信息...")
+            self.reset_stats(reset_huatian=True, reset_guoyan=True)
+            
             # 执行启用的日常功能
             if self.huatian_enabled:
                 logger.info("开始执行花田功能...")
-                # 重置花田统计
-                self.reset_stats(reset_huatian=True, reset_guoyan=False)
                 self._execute_huatian()
             
             time.sleep(1)
             if self.guoyan_enabled:
                 logger.info("开始执行果炎功能...")
-                # 只重置果炎统计，不影响花田统计
-                self.reset_stats(reset_huatian=False, reset_guoyan=True)
                 self._execute_guoyan()
             
             logger.info("=" * 50)
