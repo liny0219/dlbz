@@ -79,6 +79,9 @@ _config_cache = ConfigCache()
 class OCRConfig(BaseModel):
     lang: str = "ch"
     use_angle_cls: bool = True
+    ocr_confidence_threshold: float = 0.8  # OCR识别置信度阈值
+    image_template_match_threshold: float = 0.95  # 图像模板匹配阈值
+    debug_mode: bool = False  # 是否开启调试模式
 
 class DeviceConfig(BaseModel):
     connection_timeout: int = 30
@@ -165,7 +168,16 @@ class Config:
     def __init__(self, config_dir=None):
         if config_dir is None:
             config_dir = get_config_dir()
-        self.ocr = OCRConfig(**self._load_yaml_with_log(os.path.join(config_dir, "ocr.yaml"), name="ocr.yaml", fallback=os.path.join(config_dir, "battle.yaml"), key="ocr"))
+        # 兼容旧字段
+        ocr_raw = self._load_yaml_with_log(os.path.join(config_dir, "recognition_config.yaml"), name="recognition_config.yaml", fallback=os.path.join(config_dir, "battle.yaml"), key="ocr")
+        # 字段兼容处理
+        if "ocr_confidence_threshold" not in ocr_raw and "confidence_threshold" in ocr_raw:
+            ocr_raw["ocr_confidence_threshold"] = ocr_raw["confidence_threshold"]
+        if "image_template_match_threshold" not in ocr_raw and "image_match_threshold" in ocr_raw:
+            ocr_raw["image_template_match_threshold"] = ocr_raw["image_match_threshold"]
+        if "debug_mode" not in ocr_raw:
+            ocr_raw["debug_mode"] = ocr_raw.get("ocr_debug", False)
+        self.ocr = OCRConfig(**ocr_raw)
         self.device = DeviceConfig(**self._load_yaml_with_log(os.path.join(config_dir, "device.yaml"), name="device.yaml", fallback=os.path.join(config_dir, "battle.yaml"), key="device"))
         self.logging = LoggingConfig(**self._load_yaml_with_log(os.path.join(config_dir, "logging.yaml"), name="logging.yaml", fallback=os.path.join(config_dir, "battle.yaml"), key="logging"))
         self.command_interval = self._load_yaml_with_log(os.path.join(config_dir, "battle.yaml"), name="battle.yaml").get("command_interval", 1.0)

@@ -1,0 +1,5 @@
+lang: ch
+use_angle_cls: true
+ocr_confidence_threshold: 0.8
+image_template_match_threshold: 0.9
+debug_mode: false

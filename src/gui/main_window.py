@@ -24,7 +24,7 @@ DEFAULT_CONFIG_FILES = [
     ("device.yaml", "设备"),
     ("battle.yaml", "战斗设置"),
     ("logging.yaml", "日志"),
-    ("ocr.yaml", "OCR"),
+    ("recognition_config.yaml", "识别配置"),
 ]
 
 LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]

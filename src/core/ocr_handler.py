@@ -22,6 +22,12 @@ class OCRHandler:
         """
         self.device_manager = device_manager
         
+        # 从配置中读取OCR和图像模板匹配阈值
+        from common.config import config
+        self.ocr_confidence_threshold = config.ocr.ocr_confidence_threshold
+        self.image_template_match_threshold = config.ocr.image_template_match_threshold
+        self.debug_mode = getattr(config.ocr, 'debug_mode', False)
+        
         # 修复打包环境问题
         fix_frozen_environment()
         
@@ -114,20 +120,24 @@ class OCRHandler:
         keywords: List[str],
         image: Union[Image.Image, np.ndarray, str,None] = None,
         region: Optional[Tuple[int, int, int, int]] = None,
-        threshold: float = 0.8
+        threshold: Optional[float] = None
     ) -> bool:
         """
         检查截图OCR结果中是否全部匹配给定文案数组
         :param keywords: 需要匹配的文案字符串数组
         :param image: 支持 PIL.Image、OpenCV numpy.ndarray、图片路径
         :param region: 可选，(x1, y1, x2, y2) 指定识别区域坐标，默认全屏
-        :param threshold: 可信度阈值
+        :param threshold: OCR置信度阈值
         :return: bool，是否全部匹配
         """
         original_image = image
         processed_image = None
         
         try:
+            # 使用配置中的默认阈值
+            if threshold is None:
+                threshold = self.ocr_confidence_threshold
+            
             # 自动截图
             if image is None:
                 if not hasattr(self, "device_manager"):
@@ -169,7 +179,10 @@ class OCRHandler:
                     all_texts.append((text, confidence))
                     if confidence >= threshold:
                         detected_texts.add(text)
-            # logger.debug(f"OCR识别文本及置信度: {[f'{t}:{c:.2f}' for t,c in all_texts]}")
+            if self.debug_mode:
+                logger.info(f"[OCR调试] match_texts 关键词: {keywords}")
+                logger.info(f"[OCR调试] 识别文本及置信度: {[f'{t}:{c:.2f}' for t,c in all_texts]}")
+                logger.info(f"[OCR调试] 阈值: {threshold}")
             for kw in keywords:
                 if not any(kw in t for t in detected_texts):
                     logger.debug(f"未检测到关键词: {kw}")
@@ -192,17 +205,21 @@ class OCRHandler:
         keywords: List[str],
         image: Union[Image.Image, np.ndarray, str, None] = None,
         region: Optional[Tuple[int, int, int, int]] = None,
-        threshold: float = 0.8
+        threshold: Optional[float] = None
     ) -> bool:
         """
         检查截图OCR结果中是否全部匹配给定文案数组，若匹配则点击第一个匹配到的文本中心点。
         :param keywords: 需要匹配的文案字符串数组
         :param image: 可选，PIL.Image、OpenCV numpy.ndarray、图片路径，默认自动截图
         :param region: 可选，(x1, y1, x2, y2) 指定识别区域坐标，默认全屏
-        :param threshold: 可信度阈值
+        :param threshold: OCR置信度阈值
         :return: bool，是否全部匹配并点击
         """
         try:
+            # 使用配置中的默认阈值
+            if threshold is None:
+                threshold = self.ocr_confidence_threshold
+            
             # 自动截图
             if image is None:
                 if not hasattr(self, "device_manager"):
@@ -328,7 +345,7 @@ class OCRHandler:
                     continue
                 for item in line:
                     confidence = item[1][1]
-                    if confidence >= 0.8:  # 使用固定阈值
+                    if confidence >= self.ocr_confidence_threshold:  # 使用配置中的OCR置信度阈值
                         # logger.debug(f"OCR识别文本: {item[1][0]}，置信度: {confidence:.2f}") 
                         processed_results.append({
                             'text': item[1][0],
@@ -345,7 +362,7 @@ class OCRHandler:
         self,
         image: Union[Image.Image, np.ndarray, str, None],
         template_path: str,
-        threshold: float = 0.95,
+        threshold: Optional[float] = None,
         region: Optional[Tuple[int, int, int, int]] = None,
         gray: bool = False,
         debug: bool = False,
@@ -355,12 +372,16 @@ class OCRHandler:
         检查模板文件名是否匹配规则xxx__x1_y1_x2_y2.png，若匹配则自动提取region坐标，否则region为None。
         :param image: 支持 PIL.Image、OpenCV numpy.ndarray、图片路径
         :param template_path: 模板图片路径
-        :param threshold: 匹配阈值，默认0.8
+        :param threshold: 图像模板匹配阈值，默认0.95
         :param region: (x1, y1, x2, y2) 匹配区域，默认全图
         :param debug: 是否保存调试图片，保存到debug目录
         :return: (x, y) 匹配到的左上角坐标，未匹配返回None
         """
         try:
+            # 使用配置中的默认阈值
+            if threshold is None:
+                threshold = self.image_template_match_threshold
+            
             # 1. 读取主图像，转为BGR格式
             if image is None:
                 logger.error("Input image is None")
@@ -397,10 +418,14 @@ class OCRHandler:
             # 5. 模板匹配
             res = cv2.matchTemplate(img_proc, template_proc, cv2.TM_CCOEFF_NORMED)
             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-            # logger.debug(f"模板匹配最大相关系数: {max_val:.3f}")
+            if self.debug_mode:
+                logger.info(f"[OCR调试] match_image 模板路径: {template_path}")
+                logger.info(f"[OCR调试] 最大相关系数: {max_val:.3f}")
+                logger.info(f"[OCR调试] 匹配阈值: {threshold}")
 
             # 6. debug保存图片，画出匹配区域
             if debug:
+                logger.info(f"模板:{template_path},匹配系数: {max_val:.3f},阈值: {threshold}")
                 os.makedirs("debug", exist_ok=True)
                 debug_img = orig_image.copy()
                 # 匹配区域左上角坐标
@@ -634,22 +659,25 @@ class OCRHandler:
         self,
         image: Union[Image.Image, np.ndarray, str, None],
         template_path: str,
-        threshold: float = 0.95,
+        threshold: Optional[float] = None,
         region: Optional[Tuple[int, int, int, int]] = None,
         gray: bool = False,
-        debug: bool = False,
     ) -> list[tuple[int, int, float]]:
         """
         多模板匹配，返回所有相关系数大于等于阈值的点坐标及分数，并将所有匹配区域画框保存到debug目录。
         :param image: 支持 PIL.Image、OpenCV numpy.ndarray、图片路径
         :param template_path: 模板图片路径
-        :param threshold: 匹配阈值，默认0.8
+        :param threshold: 图像模板匹配阈值，默认0.95
         :param region: (x1, y1, x2, y2) 匹配区域，默认全图
         :param gray: 是否灰度匹配
         :return: [(x, y, score), ...]，所有匹配点的左上角坐标及分数
         """
         import numpy as np
         try:
+            # 使用配置中的默认阈值
+            if threshold is None:
+                threshold = self.image_template_match_threshold
+            
             # 1. 读取主图像，转为BGR格式
             if image is None:
                 logger.error("Input image is None")
@@ -688,16 +716,18 @@ class OCRHandler:
             y_idxs, x_idxs = np.where(res >= threshold)
             matches = []
             debug_img = orig_image.copy()
+            if self.debug_mode:
+                logger.info(f"[OCR调试] match_image_multi 模板路径: {template_path}")
+                logger.info(f"[OCR调试] 匹配阈值: {threshold}")
+                logger.info(f"[OCR调试] 匹配点数: {len(x_idxs)}")
+                logger.info(f"[OCR调试] 匹配分数: {[float(res[y, x]) for x, y in zip(x_idxs, y_idxs)]}")
             for (x, y) in zip(x_idxs, y_idxs):
                 score = float(res[y, x])
                 abs_x, abs_y = x + offset_x, y + offset_y
                 matches.append((abs_x, abs_y, score))
                 # 画矩形框
                 cv2.rectangle(debug_img, (abs_x, abs_y), (abs_x + tw, abs_y + th), (0, 0, 255), 2)
-            # 保存debug图片
-            if debug:
-                os.makedirs("debug", exist_ok=True)
-                cv2.imwrite("debug/match_image_multi_result.png", debug_img)
+
             return matches
         except Exception as e:
             logger.error(f"match_image_multi 执行异常: {e}\n{traceback.format_exc()}")
