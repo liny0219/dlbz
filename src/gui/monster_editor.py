@@ -57,7 +57,7 @@ class MonsterEditor(ttk.LabelFrame):
         edit_btn.pack(side=tk.LEFT, padx=(0, 2))
         help_btn = ttk.Button(btn_frame, text="说明", width=6, command=self.on_battle_help)
         help_btn.pack(side=tk.LEFT, padx=(0, 2))
-        set_btn = ttk.Button(btn_frame, text="设置", width=6, command=self.on_set_battle_file)
+        set_btn = ttk.Button(btn_frame, text="浏览", width=6, command=self.on_set_battle_file)
         set_btn.pack(side=tk.LEFT)
 
         # 按钮区

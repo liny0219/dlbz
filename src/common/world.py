@@ -63,11 +63,13 @@ class World:
 
     def restart_wait_in_world(self,show_log:bool=False):
         self.app_manager.close_app()
+        logger.info(f"[restart_wait_in_world]关闭应用")
         if show_log:
             logger.info(f"[read_map_state]读取界面状态")
 
-        sleep_until(lambda: not self.app_manager.is_app_running(),timeout=10)
-
+        resilt = sleep_until(lambda: not self.app_manager.is_app_running(),timeout=10,function_name="restart_wait_in_world")
+        logger.info(f"[restart_wait_in_world]关闭应用结果: {resilt}")
+        
         while True:
             time.sleep(1)
             in_world = self.in_world()
@@ -266,7 +268,7 @@ class World:
             logger.debug("不在旅馆门口")
             return None
     
-    def find_fengmo_point(self, image: Optional[Image.Image] = None, type: str = "right",offset=60, current_point:CheckPoint|None=None) -> Optional[tuple[int, int, int]] | None:
+    def find_fengmo_point(self, image: Optional[Image.Image] = None, type: str = "right", offset=60, current_point:CheckPoint|None=None) -> Optional[tuple[int, int, int]] | None:
         """
         判断当前是否有逢魔点(逢魔入口也是这个,判断感叹号)。
         """
@@ -274,14 +276,17 @@ class World:
             image = self.device_manager.get_screenshot()
         find_list = self.ocr_handler.match_image_multi(image, "assets/fengmo/fengmo_point.png", threshold=0.9)
         # 过滤在禁止范围内的点
-        forbidden_range = (936,36,1208,195)
+        forbidden_range = [(936,36,1208,195),(16, 534,302, 687)]
         # 打印禁止范围和点的坐标，用于调试
         logger.debug(f"禁止范围: {forbidden_range}")
         # 过滤掉在禁止范围内的点，并在过滤时输出日志
         filtered_list = []
         for point in find_list:
-            in_forbidden = (forbidden_range[0] <= int(point[0]) <= forbidden_range[2] and
-                            forbidden_range[1] <= int(point[1]) <= forbidden_range[3])
+            in_forbidden = False
+            for forbidden in forbidden_range:
+                if forbidden[0] <= int(point[0]) <= forbidden[2] and forbidden[1] <= int(point[1])+offset <= forbidden[3]:
+                    in_forbidden = True
+                    break
             logger.info(f"发现点坐标: ({point[0]}, {point[1]})")
             logger.info(f"是否在禁止范围内: {in_forbidden}")
             if not in_forbidden:

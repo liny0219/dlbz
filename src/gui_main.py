@@ -38,7 +38,7 @@ CONFIG_FILES = [
     ("recognition_config.yaml", "识别配置"),
 ]
 
-version = "v1.8.17"
+version = "v1.9.0-bate1"
 
 def main():
     title = f"旅人休息站.免费脚本 {version} 分辨率 1280x720 (dpi 240)"

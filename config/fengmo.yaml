@@ -1,7 +1,7 @@
 rest_in_inn: false
 vip_cure: false
-city: 托托哈哈岛
-depth: 3
+city: 卡纳尔布来因
+depth: 1
 find_point_wait_time: 0.2
 wait_map_time: 0.5
 wait_ui_time: 0.3

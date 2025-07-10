@@ -89,6 +89,9 @@ class FarmingMode:
         # 重置状态数据
         self.state_data = FarmingStateData()
         
+        def check_in_battle_end(image):
+            if self.battle.battle_end(image):
+                self.world.click_tirm(6)
         pre_state = None
         start_time = time.time()
         is_left = 0
@@ -96,11 +99,11 @@ class FarmingMode:
             while True:
                 screenshot = self.device_manager.get_screenshot()
                 result = self.world.check_in_world_or_battle(
-                    screenshot,lambda image: self.world.dclick_tirm(6))
+                    screenshot,check_in_battle_end)
                 if result == 'in_battle':
                     self.state_data.in_map = False
                     pre_state = 'in_battle'
-                    self.battle.auto_battle()
+                    self.battle.auto_battle(timeout=1)
                     continue
                 if result == 'in_world':
                     self.state_data.in_map = True
@@ -109,13 +112,14 @@ class FarmingMode:
                         self.state_data.last_time = round((time.time() - start_time) / 60, 2)
                         self.report_data()
                     if pre_state == 'in_world':
-                        time.sleep(1)
-                    if is_left:
-                        logger.info("[in_world]向右跑")
-                        self.world.run_right()
-                    else:
-                        logger.info("[in_world]向左跑")
-                        self.world.run_left()
+                        if is_left:
+                            time.sleep(1)
+                            logger.info("[in_world]向右跑")
+                            self.world.run_right()
+                        else:
+                            time.sleep(1)
+                            logger.info("[in_world]向左跑")
+                            self.world.run_left()
                     is_left = not is_left
                     pre_state = 'in_world'
         except Exception as e:

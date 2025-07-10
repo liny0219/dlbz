@@ -400,7 +400,7 @@ class FengmoMode:
                                     self.world.closeUI()
                                     return
                                 logger.info(f"[collect_junk_phase]点击小地图: {check_point}")
-                                self.device_manager.click(*check_point.pos)
+                                self.device_manager.click(check_point.pos[0], check_point.pos[1])
                             self.wait_map()
                             in_world_or_battle = self._in_world_or_battle()
                             logger.info(f"[collect_junk_phase]in_world_or_battle: {in_world_or_battle}")
@@ -503,8 +503,8 @@ class FengmoMode:
             if check_point is None:
                 logger.error("[find_box_phase]check_point为None，需要排查")
                 raise Exception("[find_box_phase]check_point为None，需要排查")
-            logger.info(f"[find_box_phase]点击小地图找到的最近点位: {check_point.pos}")
-            self.device_manager.click(*check_point.pos)
+            logger.info(f"[find_box_phase]点击小地图找到的最近点位:{check_point.id} {check_point.pos}")
+            self.device_manager.click(check_point.pos[0], check_point.pos[1])
             self.wait_map()
             in_world_or_battle = self._in_world_or_battle()
             logger.info(f"[find_box_phase]in_world_or_battle: {in_world_or_battle}")
@@ -594,7 +594,7 @@ class FengmoMode:
                     logger.error("[find_boss_phase]check_point为None，需要排查")
                     raise Exception("[find_boss_phase]check_point为None，需要排查")
                 logger.info(f"[find_boss_phase]点击小地图最近Boss的点: {check_point.pos}")
-                self.device_manager.click(*check_point.pos)
+                self.device_manager.click(check_point.pos[0], check_point.pos[1])
                 self.wait_map()
                 result = self.wait_check_boss()
                 if result == 'in_world_battle_fail' or result == 'in_world_fight_boss':

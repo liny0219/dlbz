@@ -156,16 +156,39 @@ class DailyMode:
             # 重置所有统计信息（在开始执行前）
             logger.info("重置所有统计信息...")
             self.reset_stats(reset_huatian=True, reset_guoyan=True)
-            
-            # 执行启用的日常功能
-            if self.huatian_enabled:
-                logger.info("开始执行花田功能...")
-                self._execute_huatian()
-            
-            time.sleep(1)
-            if self.guoyan_enabled:
-                logger.info("开始执行果炎功能...")
-                self._execute_guoyan()
+            huatian_done = False
+            guoyan_done = False
+            while True:
+                # 检查地图名称
+                map_name = self.world.get_map_name()
+
+                if '无名小镇' in map_name:
+                    # 执行启用的日常功能
+                    if self.huatian_enabled:
+                        logger.info("开始执行花田功能...")
+                        self._execute_huatian()
+                        huatian_done = True
+                    else:
+                        logger.info("花田功能未启用，跳过")
+                        huatian_done = True
+
+                if '圣树之泉' in map_name:
+                    # 执行启用的日常功能
+                    if self.guoyan_enabled:
+                        logger.info("开始执行果炎功能...")
+                        self._execute_guoyan()
+                        guoyan_done = True
+                    else:
+                        logger.info("果炎功能未启用，跳过")
+                        guoyan_done = True
+
+                if not huatian_done:
+                    self.world.tpAnywhere('无名小镇')
+                if not guoyan_done:
+                    self.world.tpAnywhere('圣树之泉')
+                if huatian_done and guoyan_done:
+                    break
+                time.sleep(1)
             
             logger.info("=" * 50)
             logger.info("日常玩法执行完成")
@@ -195,18 +218,6 @@ class DailyMode:
             if not self._check_app_status():
                 logger.error("[花田] 应用状态检查失败")
                 return
-
-            map_name = self.world.get_map_name()
-            if map_name is None or len(map_name) == 0:
-                logger.error("无法识别地图名称")
-                return
-            if '无名小镇' not in map_name:
-                if not self.world.tpAnywhere('无名小镇'):
-                    logger.error("传送到无名小镇失败")
-                    return
-            else:
-                logger.info("已经在无名小镇")
-        
             
             # 步骤3: 处理花田1和花田2
             huatian1_pos = (514, 350)
@@ -354,19 +365,6 @@ class DailyMode:
             if not self._check_app_status():
                 logger.error("[果炎] 应用状态检查失败")
                 return
-            
-            # 步骤2: 检查当前位置
-            map_name = self.world.get_map_name()
-            if map_name is None or len(map_name) == 0:
-                logger.error("无法识别地图名称")
-                return
-            if '圣树之泉' not in map_name:
-                if not self.world.tpAnywhere('圣树之泉'):
-                    logger.error("传送到圣树之泉失败")
-                    return
-            else:
-                logger.info("已经在圣树之泉")
-            
 
             target_found = False
             target_count_str = str(self.guoyan_target_count)

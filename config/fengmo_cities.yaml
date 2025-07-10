@@ -1,4 +1,152 @@
 cities:
+  卡纳尔布来因:
+    check_points:
+    - id: 1
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 643
+        - 268
+      next_point: true
+      pos:
+      - 610
+      - 272
+      reset_map: true
+    - id: 2
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 549
+        - 353
+      next_point: true
+      pos:
+      - 584
+      - 314
+      reset_map: true
+    - id: 3
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 854
+        - 337
+      next_point: true
+      pos:
+      - 672
+      - 459
+      reset_map: true
+    - id: 4
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 735
+        - 235
+      next_point: true
+      pos:
+      - 700
+      - 534
+      reset_map: true
+    - id: 5
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 806
+        - 268
+      next_point: true
+      pos:
+      - 810
+      - 559
+      reset_map: true
+    - id: 6
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 635
+        - 245
+      next_point: true
+      pos:
+      - 493
+      - 493
+      reset_map: true
+    - id: 7
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 419
+        - 438
+      next_point: true
+      pos:
+      - 442
+      - 582
+      reset_map: true
+    - id: 8
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 521
+        - 264
+      next_point: true
+      pos:
+      - 306
+      - 523
+      reset_map: true
+    - id: 9
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 639
+        - 267
+      next_point: true
+      pos:
+      - 341
+      - 367
+      reset_map: true
+    - id: 10
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 782
+        - 414
+      next_point: true
+      pos:
+      - 421
+      - 365
+      reset_map: true
+    - id: 11
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 784
+        - 427
+      next_point: true
+      pos:
+      - 530
+      - 318
+      reset_map: true
+    - id: 12
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 639
+        - 311
+      next_point: true
+      pos:
+      - 490
+      - 129
+      reset_map: true
+    entrance_pos:
+    - 658
+    - 326
+    inn_pos:
+    - 383
+    - 326
+    monster_pos:
+    - - 344
+      - 433
+    monsters:
+    - battle_config: D:/dldbz/config/battle_scripts/卡纳尔布来因精英怪.txt
+      name: 逢凶的海洋大蜥蜴人
+    - battle_config: D:/dldbz/config/battle_scripts/卡纳尔布来因Boss.txt
+      name: 逢虐的梅尔斯特罗姆
   托托哈哈岛:
     check_points:
     - id: 1
