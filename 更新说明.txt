@@ -1,4 +1,7 @@
-v1.9.0-bate1
+v1.9.0-bate2
+bugfix: 修复点位4与点位5过近,导致二阶段无法继续
+
+v1.9.0-bate2
 feature: 支持逢魔第三章
 feature: 优化挂机刷野的逻辑
 

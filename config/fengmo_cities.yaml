@@ -38,12 +38,12 @@ cities:
       item_pos:
       - backup_pos: []
         pos:
-        - 735
-        - 235
+        - 748
+        - 339
       next_point: true
       pos:
       - 700
-      - 534
+      - 506
       reset_map: true
     - id: 5
       item_pos:
