@@ -58,6 +58,7 @@
 |---------|------|------|------|
 | Wait | 等待指定秒数 | `Wait,秒数` | `Wait,2.5` |
 | Skip | 跳过指定秒数（如动画） | `Skip,秒数` | `Skip,1.0` |
+| Auto | 自动战斗指令 | 
 | PressInRound | 长按跳过到下个战斗回合 | `PressInRound,超时秒数` | `PressInRound,5` |
 
 ### 循环控制指令

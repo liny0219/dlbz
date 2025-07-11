@@ -249,8 +249,9 @@ class Battle:
             logger.warning("无法获取截图，无法判断是否在技能释放中")
             return False
         points_colors = [
-            (460, 657, '050004', 1),
-            (521, 661, '050004', 1),
+            (443, 657, '4E4D4B', 1),
+            (537, 655, '4F5450', 1),
+            (489, 677, '0A0907', 1),
         ]
         results = self.ocr_handler.match_point_color(image, points_colors)
         return results and self.in_battle(image)
@@ -262,10 +263,9 @@ class Battle:
             logger.warning("无法获取截图，无法判断是否在技能释放中")
             return False
         points_colors = [
-            (518, 656, '252326', 1),
-            (460, 657, '252326', 1),
-            (537, 660, 'D9DADC', 1),
-            (443, 661, 'E0E0E0', 1),
+            (442, 652, 'DFDEDC', 1),
+            (536, 652, 'DDDBE0', 1),
+            (534, 665, '201F25', 1),
         ]
         # 批量判断
         results = self.ocr_handler.match_point_color(image, points_colors)

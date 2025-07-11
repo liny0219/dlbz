@@ -110,6 +110,7 @@ class BattleCommandExecutor:
         while self._current_index < len(self.commands):
             idx = self._current_index
             cmd = self.commands[idx]
+            next_cmd = self.commands[idx+1] if idx+1 < len(self.commands) else None
             try:
                 self.logger.info(f"执行第{idx+1}条指令: {cmd}")
                 if cmd.get('type') == 'CheckDead':
@@ -141,6 +142,9 @@ class BattleCommandExecutor:
                     self.logger.info(f"等待战斗回合结束")
                     result = self.battle.wait_done(callback=callback)
                     if result == 'end':
+                        if next_cmd and next_cmd.get('type') == 'PressInRound':
+                            self._current_index += 1
+                            continue
                         return { 'success': True,"state":'end'}
                     if result in ['wait_done_timeout', 'exception']:
                         self.logger.info(f"回合异常:{cmd}{result}")

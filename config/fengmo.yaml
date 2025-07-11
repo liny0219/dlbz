@@ -5,4 +5,4 @@ depth: 1
 find_point_wait_time: 0.2
 wait_map_time: 0.5
 wait_ui_time: 0.3
-default_battle_config: D:/dldbz/config/battle_scripts/捡垃圾重启.txt
+default_battle_config: ''
