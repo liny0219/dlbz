@@ -2,6 +2,7 @@ from __future__ import annotations
 import logging
 from typing import Callable, List, Dict, Any
 from core.battle import Battle
+from utils.sleep_utils import sleep_until
 from typing import TYPE_CHECKING
 from PIL import Image
 if TYPE_CHECKING:
@@ -115,6 +116,10 @@ class BattleCommandExecutor:
                     self.logger.info(f"开启队友阵亡检查:{cmd}")
                     check_dead_cmd = cmd
                 result = self.execute_command(cmd)
+                if result and cmd.get('type') == 'Auto':
+                    self.logger.info(f"等待战斗回合结束")
+                    sleep_until(self.battle.not_in_battle,timeout=120)
+                    self.logger.info(f"战斗回合结束")
                 if result and cmd.get('type') == 'Run':
                     return { 'success': False,"state":'run'}
                 if result and cmd.get('type') == 'ExitApp':
@@ -223,6 +228,8 @@ class BattleCommandExecutor:
             return self.battle.cmd_exit_app(**params)
         elif cmd_type == "PressInRound":
             return self.battle.cmd_press_in_round(**params)
+        elif cmd_type == "Auto":
+            return self.battle.cmd_auto_battle(**params)
         elif cmd_type == "LoopS":
             return True
         elif cmd_type == "LoopE":

@@ -163,6 +163,12 @@ class Battle:
             return True
         return False
     
+    def not_in_battle(self, image: Optional[Image.Image] = None) -> bool:
+        """
+        判断当前是否不在战斗中。
+        """
+        return not self.in_battle(image)
+    
     def in_round(self, image: Optional[Image.Image] = None) -> bool:
         """
         判断当前是否在战斗回合中。
@@ -874,19 +880,22 @@ class Battle:
     
     def press_in_round(self, timeout: float = 15) -> bool:
         try:
-            logger.debug("等待战斗开始")
-            logger.debug(f"长按按下,等待跳过")
             if self.device_manager.device is None:
                 logger.error("设备未连接")
                 return False
+            logger.info("等待战斗开始")
+            logger.info(f"长按按下,等待跳过")
             self.device_manager.press_down(100,20)
             start_time = time.time()
             while not self.in_round():
                 if time.time() - start_time > timeout:
-                    logger.debug("[press_in_round] 等待超时")
+                    logger.info("[press_in_round] 等待超时")
+                    logger.info(f"长按抬起")
+                    self.device_manager.press_up(100,20)
                     return False
+                logger.info(f"等待跳过")
                 time.sleep(1)
-            logger.debug(f"长按抬起")
+            logger.info(f"长按抬起")
             self.device_manager.press_up(100,20)
             time.sleep(0.5)
         except Exception as e:
@@ -1079,6 +1088,13 @@ class Battle:
 
     def cmd_press_in_round(self, timeout: float = 15) -> bool:
         return self.press_in_round(timeout)
+    
+    def cmd_auto_battle(self) -> bool:
+        """
+        自动战斗
+        """
+        logger.debug("[Battle] 自动战斗（AutoBattle）")
+        return self.auto_battle()
 
     def cmd_battle_start(self) -> bool:
         """
