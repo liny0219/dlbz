@@ -289,7 +289,7 @@ class FengmoMode:
             self.state_data.step = Step.UN_START
             while True:
                 self.report_data()
-                logger.info(f"[run]当前配置的城市: {self.city_name} 深度: {self.depth}")
+                logger.info(f"[run]当前配置的城市: {self.city_name} 深度增量: {self.depth}")
                 # if not self.world.wait_in_fengmo_map():
                 if self.rest_in_inn:
                     logger.info("[run]休息检查")

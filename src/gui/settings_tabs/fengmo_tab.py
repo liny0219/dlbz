@@ -52,8 +52,8 @@ class FengmoSettingsTab(ttk.Frame):
 
         # 深度
         self.depth_var = tk.StringVar(value=str(config_data.get("depth", 1)))
-        ttk.Label(config_frame, text="深度", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
-        depth_spin = tk.Spinbox(config_frame, from_=1, to=10, textvariable=self.depth_var, width=input_width)
+        ttk.Label(config_frame, text="深度增量", width=label_width, anchor="w").grid(row=row, column=0, sticky='w', padx=5, pady=3)
+        depth_spin = tk.Spinbox(config_frame, from_=-2, to=2, textvariable=self.depth_var, width=input_width)
         depth_spin.grid(row=row, column=1, padx=5, pady=3, sticky='w')
         row += 1
 

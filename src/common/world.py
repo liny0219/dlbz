@@ -573,7 +573,7 @@ class World:
         if not in_minimap:
             return False
         logger.info(f"[go_fengmo]点击小地图: {entrance_pos}")
-        self.device_manager.click(*entrance_pos)
+        self.device_manager.click(entrance_pos[0],entrance_pos[1])
         self.in_world_or_battle()
         time.sleep(wait_time)
         # 寻找逢魔入口
@@ -601,7 +601,7 @@ class World:
         if not in_minimap:
             return False
         logger.info(f"[go_fengmo]点击小地图: {entrance_pos}")
-        self.device_manager.click(*entrance_pos)
+        self.device_manager.click(entrance_pos[0],entrance_pos[1])
         self.in_world_or_battle()
         time.sleep(wait_time)
         # 寻找逢魔入口
@@ -616,7 +616,11 @@ class World:
             return False
         # 涉入
         logger.info(f"[go_fengmo]涉入")
-        sleep_until(lambda: self.ocr_handler.match_click_text(["涉入"],region=(760,465,835,499)),function_name="涉入")
+        pos = sleep_until(self.find_fengmo_start)
+        if pos is None:
+            logger.info("未发现逢魔涉入按钮")
+            return False
+        self.device_manager.click(*pos[:2])
         time.sleep(5)
         return True
     
@@ -731,34 +735,45 @@ class World:
                 result = 'finish_cure'
             time.sleep(0.2)
         return result
+    
+    def find_fengmo_start(self,image:Optional[Image.Image]=None):
+        """
+        判断当前逢魔入口
+        """
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        find = self.ocr_handler.match_image(image, "assets/fengmo/fengmo_start.png")
+        if find:
+            logger.debug("发现逢魔入口")
+            return find
+        else:
+            logger.debug("未发现逢魔入口")
+            return None
 
     def select_fengmo_mode(self,depth:int,callback:Callable[[], str|None]|None = None):
         """
         选择逢魔模式
         """
         logger.info(f"[select_fengmo_mode]等待选择深度")
-        sleep_until(lambda: self.ocr_handler.match_texts(["选择深度"]),function_name="选择深度",timeout=5)
-        logger.info(f"[select_fengmo_mode]读取当前深度")
-        current_depth = self.read_fengmo_depth()
-        while current_depth != depth:
-            time.sleep(0.1)
-            current_depth = self.read_fengmo_depth()
-            if current_depth == depth:
-                logger.info(f"[select_fengmo_mode]当前深度: {current_depth} 目标深度: {depth}")
-                break
-            if current_depth is None:
-                logger.info(f"[select_fengmo_mode]读取深度失败")
-                if callback is not None:
-                   result = callback()
-                   if result is not None:
-                       return result
-                continue
-            if current_depth < depth:
-                logger.info(f"[select_fengmo_mode]当前深度: {current_depth} 目标深度: {depth} 增加深度")
+        pos = sleep_until(self.find_fengmo_start,timeout=5)
+        time.sleep(0.5)
+        if pos is None:
+            if callback is not None:
+                result = callback()
+                if result is not None:
+                    return result
+            return 'fail'
+        if depth == 0:
+            return 'success'
+        num_depth = abs(depth)
+        if depth > 0:
+            for i in range(num_depth):
                 self.do_fengmo_depth("add")
-            else:
-                logger.info(f"[select_fengmo_mode]当前深度: {current_depth} 目标深度: {depth} 减少深度")
+                time.sleep(0.5)
+        else:
+            for i in range(num_depth):
                 self.do_fengmo_depth("sub")
+                time.sleep(0.5)
         return 'success'
     
     def find_map_treasure(self, image: Optional[Image.Image] = None) -> Optional[list[tuple[int, int]]]:

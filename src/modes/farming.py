@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import threading
 import time
 from typing import Any, Dict, Optional
+from common import world
 from utils import logger
 from common.app import AppManager
 from core.battle import Battle
@@ -89,39 +90,35 @@ class FarmingMode:
         # 重置状态数据
         self.state_data = FarmingStateData()
         
-        def check_in_battle_end(image):
-            if self.battle.battle_end(image):
-                self.world.click_tirm(6)
-        pre_state = None
         start_time = time.time()
         is_left = 0
+        battle = self.world._get_battle()
         try:
             while True:
                 screenshot = self.device_manager.get_screenshot()
-                result = self.world.check_in_world_or_battle(
-                    screenshot,check_in_battle_end)
-                if result == 'in_battle':
-                    self.state_data.in_map = False
-                    pre_state = 'in_battle'
+                in_battle = battle and battle.in_battle(screenshot)
+                battle_end = self.battle.battle_end(screenshot)
+                if battle_end:
+                    self.world.click_tirm(6)
+                    self.state_data.battle_count += 1
+                    self.state_data.last_time = round((time.time() - start_time) / 60, 2)
+                    self.report_data()
+                    continue
+                if in_battle:
                     self.battle.auto_battle(timeout=1)
                     continue
-                if result == 'in_world':
-                    self.state_data.in_map = True
-                    if pre_state == 'in_battle':
-                        self.state_data.battle_count += 1
-                        self.state_data.last_time = round((time.time() - start_time) / 60, 2)
-                        self.report_data()
-                    if pre_state == 'in_world':
-                        if is_left:
-                            time.sleep(1)
-                            logger.info("[in_world]向右跑")
-                            self.world.run_right()
-                        else:
-                            time.sleep(1)
-                            logger.info("[in_world]向左跑")
-                            self.world.run_left()
-                    is_left = not is_left
-                    pre_state = 'in_world'
+                if is_left:
+                    time.sleep(1)
+                    logger.info("[in_world]向右跑")
+                    self.world.run_right()
+                else:
+                    time.sleep(1)
+                    logger.info("[in_world]向左跑")
+                    self.world.run_left()
+                is_left = not is_left
+                time.sleep(0.1)
+                screenshot = self.device_manager.get_screenshot()
+               
         except Exception as e:
             logger.error(f"[刷野模式] 主循环异常: {e}")
             logger.error(f"{e.__traceback__}\n{traceback.format_exc()}")
