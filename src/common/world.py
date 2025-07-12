@@ -101,22 +101,21 @@ class World:
         count = 0
         while count < max_count:
             time.sleep(1)
-            if self.in_world():
+            if self.in_world() and self.in_fengmo_map():
                 count += 1
             else:
                 count = 0
             if callback is not None:
                 callback()
-        if self.in_fengmo_map():
-            if show_log:
-                logger.info(f"[read_map_state]在逢魔地图中")
-            time.sleep(2)
-            self.open_minimap()
-            sleep_until(self.in_minimap)
-            state = self.get_fengmo_state()
-            self.closeUI()
-            if state is not None:
-                return state
+        if show_log:
+            logger.info(f"[read_map_state]在逢魔地图中")
+        time.sleep(2)
+        self.open_minimap()
+        sleep_until(self.in_minimap)
+        state = self.get_fengmo_state()
+        self.closeUI()
+        if state is not None:
+            return state
         logger.info(f"[read_map_state]在城镇中")
         self.closeUI()
         return 'in_world'

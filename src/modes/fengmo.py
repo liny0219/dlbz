@@ -404,8 +404,6 @@ class FengmoMode:
                             self.wait_map()
                             in_world_or_battle = self._in_world_or_battle()
                             logger.info(f"[collect_junk_phase]in_world_or_battle: {in_world_or_battle}")
-                            if self.check_state(Step.COLLECT_JUNK,check_point):
-                                return
                             if in_world_or_battle:
                                 if not in_world_or_battle["app_alive"]:
                                     if not self.wait_check_mode_state_ok():
@@ -421,6 +419,8 @@ class FengmoMode:
                                 if in_world_or_battle["in_battle"]:
                                     logger.info(f"[collect_junk_phase]遇敌战斗过")
                                     time.sleep(self.wait_map_time)
+                            if self.check_state(Step.COLLECT_JUNK,check_point):
+                                return
                     self.wait_map()
                     #  当前查找逢魔点
                     logger.info(f"[collect_junk_phase]当前查找逢魔点: {check_point.id}")
