@@ -126,16 +126,7 @@ class Battle:
         if image is None:
             logger.warning("无法获取截图，无法判断是否战斗结算")
             return False
-        
-        points_colors = [
-            (103, 28, 'F1E8E9', 1), # 战
-            (204, 62, 'EFE7E5', 1), # 斗
-            (291, 79, 'F4EBEC', 1), # 结
-            (346, 28, 'ECE8E5', 1), # 算
-            (38, 65, '6A6069', 1), # 左侧花边
-        ]
-        # 批量判断
-        results = self.ocr_handler.match_point_color(image, points_colors)
+        results = self.ocr_handler.match_image(image, "assets/battle_end.png")
         if results:
             logger.info("在战斗结算")
             return True
