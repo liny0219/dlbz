@@ -275,7 +275,7 @@ class World:
             image = self.device_manager.get_screenshot()
         find_list = self.ocr_handler.match_image_multi(image, "assets/fengmo/fengmo_point.png", threshold=0.9)
         # 过滤在禁止范围内的点
-        forbidden_range = [(936,36,1208,195),(16, 534,302, 687)]
+        forbidden_range = [(936,36,1208,240),(16, 534,302, 687)]
         # 打印禁止范围和点的坐标，用于调试
         logger.debug(f"禁止范围: {forbidden_range}")
         # 过滤掉在禁止范围内的点，并在过滤时输出日志
