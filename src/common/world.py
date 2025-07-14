@@ -586,7 +586,10 @@ class World:
         self.in_world_or_battle()
         return True
 
-    def go_fengmo(self,depth:int,entrance_pos:list[int],wait_time:float=0.2,callback:Callable[[], str|None]|None = None) -> bool:
+    def go_fengmo(self,depth:int,entrance_pos:list[int],wait_time:float=0.2,
+                  callback:Callable[[], str|None]|None = None,
+                  threshold:float=0.8,
+                  difficulty_delay:float=0.5) -> bool:
         """
         前往逢魔
         """
@@ -611,7 +614,7 @@ class World:
         logger.info(f"[go_fengmo]点击逢魔入口: {fengmo_pos}")
         self.device_manager.click(*fengmo_pos[:2])
         logger.info(f"[go_fengmo]选择逢魔模式: {depth}")
-        result = self.select_fengmo_mode(depth,callback=callback)
+        result = self.select_fengmo_mode(depth,callback=callback,threshold=threshold,difficulty_delay=difficulty_delay)
         if result != 'success':
             return False
         # 涉入
@@ -736,13 +739,13 @@ class World:
             time.sleep(0.2)
         return result
     
-    def find_fengmo_start(self,image:Optional[Image.Image]=None):
+    def find_fengmo_start(self,image:Optional[Image.Image]=None,threshold:float=0.95):
         """
         判断当前逢魔入口
         """
         if image is None:
             image = self.device_manager.get_screenshot()
-        find = self.ocr_handler.match_image(image, "assets/fengmo/fengmo_start.png")
+        find = self.ocr_handler.match_image(image, "assets/fengmo/fengmo_start.png",threshold=threshold)
         if find:
             logger.debug("发现逢魔入口")
             return find
@@ -750,12 +753,15 @@ class World:
             logger.debug("未发现逢魔入口")
             return None
 
-    def select_fengmo_mode(self,depth:int,callback:Callable[[], str|None]|None = None):
+    def select_fengmo_mode(self,depth:int,callback:Callable[[], str|None]|None = None,
+                           difficulty_delay:float=0.5,threshold:float=0.95):
         """
         选择逢魔模式
         """
         logger.info(f"[select_fengmo_mode]等待选择深度")
-        pos = sleep_until(self.find_fengmo_start,timeout=5)
+        def find_fengmo_start_with_threshold():
+            return self.find_fengmo_start(threshold=threshold)
+        pos = sleep_until(find_fengmo_start_with_threshold,timeout=10)
         time.sleep(0.5)
         if pos is None:
             if callback is not None:
@@ -769,11 +775,11 @@ class World:
         if depth > 0:
             for i in range(num_depth):
                 self.do_fengmo_depth("add")
-                time.sleep(0.5)
+                time.sleep(difficulty_delay)
         else:
             for i in range(num_depth):
                 self.do_fengmo_depth("sub")
-                time.sleep(0.5)
+                time.sleep(difficulty_delay)
         return 'success'
     
     def find_map_treasure(self, image: Optional[Image.Image] = None) -> Optional[list[tuple[int, int]]]:

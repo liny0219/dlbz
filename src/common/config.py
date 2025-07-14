@@ -100,6 +100,8 @@ class FengmoConfig(BaseModel):
     find_point_wait_time: float = 1.5
     wait_map_time: float = 0.8
     wait_ui_time: float = 0.2  # UI响应等待时间
+    difficulty_delay: float = 0.5  # 难度选择延时
+    involve_match_threshold: float = 0.8  # 涉入按钮匹配度
     default_battle_config: str = ""
     vip_cure: bool = False  # 月卡恢复
 

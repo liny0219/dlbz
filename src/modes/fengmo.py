@@ -164,6 +164,8 @@ class FengmoMode:
         self.wait_map_time = getattr(self.fengmo_config, 'wait_map_time', 0.5)
         self.wait_ui_time = getattr(self.fengmo_config, 'wait_ui_time', 0.2)
         self.default_battle_config = getattr(self.fengmo_config, 'default_battle_config', '')
+        self.difficulty_delay = getattr(self.fengmo_config, 'difficulty_delay', 0.5)
+        self.involve_match_threshold = getattr(self.fengmo_config, 'involve_match_threshold', 0.8)
         
         self.state_data: StateData = StateData()
         
@@ -301,7 +303,10 @@ class FengmoMode:
 
                 self.state_data.map_fail = False
                 while True:
-                    if not self.world.go_fengmo(self.depth, self.entrance_pos, callback=self.check_enter_fengmo ):
+                    if not self.world.go_fengmo(self.depth, self.entrance_pos,
+                                                 callback=self.check_enter_fengmo,
+                                                 threshold=self.involve_match_threshold,
+                                                 difficulty_delay=self.difficulty_delay):
                         self.state_data.step = Step.State_FAIL
                         break
                     if self.world.wait_in_fengmo_map(timeout=10):
