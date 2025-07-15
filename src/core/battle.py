@@ -511,7 +511,7 @@ class Battle:
         """
         return self.cast_extra_skill(index, bp, role_id, x, y,
                                   normalize_pos=[(800, 210),(910, 210)],
-                                  click_pos=[(945, 568)],
+                                  click_pos=[(945, 568),(945, 585)],
                                   switch=switch)
             
     def cast_pet(self, index:int, bp:int = 0, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
@@ -520,7 +520,7 @@ class Battle:
         """
         return self.cast_extra_skill(index, bp, role_id, x, y,
                                   normalize_pos=[(910, 210),(1080, 210)],
-                                  click_pos=[(945, 533)],
+                                  click_pos=[(945, 533),(945, 585)],
                                   switch=switch)
                 
     def cast_extra_skill(self, index:int, bp:int = 0, role_id:int = 0, 
@@ -582,6 +582,9 @@ class Battle:
         # 点击发动按钮,兼容必杀技\支炎兽\ex技能时点击必杀发动选项
         for pos in click_pos:
             self.device_manager.click(pos[0], pos[1])
+            time.sleep(self.wait_time + self.wait_ui_time)
+            if self.in_round():
+                break
         logger.info(f"[Battle] 点击发动按钮")
         time.sleep(self.wait_time + self.wait_ui_time)
         if role_id != 0:
@@ -987,24 +990,11 @@ class Battle:
         """
         全体加成
         """
-        if timeout is None:
-            timeout = self.boost_timeout
-        start_time = time.time()
-        while True:
-            if time.time() - start_time > timeout:
-                logger.info("[Battle] 全体加成超时")
-                return False
-            screenshot = self.device_manager.get_screenshot()
-            if self.in_boost_on(screenshot):
-                logger.debug("[Battle] 全体加成on")
-                return True
-            if self.in_boost_off(screenshot):
-                logger.debug("[Battle] 全体加成off")
-                self.device_manager.click(893, 654)
-            if not self.in_battle():
-                logger.debug("[Battle] 不在战斗中")
-                return False
-            time.sleep(self.wait_time)
+        logger.info("[Battle] 全体加成")
+        time.sleep(self.boost_timeout)
+        self.device_manager.click(894, 655)
+        time.sleep(self.boost_timeout)
+        return True
 
     def cmd_attack(self) -> bool:
         """

@@ -14,5 +14,5 @@ cast_skill_timeout: 10.0
 attack_timeout: 10.0
 wait_in_round_timeout: 10.0
 wait_done_timeout: 90.0
-boost_timeout: 15.0
+boost_timeout: 0.5
 switch_all_timeout: 5.0

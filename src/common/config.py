@@ -163,7 +163,7 @@ class BattleConfig(BaseModel):
     attack_timeout: float = 5.0  # 攻击超时时间
     wait_in_round_timeout: float = 10.0  # 等待回合超时时间
     wait_done_timeout: float = 90.0  # 等待战斗结束超时时间
-    boost_timeout: float = 15.0  # 全体加成超时时间
+    boost_timeout: float = 0.5  # 全体加成超时时间
     switch_all_timeout: float = 5.0  # 全员交替超时时间
 
 class Config:
