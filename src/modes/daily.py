@@ -184,8 +184,10 @@ class DailyMode:
 
                 if not huatian_done:
                     self.world.tpAnywhere('无名小镇')
+                    continue
                 if not guoyan_done:
                     self.world.tpAnywhere('圣树之泉')
+                    continue
                 if huatian_done and guoyan_done:
                     break
                 time.sleep(1)

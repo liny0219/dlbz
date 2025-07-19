@@ -1,3 +1,7 @@
+v1.9.8
+feature: 优化日常冗余判断
+bugfix: 修复逢魔被团灭卡住异常bug
+
 v1.9.7
 feature: 改造全体加成按钮逻辑,避免有时多次点击
 bugfix: 修复XEX指令没有点击发动

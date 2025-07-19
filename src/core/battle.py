@@ -856,20 +856,15 @@ class Battle:
         if not self.all_dead(image):
             return False
         logger.info(f"[check_battle_fail]检测到被全灭")
-        start_time = time.time()
-        while not world.in_world():
-            if time.time() - start_time > 10:
-                logger.info(f"[check_battle_fail]全灭返回世界超时")
-                return False
-            self.device_manager.click(480,480)
-            logger.info(f"[check_battle_fail]点击放弃")
-            time.sleep(0.5)
-            self.device_manager.click(800,480)
-            logger.info(f"[check_battle_fail]点击确认")
-            time.sleep(0.5)
-            if type == 'tip':
-                logger.info(f"[check_battle_fail]tip confirm")
-                world.click_confirm_yes()
+        self.device_manager.click(480,480)
+        logger.info(f"[check_battle_fail]点击放弃")
+        time.sleep(self.wait_ui_time + 0.3)
+        self.device_manager.click(800,480)
+        logger.info(f"[check_battle_fail]点击确认")
+        time.sleep(self.wait_ui_time + 0.3)
+        if type == 'tip':
+            logger.info(f"[check_battle_fail]tip confirm")
+            world.click_confirm_yes()
         return True
     
     def press_in_round(self, timeout: float = 15) -> bool:
