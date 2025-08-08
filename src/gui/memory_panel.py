@@ -131,10 +131,10 @@ class MemoryPanel(ttk.Frame):
         battle_count_frame = ttk.Frame(memory_frame)
         battle_count_frame.pack(fill=tk.X, pady=5)
         
-        ttk.Label(battle_count_frame, text="战斗次数:", width=12, anchor="w").pack(side=tk.LEFT)
+        ttk.Label(battle_count_frame, text="战斗次数(0为无限):", width=12, anchor="w").pack(side=tk.LEFT)
         
         self.battle_count_var = tk.IntVar(value=self.config_data["memory_config"]["battle_count"])
-        battle_count_spin = tk.Spinbox(battle_count_frame, from_=1, to=999, increment=1, 
+        battle_count_spin = tk.Spinbox(battle_count_frame, from_=0, to=9999999, increment=1, 
                                       textvariable=self.battle_count_var, width=10)
         battle_count_spin.pack(side=tk.LEFT, padx=(5, 0))
         

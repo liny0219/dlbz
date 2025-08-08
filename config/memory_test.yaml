@@ -1,6 +1,6 @@
-battle_script_path: D:/dldbz/config/battle_scripts/卡纳尔布来因Boss.txt
+battle_script_path: D:/dldbz/config/battle_scripts/挂果子.txt
 memory_config:
-  battle_count: 4
+  battle_count: 0
   click_x: 1100
   click_y: 200
   ui_wait_time: 1.0

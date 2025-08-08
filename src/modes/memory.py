@@ -90,7 +90,7 @@ class MemoryMode:
                 return
             
             # 执行追忆之书循环
-            while self.total_battles < battle_count:
+            while self.total_battles < battle_count or battle_count == 0:
                 try:
                     logger.info(f"开始第 {self.total_battles + 1}/{battle_count} 次追忆之书")
                     # 输出当前统计

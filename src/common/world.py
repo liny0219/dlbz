@@ -195,7 +195,7 @@ class World:
         if image is None:
             logger.warning("无法获取截图，无法判断是否在地图中")
             return False
-        points_colors = [
+        points_colors1 = [
             (33, 638, "FFFFFF", 1),
             (64, 649, "FFFFFF", 1),
             (452, 676, "FBF9FE", 1),
@@ -204,7 +204,15 @@ class World:
             (1236, 21, 'F0F0F0', 1),
             (1187, 5, '6E6E6E', 1),
         ]
-        results = self.ocr_handler.match_point_color(image, points_colors)
+        points_colors2 = [
+            (69, 57, 'F7FCFF', 1),
+            (52, 82, 'FEFFFF', 1),
+            (51, 65, '040D14', 1),
+            (35, 64, 'FCFFFF', 1),
+        ]
+        results = self.ocr_handler.match_point_color(image, points_colors1)
+        if not results:
+            results = self.ocr_handler.match_point_color(image, points_colors2)
         if results:
             logger.debug("检测到在小地图中")
             return True

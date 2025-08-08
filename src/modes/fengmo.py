@@ -299,8 +299,10 @@ class FengmoMode:
                     if self.world.vip_cure(self.vip_cure) == 'finish_cure':
                         need_inn = False
                     if need_inn:
-                        self.world.rest_in_inn(self.inn_pos)
-
+                        if self.inn_pos[0] != 0 and self.inn_pos[1] != 0:
+                            self.world.rest_in_inn(self.inn_pos)
+                        else:
+                            logger.info("[run]没有旅馆位置")
                 self.state_data.map_fail = False
                 while True:
                     if not self.world.go_fengmo(self.depth, self.entrance_pos,
@@ -347,9 +349,11 @@ class FengmoMode:
         - 通过 _handle_check_result 处理通用分支。
         - 可能因状态变化提前 return，或因异常抛出。
         """
+        # 方便测试调试
+        is_ascending = True
         while True:
-            point_index = 0
-            while point_index < len(self.check_points):
+            point_index = 0 if is_ascending else len(self.check_points) - 1 
+            while point_index < len(self.check_points) if is_ascending else point_index > 0:
                 check_point = self.check_points[point_index]
                 next_point = False
                 reset_map = False
@@ -366,8 +370,12 @@ class FengmoMode:
                             logger.info(f"[collect_junk_phase]App未运行")
                             if not self.wait_check_mode_state_ok():
                                 return
-                            if point_index > 0:
-                                point_index -= 1
+                            if is_ascending:
+                                if point_index > 0:
+                                    point_index -= 1
+                            else:
+                                if point_index < len(self.check_points):
+                                    point_index += 1
                             next_point = True  # 设置为True跳出内层循环
                             continue
                         if not in_world_or_battle["is_battle_success"]:
@@ -379,8 +387,12 @@ class FengmoMode:
                         if in_world_or_battle["in_battle"]:
                             logger.info(f"[collect_junk_phase]遇敌战斗过")
                             # 如果遇到战斗,返回上一个检查点继续检查
-                            if point_index > 0:
-                                point_index -= 1
+                            if is_ascending:
+                                if point_index > 0:
+                                    point_index -= 1
+                            else:
+                                if point_index < len(self.check_points):
+                                    point_index += 1
                             next_point = True  # 设置为True跳出内层循环
                             continue
                     if self.check_state(Step.COLLECT_JUNK,check_point):
@@ -444,7 +456,10 @@ class FengmoMode:
                 
                 # 如果next_point为True，则处理下一个检查点
                 if next_point:
-                    point_index += 1
+                    if is_ascending:
+                        point_index += 1
+                    else:
+                        point_index -= 1
 
     def _find_box_phase(self) -> None:
         """

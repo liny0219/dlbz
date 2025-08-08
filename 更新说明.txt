@@ -1,3 +1,6 @@
+v1.9.9
+feature: 逢魔4章
+
 v1.9.8
 feature: 优化日常冗余判断
 bugfix: 修复逢魔被团灭卡住异常bug

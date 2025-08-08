@@ -419,3 +419,151 @@ cities:
       name: 逢凶的城市大鼠人
     - battle_config: D:/dldbz/config/battle_scripts/1.txt
       name: 逢虐的基加提亚斯
+  绝碧冰原:
+    check_points:
+    - id: 1
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 615
+        - 267
+      next_point: true
+      pos:
+      - 473
+      - 515
+      reset_map: true
+    - id: 2
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 639
+        - 278
+      next_point: true
+      pos:
+      - 413
+      - 389
+      reset_map: true
+    - id: 3
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 860
+        - 269
+      next_point: true
+      pos:
+      - 531
+      - 411
+      reset_map: true
+    - id: 4
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 515
+        - 292
+      next_point: true
+      pos:
+      - 678
+      - 519
+      reset_map: true
+    - id: 5
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 734
+        - 310
+      next_point: true
+      pos:
+      - 824
+      - 482
+      reset_map: true
+    - id: 6
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 405
+        - 274
+      next_point: true
+      pos:
+      - 644
+      - 436
+      reset_map: true
+    - id: 7
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 641
+        - 312
+      next_point: true
+      pos:
+      - 556
+      - 342
+      reset_map: true
+    - id: 8
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 639
+        - 312
+      next_point: true
+      pos:
+      - 835
+      - 332
+      reset_map: true
+    - id: 9
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 750
+        - 266
+      next_point: true
+      pos:
+      - 763
+      - 308
+      reset_map: true
+    - id: 10
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 635
+        - 280
+      next_point: true
+      pos:
+      - 690
+      - 220
+      reset_map: true
+    - id: 11
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 639
+        - 272
+      next_point: true
+      pos:
+      - 629
+      - 174
+      reset_map: true
+    - id: 12
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 756
+        - 316
+      next_point: true
+      pos:
+      - 629
+      - 290
+      reset_map: true
+    entrance_pos:
+    - 576
+    - 518
+    inn_pos:
+    - 0
+    - 0
+    monster_pos:
+    - - 344
+      - 433
+    monsters:
+    - battle_config: D:/dldbz/config/battle_scripts/绝碧冰原精英怪.txt
+      name: 逢凶的冰雪大怪
+    - battle_config: D:/dldbz/config/battle_scripts/绝碧冰原BOSS.txt
+      name: 逢虐的玛纳加尔姆
