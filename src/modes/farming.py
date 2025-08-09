@@ -96,27 +96,33 @@ class FarmingMode:
         try:
             while True:
                 screenshot = self.device_manager.get_screenshot()
+                in_world = self.world.in_world(screenshot)
+                if in_world:
+                    while True:
+                        time.sleep(0.1)
+                        if is_left:
+                            logger.info("[in_world]向右跑")
+                            self.world.run_right()
+                        else:
+                            logger.info("[in_world]向左跑")
+                            self.world.run_left()
+                        is_left = not is_left
+                        screenshot = self.device_manager.get_screenshot()
+                        is_black_screen = self.world.in_black_screen(screenshot)
+                        if is_black_screen:
+                            self.state_data.battle_count += 1
+                            self.state_data.last_time = round((time.time() - start_time) / 60, 2)
+                            self.report_data()
+                            break
+                screenshot = self.device_manager.get_screenshot()
                 in_battle = battle and battle.in_battle(screenshot)
-                battle_end = self.battle.battle_end(screenshot)
-                if battle_end:
-                    self.world.click_tirm(6)
-                    self.state_data.battle_count += 1
-                    self.state_data.last_time = round((time.time() - start_time) / 60, 2)
-                    self.report_data()
-                    continue
                 if in_battle:
                     self.battle.auto_battle(timeout=1)
                     continue
-                if is_left:
-                    time.sleep(1)
-                    logger.info("[in_world]向右跑")
-                    self.world.run_right()
-                else:
-                    time.sleep(1)
-                    logger.info("[in_world]向左跑")
-                    self.world.run_left()
-                is_left = not is_left
-                time.sleep(0.1)
+                screenshot = self.device_manager.get_screenshot()
+                battle_end = self.battle.battle_end(screenshot)
+                if battle_end:
+                    self.world.click_tirm(6)
                 screenshot = self.device_manager.get_screenshot()
                
         except Exception as e:

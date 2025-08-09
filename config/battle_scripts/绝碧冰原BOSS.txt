@@ -3,11 +3,12 @@ BattleStart
 Role,1,1,0
 Role,2,1,0
 Role,3,1,0
-Role,4,1,0
+SP,4
 Boost
 Attack
 
 #第2回合
+Role,4,1,0
 Boost
 Attack
 

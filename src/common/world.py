@@ -134,6 +134,30 @@ class World:
             return 'box'
         logger.info(f"[check_fengmo_state]识别到一阶段")
         return 'collect'
+    
+    def in_black_screen(self, image: Optional[Image.Image] = None) -> bool:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在黑屏中")
+            return False
+        points_colors = [
+            (636, 351, '000000', 1),
+            (337, 347, '000000', 1),
+            (962, 357, '000000', 1),
+            (967, 191, '000000', 1),
+            (647, 188, '000000', 1),
+            (335, 168, '000000', 1),
+            (335, 501, '000000', 1),
+            (633, 498, '000000', 1),
+            (963, 505, '000000', 1),
+        ]
+        results = self.ocr_handler.match_point_color(image, points_colors)
+        if results:
+            logger.debug("检测到在黑屏中")
+            return True
+        else:
+            logger.debug("不在黑屏中")
         
     def in_world(self, image: Optional[Image.Image] = None) -> bool:
         """
@@ -997,12 +1021,12 @@ class World:
     def run_left(self):
         device = self.device_manager.device
         if device:
-            device.swipe(640, 350, 590, 350, 0.05)
+            device.swipe(640, 350, 540, 350, 0.05)
 
     def run_right(self):
         device = self.device_manager.device
         if device:
-            device.swipe(640, 350, 690, 350, 0.05)
+            device.swipe(640, 350, 740, 350, 0.05)
 
     def click_confirm_pos(self):
         self.device_manager.click(800,485)
