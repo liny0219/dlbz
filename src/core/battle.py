@@ -446,7 +446,7 @@ class Battle:
             if time.time() - start_time > timeout:
                 logger.info(f"[battle]reset_round 超时")
                 return False
-            self.device_manager.click(135,25)
+            self.device_manager.click(266,26)
             time.sleep(0.1)
         return True
             
@@ -461,7 +461,7 @@ class Battle:
             if time.time() - start_time > timeout:
                 logger.info(f"[battle]exit_battle in_round 超时")
                 return False
-            self.device_manager.click(135,25)
+            self.device_manager.click(266,26)
             time.sleep(0.1)
         start_time = time.time()
         logger.info(f"[battle]exit_battle in_round")
@@ -773,7 +773,7 @@ class Battle:
                 break
             else:
                 logger.info(f"[Battle] 点击空白区域")
-                self.device_manager.click(135,25)
+                self.device_manager.click(266,26)
                 count += 1
             time.sleep(self.wait_time)
         logger.info(f"[Battle] 点击攻击按钮")
