@@ -584,12 +584,12 @@ cities:
       item_pos:
       - backup_pos: []
         pos:
-        - 637
-        - 206
+        - 638
+        - 300
       next_point: true
       pos:
-      - 772
-      - 424
+      - 770
+      - 377
       reset_map: true
     - id: 3
       item_pos:
@@ -643,12 +643,12 @@ cities:
       item_pos:
       - backup_pos: []
         pos:
-        - 530
+        - 256
         - 306
       next_point: true
       pos:
-      - 780
-      - 316
+      - 823
+      - 318
       reset_map: true
     - id: 8
       item_pos:
@@ -665,8 +665,8 @@ cities:
       item_pos:
       - backup_pos: []
         pos:
-        - 483
-        - 507
+        - 494
+        - 577
       - backup_pos: []
         pos:
         - 151
@@ -681,10 +681,10 @@ cities:
       - backup_pos: []
         pos:
         - 856
-        - 306
+        - 370
       next_point: true
       pos:
-      - 399
+      - 415
       - 467
       reset_map: true
     entrance_pos:
