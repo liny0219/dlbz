@@ -567,3 +567,137 @@ cities:
       name: 逢凶的冰雪大怪
     - battle_config: D:/dldbz/config/battle_scripts/绝碧冰原BOSS.txt
       name: 逢虐的玛纳加尔姆
+  绿斑岩床:
+    check_points:
+    - id: 1
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 768
+        - 340
+      next_point: true
+      pos:
+      - 904
+      - 317
+      reset_map: true
+    - id: 2
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 637
+        - 206
+      next_point: true
+      pos:
+      - 772
+      - 424
+      reset_map: true
+    - id: 3
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 859
+        - 306
+      next_point: true
+      pos:
+      - 855
+      - 590
+      reset_map: true
+    - id: 4
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 146
+        - 350
+      - backup_pos: []
+        pos:
+        - 642
+        - 246
+      next_point: false
+      pos:
+      - 398
+      - 600
+      reset_map: true
+    - id: 5
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 642
+        - 266
+      next_point: true
+      pos:
+      - 625
+      - 485
+      reset_map: true
+    - id: 6
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 251
+        - 357
+      next_point: true
+      pos:
+      - 686
+      - 398
+      reset_map: true
+    - id: 7
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 530
+        - 306
+      next_point: true
+      pos:
+      - 780
+      - 316
+      reset_map: true
+    - id: 8
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 602
+        - 190
+      next_point: true
+      pos:
+      - 610
+      - 292
+      reset_map: true
+    - id: 9
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 483
+        - 507
+      - backup_pos: []
+        pos:
+        - 151
+        - 341
+      next_point: false
+      pos:
+      - 450
+      - 291
+      reset_map: true
+    - id: 10
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 856
+        - 306
+      next_point: true
+      pos:
+      - 399
+      - 467
+      reset_map: true
+    entrance_pos:
+    - 908
+    - 198
+    inn_pos:
+    - 0
+    - 0
+    monster_pos:
+    - - 344
+      - 433
+    monsters:
+    - battle_config: D:/dldbz/config/battle_scripts/绿斑岩床精英怪.txt
+      name: 逢夜的沙漠大猿怪1
+    - battle_config: D:/dldbz/config/battle_scripts/绿斑岩床Boss.txt
+      name: 逢夜的沙漠蠕虫

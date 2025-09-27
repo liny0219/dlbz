@@ -416,15 +416,14 @@ class World:
             logger.warning("无法获取截图，无法判断是否找到boss")
             return False
         points_colors = [
-            (512, 484, '575757', 1),
-            (727, 487, '23576F', 1),
-            (706, 242, 'F3EDEF', 1),
-            (707, 254, 'EEE8EA', 1),
-            (707, 258, 'EFE9EB', 1),
-            (314, 374, 'F5EBEC', 1),
-            (772, 380, 'F5EFF1', 1),
-            (940, 377, 'F6EDEE', 1),
-            (616, 311, 'F9E9E9', 1),
+            (816, 483, '3B6980', 2),
+            (780, 483, '3D6C80', 2),
+            (501, 481, '606060', 2),
+            (464, 481, '646464', 2),
+            (707, 249, 'E7DFDD', 2),
+            (553, 247, 'E7DDDE', 2),
+            (948, 376, 'FAF1EC', 2),
+            (772, 380, 'F4EAE1', 2),
         ]
         results = self.ocr_handler.match_point_color(image, points_colors)
         if results:
