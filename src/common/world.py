@@ -506,9 +506,9 @@ class World:
     
     def do_fengmo_depth(self,op:str):
         if op == "add":
-            self.device_manager.click(724,360)
+            self.device_manager.click(724,284)
         elif op == "sub":
-            self.device_manager.click(555,360)
+            self.device_manager.click(555,284)
         else:
             raise ValueError(f"无效的操作: {op}")
 

@@ -355,6 +355,14 @@ class Battle:
         results = self.ocr_handler.match_point_color(image, points_colors)
         logger.debug(f"判断当前是否在后排: {results}")
         return results and self.in_skill_on(image)
+
+    def in_sp_close(self, image: Optional[Image.Image] = None) -> Tuple[int, int] | None:
+        if image is None:
+            image = self.device_manager.get_screenshot()
+        if image is None:
+            logger.warning("无法获取截图，无法判断是否在技能释放中")
+            return None
+        return self.ocr_handler.match_image(image, "assets/battle_sp_close.png")
             
 
     # ================== 战斗相关方法 ==================
@@ -511,7 +519,6 @@ class Battle:
         """
         return self.cast_extra_skill(index, bp, role_id, x, y,
                                   normalize_pos=[(800, 210),(910, 210)],
-                                  click_pos=[(945, 568),(945, 585)],
                                   switch=switch)
             
     def cast_pet(self, index:int, bp:int = 0, role_id:int = 0, x: int = 0, y: int = 0, switch: bool = False) -> bool:
@@ -520,14 +527,12 @@ class Battle:
         """
         return self.cast_extra_skill(index, bp, role_id, x, y,
                                   normalize_pos=[(910, 210),(1080, 210)],
-                                  click_pos=[(945, 533),(945, 585)],
                                   switch=switch)
                 
     def cast_extra_skill(self, index:int, bp:int = 0, role_id:int = 0, 
                       x: int = 0, y: int = 0,
                       switch: bool = False,
-                      normalize_pos:list[Tuple[int, int]] = [],
-                      click_pos:list[Tuple[int, int]] = []) -> bool:
+                      normalize_pos:list[Tuple[int, int]] = []) -> bool:
         """
         使用ex技能
         """
@@ -580,11 +585,13 @@ class Battle:
                 drag_wait_time=self.drag_wait_time
             )
         # 点击发动按钮,兼容必杀技\支炎兽\ex技能时点击必杀发动选项
-        for pos in click_pos:
-            self.device_manager.click(pos[0], pos[1])
-            time.sleep(self.wait_time + self.wait_ui_time)
-            if self.in_round():
-                break
+        btn_close_pos = self.in_sp_close()
+        if btn_close_pos is None:
+            logger.info("[Battle] 未找到关闭按钮")
+            return False
+            
+        self.device_manager.click(btn_close_pos[0] + 280, btn_close_pos[1])
+        time.sleep(self.wait_time + self.wait_ui_time)
         logger.info(f"[Battle] 点击发动按钮")
         time.sleep(self.wait_time + self.wait_ui_time)
         if role_id != 0:
@@ -684,8 +691,12 @@ class Battle:
         for pos in normalize_pos:
             self.device_manager.click(pos[0], pos[1])
         time.sleep(self.wait_time + self.wait_ui_time)
-        # 点击发动按钮,兼容必杀技\支炎兽\ex技能时点击必杀发动选项
-        normalize_pos = [(941, 525),(942, 464)]
+        btn_close_pos = self.in_sp_close()
+        if btn_close_pos is None:
+            logger.info("[Battle] 未找到关闭按钮")
+            return False
+        self.device_manager.click(btn_close_pos[0] + 280, btn_close_pos[1])
+        time.sleep(self.wait_time + self.wait_ui_time)
         for pos in normalize_pos:
             self.device_manager.click(pos[0], pos[1])
         logger.info(f"[Battle] 点击发动按钮")
