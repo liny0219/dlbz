@@ -376,28 +376,18 @@ class Battle:
         logger.debug("auto_battle 战斗场景中,等待回合")
         if not self.in_round(screenshot):
             return False
-        start_time = time.time()
-        is_auto_start = False
-        while True: 
-            if time.time() - start_time > timeout:
-                logger.info(f"[battle]auto_battle 超时")
-                return False
+        time.sleep(0.4)
+        screenshot = self.device_manager.get_screenshot()
+        if screenshot is None:
+            logger.error("[battle]auto_battle 无法获取截图")
+            return False
+        if self.in_round(screenshot):
+            logger.info("点击委托")
+            self.device_manager.click(491, 654)
             time.sleep(0.4)
-            screenshot = self.device_manager.get_screenshot()
-            if screenshot is None:
-                logger.error("[battle]auto_battle 无法获取截图")
-                return False
-            if self.in_round(screenshot) and self.in_auto_off(screenshot):
-                logger.info("点击委托")
-                self.device_manager.click(491, 654)
-                continue
-            if self.in_auto_on(screenshot):
-                logger.info("点击委托战斗开始")
-                self.device_manager.click(1104, 643)
-                is_auto_start = True
-            if not self.in_auto_off(screenshot) and not self.in_auto_on(screenshot) and is_auto_start:
-                logger.info("委托成功")
-                return True
+            logger.info("点击委托战斗开始")
+            self.device_manager.click(1104, 643)
+            return True
 
     def check_dead(self, role_id: int = 0, timeout: Optional[float] = None) -> bool:
         """

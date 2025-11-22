@@ -5,7 +5,7 @@ from utils import logger
 from common.app import AppManager
 from core.device_manager import DeviceManager
 from core.ocr_handler import OCRHandler
-from typing import Callable, Optional, Tuple, TYPE_CHECKING
+from typing import Callable, List, Optional, Tuple, TYPE_CHECKING
 from PIL import Image
 from utils.singleton import singleton
 from utils.sleep_utils import sleep_until, sleep_until_app_running
@@ -306,8 +306,14 @@ class World:
         if image is None:
             image = self.device_manager.get_screenshot()
         find_list = self.ocr_handler.match_image_multi(image, "assets/fengmo/fengmo_point.png", threshold=0.9)
+
         # 过滤在禁止范围内的点
-        forbidden_range = [(936,36,1208,240),(16, 534,302, 687)]
+        forbidden_range: list[tuple[int, int, int, int]] = [(936,36,1208,240),(16, 534,302, 687)]
+        forbidden_point = current_point.forbidden if current_point and current_point.forbidden is not None else []
+        if forbidden_point is not None and len(forbidden_point) > 0 and len(forbidden_point) % 4 == 0:
+           # 将4个坐标的列表转换为元组
+           for i in range(0, len(forbidden_point), 4):
+               forbidden_range.append((forbidden_point[i], forbidden_point[i+1], forbidden_point[i+2], forbidden_point[i+3]))
         # 打印禁止范围和点的坐标，用于调试
         logger.debug(f"禁止范围: {forbidden_range}")
         # 过滤掉在禁止范围内的点，并在过滤时输出日志
@@ -324,6 +330,8 @@ class World:
                 filtered_list.append(point)
         find_list = filtered_list
         find = None
+        if current_point and current_point.find_direction is not None:
+            type = current_point.find_direction
         if find_list is not None and len(find_list) > 0:
             # 转换为int
             points = [(int(x), int(y)) for x, y, _ in find_list]

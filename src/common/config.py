@@ -115,6 +115,8 @@ class CheckPoint(BaseModel):
     reset_map: bool
     next_point: bool
     item_pos: List[ItemPos]
+    forbidden: Optional[List[int]] = None
+    find_direction: Optional[str] = "right"
 
 class Monster(BaseModel):
     name: str

@@ -147,6 +147,119 @@ cities:
       name: 逢凶的海洋大蜥蜴人
     - battle_config: D:/dldbz/config/battle_scripts/卡纳尔布来因Boss.txt
       name: 逢虐的梅尔斯特罗姆
+  库罗普提尔:
+    check_points:
+    - find_direction: left
+      forbidden:
+      - 694
+      - 623
+      - 898
+      - 800
+      id: 1
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 501
+        - 352
+      - backup_pos: []
+        pos:
+        - 1044
+        - 307
+      next_point: false
+      pos:
+      - 433
+      - 197
+      reset_map: true
+    - find_direction: left
+      id: 2
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 198 
+        - 294
+      - backup_pos: []
+        pos:
+        - 707
+        - 450
+      next_point: false
+      pos:
+      - 612
+      - 280
+      reset_map: true
+    - id: 3
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 531
+        - 323
+      - backup_pos: []
+        pos:
+        - 678
+        - 401
+      - backup_pos: []
+        pos:
+        - 773
+        - 237
+      next_point: false
+      pos:
+      - 462
+      - 406
+      reset_map: true
+    - id: 4
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 333
+        - 342
+      next_point: true
+      pos:
+      - 430
+      - 510
+      reset_map: true
+    - id: 5
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 384
+        - 425
+      - backup_pos: []
+        pos:
+        - 1017
+        - 308
+      - backup_pos: []
+        pos:
+        - 648
+        - 248
+      next_point: true
+      pos:
+      - 640
+      - 485
+      reset_map: true
+    - id: 6
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 794
+        - 310
+      next_point: true
+      pos:
+      - 755
+      - 566
+      reset_map: true
+    entrance_pos:
+    - 472
+    - 285
+    inn_pos:
+    - 524
+    - 242
+    monster_pos:
+    - - 344
+      - 433
+    monsters:
+    - battle_config: D:/dldbz/config/battle_scripts/库罗普提尔精英怪.txt
+      name: 逢凶的森林大巴迪安1
+    - battle_config: D:/dldbz/config/battle_scripts/库罗普提尔Boss.txt
+      name: 逢虐的人面蝶
   托托哈哈岛:
     check_points:
     - id: 1
