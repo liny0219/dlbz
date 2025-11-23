@@ -350,6 +350,9 @@ class FengmoMode:
         - 可能因状态变化提前 return，或因异常抛出。
         """
         # 方便测试调试
+        # Sort self.check_points by 'id' field in ascending order before using them.
+        # Assumes each element in self.check_points has an 'id' attribute.
+        self.check_points = sorted(self.check_points, key=lambda cp: cp.id)
         is_ascending = True
         while True:
             point_index = 0 if is_ascending else len(self.check_points) - 1 

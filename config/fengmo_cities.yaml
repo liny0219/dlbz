@@ -180,7 +180,7 @@ cities:
       - backup_pos: []
         pos:
         - 707
-        - 450
+        - 420
       next_point: false
       pos:
       - 612
@@ -230,7 +230,7 @@ cities:
         pos:
         - 648
         - 248
-      next_point: true
+      next_point: false
       pos:
       - 640
       - 485
