@@ -713,6 +713,9 @@ class FengmoMode:
     def wait_check_boss(self):
         in_world_or_battle = self._in_world_or_battle()
         logger.info(f"[wait_check_boss]in_world_or_battle: {in_world_or_battle}")
+        if self.state_data.map_fail or self.state_data.step == Step.State_FAIL:
+            logger.info(f"[wait_check_boss]状态异常,退出重来")
+            return 'in_world_battle_fail'
         if in_world_or_battle:
             if not in_world_or_battle["app_alive"]:
                 self.world.restart_wait_in_fengmo_world()
