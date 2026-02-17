@@ -37,6 +37,8 @@ class BattleCommandExecutor:
             "XRole":       ["index", "skill", "bp", "role_id", "x", "y"],
             "SP":          ["index", "role_id", "x", "y"],
             "XSP":         ["index", "role_id", "x", "y"],
+            "SSP":         ["index", "role_id", "x", "y"],
+            "XSSP":        ["index", "role_id", "x", "y"],
             "EX":          ["index", "bp", "role_id", "x", "y"],
             "XEX":         ["index", "bp", "role_id", "x", "y"],
             "Pet":         ["index", "bp", "role_id", "x", "y"],
@@ -202,6 +204,10 @@ class BattleCommandExecutor:
             return self.battle.cmd_sp_skill(**params)
         elif cmd_type == "XSP":
             return self.battle.cmd_xsp_skill(**params)
+        elif cmd_type == "SSP":
+            return self.battle.cmd_ssp_skill(**params)
+        elif cmd_type == "XSSP":
+            return self.battle.cmd_xssp_skill(**params)
         elif cmd_type == "EX":
             return self.battle.cmd_ex(**params)
         elif cmd_type == "XEX":

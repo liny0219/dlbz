@@ -175,7 +175,7 @@ cities:
       item_pos:
       - backup_pos: []
         pos:
-        - 198 
+        - 198
         - 294
       - backup_pos: []
         pos:
@@ -260,6 +260,140 @@ cities:
       name: 逢凶的森林大巴迪安1
     - battle_config: D:/dldbz/config/battle_scripts/库罗普提尔Boss.txt
       name: 逢虐的人面蝶
+  弗拉姆礼堂村:
+    check_points:
+    - find_direction: left
+      forbidden:
+      - 570
+      - 248
+      - 805
+      - 507
+      id: 1
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 420
+        - 271
+      - backup_pos: []
+        pos:
+        - 962
+        - 470
+      - backup_pos: []
+        pos:
+        - 137
+        - 429
+      next_point: false
+      pos:
+      - 491
+      - 438
+      reset_map: true
+    - id: 2
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 751
+        - 302
+      next_point: true
+      pos:
+      - 474
+      - 615
+      reset_map: true
+    - id: 3
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 507
+        - 321
+      next_point: true
+      pos:
+      - 380
+      - 238
+      reset_map: true
+    - id: 4
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 751
+        - 258
+      next_point: true
+      pos:
+      - 512
+      - 304
+      reset_map: true
+    - id: 5
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 1070
+        - 375
+      - backup_pos: []
+        pos:
+        - 678
+        - 284
+      next_point: false
+      pos:
+      - 634
+      - 332
+      reset_map: true
+    - id: 6
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 640 
+        - 300
+      next_point: true
+      pos:
+      - 796
+      - 427
+      reset_map: true
+    - id: 7
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 574
+        - 295
+      next_point: true
+      pos:
+      - 782
+      - 489
+      reset_map: true
+    - find_direction: left
+      id: 8
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 529 
+        - 377
+      next_point: true
+      pos:
+      - 699
+      - 254
+      reset_map: true
+    - id: 9
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 624
+        - 311
+      next_point: true
+      pos:
+      - 813
+      - 291
+      reset_map: true
+    entrance_pos:
+    - 493
+    - 439
+    inn_pos:
+    - 628
+    - 495
+    monster_pos:
+    - - 344
+      - 433
+    monsters:
+    - battle_config: D:/dldbz/config/battle_scripts/弗拉姆礼堂村精英怪.txt
+      name: 逢夜的山丘大猿怪
+    - battle_config: D:/dldbz/config/battle_scripts/弗拉姆礼堂村Boss.txt
+      name: 逢夜的食梦
   托托哈哈岛:
     check_points:
     - id: 1

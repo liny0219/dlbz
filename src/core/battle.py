@@ -644,7 +644,7 @@ class Battle:
         return True
 
     def cast_sp(self, index:int, role_id:int = 0, x: int = 0, y: int = 0, 
-                switch: bool = False) -> bool:
+                switch: bool = False, is_sp: bool = False) -> bool:
         timeout = self.cast_sp_timeout
         enemy_pos = None
         if index < 1 or index > 4:
@@ -685,10 +685,11 @@ class Battle:
         if btn_close_pos is None:
             logger.info("[Battle] 未找到关闭按钮")
             return False
-        self.device_manager.click(btn_close_pos[0] + 280, btn_close_pos[1])
+        cast_btn_diff = 280 if not is_sp else 539
+        self.device_manager.click(btn_close_pos[0] + cast_btn_diff, btn_close_pos[1])
         time.sleep(self.wait_time + self.wait_ui_time)
-        for pos in normalize_pos:
-            self.device_manager.click(pos[0], pos[1])
+        # for pos in normalize_pos:
+        #     self.device_manager.click(pos[0], pos[1])
         logger.info(f"[Battle] 点击发动按钮")
         time.sleep(self.wait_time + self.wait_ui_time)
         if role_id != 0:
@@ -1034,6 +1035,22 @@ class Battle:
         """
         logger.debug(f"[Battle] 释放后排特殊技能（SP），技能索引: 角色:{index} 技能对象:{role_id} 敌人坐标:{x,y}")
         return self.cast_sp(index, role_id, x, y, switch=True)
+
+    def cmd_ssp_skill(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
+        """
+        特殊技能（SSP）
+        :param index: 技能索引
+        """
+        logger.debug(f"[Battle] 释放后排特殊技能（SSP），技能索引: 角色:{index} 技能对象:{role_id} 敌人坐标:{x,y}")
+        return self.cast_sp(index, role_id, x, y, switch=True, is_sp=True)
+    
+    def cmd_xssp_skill(self, index: int = 1, role_id:int = 0, x:int = 0, y:int = 0) -> bool:
+        """
+        特殊技能（XSSP）
+        :param index: 技能索引
+        """
+        logger.debug(f"[Battle] 释放后排特殊技能（XSSP），技能索引: 角色:{index} 技能对象:{role_id} 敌人坐标:{x,y}")
+        return self.cast_sp(index, role_id, x, y, switch=True, is_sp=True)
 
     def cmd_wait(self, seconds: float = 1.0) -> bool:
         """
