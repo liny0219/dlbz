@@ -379,7 +379,7 @@ class FengmoMode:
                             else:
                                 if point_index < len(self.check_points):
                                     point_index += 1
-                            next_point = True  # 设置为True跳出内层循环
+                            next_point = True  # 设置为True跳出内层循环729, 443
                             continue
                         if not in_world_or_battle["is_battle_success"]:
                             logger.info(f"[collect_junk_phase]战斗失败")
@@ -393,9 +393,13 @@ class FengmoMode:
                             if is_ascending:
                                 if point_index > 0:
                                     point_index -= 1
+                                else:
+                                    continue
                             else:
                                 if point_index < len(self.check_points):
                                     point_index += 1
+                                else:
+                                    continue
                             next_point = True  # 设置为True跳出内层循环
                             continue
                     if self.check_state(Step.COLLECT_JUNK,check_point):
@@ -690,14 +694,17 @@ class FengmoMode:
             treasure = self.world.find_map_treasure(screenshot)
             if treasure:
                 find_points.extend(treasure)
+                logger.info(f"[find_map_tag]找到宝箱点: {treasure}")
             # 记录 monster 返回内容和类型
             monster = self.world.find_map_monster(screenshot)
             if monster:
                 find_points.extend([monster])
+                logger.info(f"[find_map_tag]找到怪物点: {monster}")
             # 记录 cure 返回内容和类型
             cure = self.world.find_map_cure(screenshot)
             if cure:
                 find_points.extend([cure])
+                logger.info(f"[find_map_tag]找到治疗点: {cure}")
             closest_find_points = []
             for find_point in find_points:
                 closest_find_points.append(self.find_closest_point((find_point[0],find_point[1]), self.check_points))

@@ -350,12 +350,12 @@ cities:
       item_pos:
       - backup_pos: []
         pos:
-        - 574
-        - 295
+        - 763
+        - 335
       next_point: true
       pos:
-      - 782
-      - 489
+      - 726
+      - 492
       reset_map: true
     - find_direction: left
       id: 8
