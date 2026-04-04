@@ -114,15 +114,15 @@ cities:
       item_pos:
       - backup_pos: []
         pos:
-        - 859
-        - 296
+        - 521
+        - 347
       - backup_pos: []
         pos:
-        - 174
-        - 262
+        - 1145
+        - 284
       next_point: false
       pos:
-      - 674
+      - 660
       - 407
       reset_map: true
     entrance_pos:
