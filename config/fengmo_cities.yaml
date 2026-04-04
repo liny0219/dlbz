@@ -1,4 +1,152 @@
 cities:
+  南克拉克雷吉荒道:
+    check_points:
+    - forbidden:
+      - 969
+      - 422
+      - 1241
+      - 679
+      id: 1
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 710
+        - 306
+      next_point: true
+      pos:
+      - 380
+      - 295
+      reset_map: true
+    - id: 2
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 192
+        - 372
+      next_point: true
+      pos:
+      - 346
+      - 358
+      reset_map: true
+    - id: 3
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 833
+        - 338
+      next_point: true
+      pos:
+      - 386
+      - 416
+      reset_map: true
+    - id: 4
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 802
+        - 306
+      next_point: true
+      pos:
+      - 440
+      - 448
+      reset_map: true
+    - id: 5
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 439
+        - 306
+      - backup_pos: []
+        pos:
+        - 906
+        - 306
+      next_point: false
+      pos:
+      - 452
+      - 327
+      reset_map: true
+    - id: 6
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 406
+        - 306
+      next_point: true
+      pos:
+      - 542
+      - 329
+      reset_map: true
+    - id: 7
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 743
+        - 404
+      layer: 1
+      next_point: true
+      pos:
+      - 604
+      - 356
+      reset_map: true
+    - id: 8
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 635
+        - 306
+      next_point: true
+      pos:
+      - 600
+      - 323
+      reset_map: true
+    - id: 9
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 505
+        - 341
+      next_point: true
+      pos:
+      - 647
+      - 290
+      reset_map: true
+    - id: 10
+      item_pos:
+      - backup_pos: []
+        pos:
+        - 859
+        - 296
+      - backup_pos: []
+        pos:
+        - 174
+        - 262
+      next_point: false
+      pos:
+      - 674
+      - 407
+      reset_map: true
+    entrance_pos:
+    - 414
+    - 330
+    inn_pos:
+    - 0
+    - 0
+    layers:
+    - entrance_pos:
+      - - 573
+        - 317
+      exit_pos:
+      - - 573
+        - 326
+      id: 1
+    monster_pos:
+    - - 344
+      - 433
+    monsters:
+    - battle_config: D:/dldbz/config/battle_scripts/南克拉克雷吉荒道精英怪.txt
+      name: 逢夜的荒野大怪
+    - battle_config: D:/dldbz/config/battle_scripts/南克拉克雷吉荒道Boss.txt
+      name: 逢夜的古代神兵
   卡纳尔布来因:
     check_points:
     - id: 1
@@ -339,7 +487,7 @@ cities:
       item_pos:
       - backup_pos: []
         pos:
-        - 640 
+        - 640
         - 300
       next_point: true
       pos:
@@ -362,7 +510,7 @@ cities:
       item_pos:
       - backup_pos: []
         pos:
-        - 529 
+        - 529
         - 377
       next_point: true
       pos:
@@ -384,8 +532,8 @@ cities:
     - 493
     - 439
     inn_pos:
-    - 628
-    - 495
+    - 614
+    - 484
     monster_pos:
     - - 344
       - 433

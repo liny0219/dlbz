@@ -1,6 +1,6 @@
 import os
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from utils.get_asset_path import get_asset_path
 from typing import Dict, List, TypedDict, Optional, Union
 import logging
@@ -109,7 +109,36 @@ class ItemPos(BaseModel):
     pos: List[int]
     backup_pos: List[int]
 
+
+def _validate_xy_pair_list(name: str, v: List[List[int]]) -> List[List[int]]:
+    for i, pair in enumerate(v):
+        if len(pair) != 2:
+            raise ValueError(f"{name}[{i}] must be [x, y] with length 2, got {pair!r}")
+    return v
+
+
+class MapLayer(BaseModel):
+    """Fengmo map tier: ordered minimap clicks to enter (entrance_pos) or leave (exit_pos) this tier."""
+
+    id: int
+    entrance_pos: List[List[int]] = Field(default_factory=list)
+    exit_pos: List[List[int]] = Field(default_factory=list)
+
+    @field_validator("entrance_pos", "exit_pos")
+    @classmethod
+    def _validate_pos_lists(cls, v: List[List[int]]) -> List[List[int]]:
+        return _validate_xy_pair_list("layer_pos", v)
+
+
 class CheckPoint(BaseModel):
+    """
+    Minimap checkpoint: main click target is ``pos``.
+    Optional ``layer`` references a ``MapLayer.id`` from the same city's ``layers`` list; unset means default tier (0).
+    Tier switches (exit then entrance sequences) are handled in ``FengmoMode`` using ``layers``; not vision-based.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
     id: int
     pos: List[int]
     reset_map: bool
@@ -117,10 +146,39 @@ class CheckPoint(BaseModel):
     item_pos: List[ItemPos]
     forbidden: Optional[List[int]] = None
     find_direction: Optional[str] = "right"
+    layer: Optional[int] = None
+
 
 class Monster(BaseModel):
     name: str
     battle_config: str
+
+
+class FengmoCityEntry(BaseModel):
+    """Single city block inside fengmo_cities.yaml."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    inn_pos: List[int]
+    entrance_pos: List[int]
+    check_points: List[CheckPoint]
+    monsters: List[Monster]
+    monster_pos: List[tuple[int, int]]
+    layers: List[MapLayer] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _layers_and_checkpoint_refs(self) -> "FengmoCityEntry":
+        ids = [L.id for L in self.layers]
+        if len(ids) != len(set(ids)):
+            raise ValueError(f"layers ids must be unique, got {ids}")
+        id_set = set(ids)
+        for cp in self.check_points:
+            if cp.layer is not None and cp.layer not in id_set:
+                raise ValueError(
+                    f"checkpoint id={cp.id} references unknown layer={cp.layer}; known layer ids={sorted(id_set)}"
+                )
+        return self
+
 
 class CityConfig(TypedDict):
     inn_pos: List[int]
@@ -129,8 +187,9 @@ class CityConfig(TypedDict):
     monsters: List[Monster]
     monster_pos: List[tuple[int, int]]
 
+
 class FengmoCityConfig(BaseModel):
-    cities: Dict[str, CityConfig]
+    cities: Dict[str, FengmoCityEntry]
 
 class NoMillisecFormatter(logging.Formatter):
     def formatTime(self, record, datefmt=None):

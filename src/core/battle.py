@@ -362,7 +362,10 @@ class Battle:
         if image is None:
             logger.warning("无法获取截图，无法判断是否在技能释放中")
             return None
-        return self.ocr_handler.match_image(image, "assets/battle_sp_close.png")
+        # 发动按钮坐标由「模板左上角 + 固定偏移」推算，需左上角而非中心点
+        return self.ocr_handler.match_image(
+            image, "assets/battle_sp_close.png", return_center=False
+        )
             
 
     # ================== 战斗相关方法 ==================

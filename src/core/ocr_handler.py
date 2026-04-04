@@ -366,16 +366,19 @@ class OCRHandler:
         region: Optional[Tuple[int, int, int, int]] = None,
         gray: bool = False,
         debug: bool = False,
+        return_center: bool = True,
     ) -> Optional[Tuple[int, int]]:
         """
-        使用模板匹配，判断image中指定区域是否包含template_path指定的图片，返回匹配到的左上角坐标。
-        检查模板文件名是否匹配规则xxx__x1_y1_x2_y2.png，若匹配则自动提取region坐标，否则region为None。
+        使用模板匹配，判断 image 中指定区域是否包含 template_path 指定的图片。
+        检查模板文件名是否匹配规则 xxx__x1_y1_x2_y2.png，若匹配则自动提取 region 坐标，否则 region 为 None。
         :param image: 支持 PIL.Image、OpenCV numpy.ndarray、图片路径
         :param template_path: 模板图片路径
-        :param threshold: 图像模板匹配阈值，默认0.95
+        :param threshold: 图像模板匹配阈值，默认取配置
         :param region: (x1, y1, x2, y2) 匹配区域，默认全图
-        :param debug: 是否保存调试图片，保存到debug目录
-        :return: (x, y) 匹配到的左上角坐标，未匹配返回None
+        :param gray: 是否灰度匹配
+        :param debug: 是否保存调试图片，保存到 debug 目录
+        :param return_center: True（默认）返回匹配矩形中心 (cx, cy)；False 返回左上角 (x, y)，便于与固定像素偏移组合
+        :return: 坐标元组，未匹配返回 None
         """
         try:
             # 使用配置中的默认阈值
@@ -436,11 +439,14 @@ class OCRHandler:
                 cv2.imwrite("debug/match_image_result.png", debug_img)
                 logger.debug(f"匹配区域已保存到debug/match_image_result.png")
 
-            # 7. 匹配结果坐标
+            # 7. 匹配结果坐标（全图坐标系下的左上角）
             if max_val >= threshold:
                 match_x = max_loc[0] + (region[0] if region else 0)
                 match_y = max_loc[1] + (region[1] if region else 0)
-                # logger.debug(f"模板匹配成功，坐标: ({match_x}, {match_y})")
+                if return_center:
+                    cx = match_x + tw // 2
+                    cy = match_y + th // 2
+                    return (cx, cy)
                 return (match_x, match_y)
             else:
                 logger.debug("模板未匹配成功")

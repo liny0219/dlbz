@@ -1,7 +1,7 @@
 from enum import Enum
 from dataclasses import dataclass
 import time
-from typing import Optional
+from typing import List, Optional
 from PIL import Image
 from utils import logger
 from common.app import AppManager
@@ -155,11 +155,14 @@ class FengmoMode:
         if self.city_name not in fengmo_cities:
             raise ValueError(f"未找到城市配置: {self.city_name}")
         self.city_config = fengmo_cities[self.city_name]
-        self.inn_pos = self.city_config.get("inn_pos", [])
-        self.monsters = self.city_config.get("monsters", [])
-        self.monster_pos = self.city_config.get("monster_pos",[])
-        self.entrance_pos = self.city_config.get("entrance_pos", [])
-        self.check_points = self.city_config.get("check_points", [])
+        self.inn_pos = self.city_config.inn_pos
+        self.monsters = self.city_config.monsters
+        self.monster_pos = self.city_config.monster_pos
+        self.entrance_pos = self.city_config.entrance_pos
+        self.check_points = self.city_config.check_points
+        self.map_layers = self.city_config.layers
+        # Logical fengmo map tier (0 = default); updated after entrance/exit sequences. Not vision-based.
+        self.current_layer_id: int = 0
         self.find_point_wait_time = getattr(self.fengmo_config, 'find_point_wait_time', 1.5)
         self.wait_map_time = getattr(self.fengmo_config, 'wait_map_time', 0.5)
         self.wait_ui_time = getattr(self.fengmo_config, 'wait_ui_time', 0.2)
@@ -187,6 +190,108 @@ class FengmoMode:
     def _in_world_or_battle(self):
         time.sleep(self.wait_ui_time)
         return self.world.in_world_or_battle(callback=lambda image: self.check_info(image))
+
+    _DEFAULT_MAP_LAYER_ID = 0
+
+    def _layer_exit_entrance(self, layer_id: int) -> tuple[List[List[int]], List[List[int]]]:
+        """Return ``(exit_pos, entrance_pos)`` for ``layer_id``. Tier 0 uses empty lists unless ``layers`` defines id 0."""
+        if layer_id == self._DEFAULT_MAP_LAYER_ID:
+            for L in self.map_layers:
+                if L.id == self._DEFAULT_MAP_LAYER_ID:
+                    return (list(L.exit_pos), list(L.entrance_pos))
+            return ([], [])
+        for L in self.map_layers:
+            if L.id == layer_id:
+                return (list(L.exit_pos), list(L.entrance_pos))
+        raise ValueError(f"Unknown map layer id={layer_id} for city={self.city_name}")
+
+    def _run_minimap_xy_sequence(
+        self,
+        points: List[List[int]],
+        step: Step,
+        check_point: CheckPoint,
+        log_tag: str,
+        *,
+        skip_open_minimap_first: bool,
+    ) -> bool:
+        """
+        Click each [x,y] on minimap in order; wait until in_world between steps (same semantics as former layer_points).
+        Returns True if the phase should abort (battle fail, check_state, minimap open failure).
+        After a non-empty sequence, reopens minimap for the caller. Empty sequence is a no-op.
+        """
+        if not points:
+            return False
+        cp_id = check_point.id
+        i = 0
+        skip_open = skip_open_minimap_first
+        while i < len(points):
+            xy = points[i]
+            if not skip_open:
+                self.world.open_minimap()
+                in_minimap = sleep_until(self.world.in_minimap, timeout=5)
+                if not in_minimap:
+                    logger.error(f"[{log_tag}] 打开小地图失败 cp={cp_id} i={i}")
+                    return True
+            skip_open = False
+
+            logger.info(f"[{log_tag}] cp={cp_id} index={i} click=({xy[0]},{xy[1]})")
+            self.device_manager.click(int(xy[0]), int(xy[1]))
+            completed_this_point = False
+            while True:
+                self.wait_map()
+                in_world_or_battle = self._in_world_or_battle()
+                logger.info(f"[{log_tag}] cp={cp_id} index={i} in_world_or_battle={in_world_or_battle}")
+                if in_world_or_battle:
+                    if not in_world_or_battle["app_alive"]:
+                        if not self.wait_check_mode_state_ok():
+                            return True
+                        logger.info(f"[{log_tag}] cp={cp_id} index={i} 回退: app 恢复后重开图并重复点击")
+                        break
+                    if not in_world_or_battle["is_battle_success"]:
+                        logger.info(f"[{log_tag}] cp={cp_id} index={i} 战斗失败")
+                        self.state_data.step = Step.BATTLE_FAIL
+                        return True
+                    if in_world_or_battle["in_world"]:
+                        logger.info(f"[{log_tag}] cp={cp_id} index={i} 在城镇中")
+                        completed_this_point = True
+                        break
+                    if in_world_or_battle["in_battle"]:
+                        logger.info(f"[{log_tag}] cp={cp_id} index={i} 遇敌战斗过")
+                        time.sleep(self.wait_map_time)
+                        logger.info(f"[{log_tag}] cp={cp_id} index={i} 回退: 战斗轮询后重开图并重复点击")
+                        break
+                if self.check_state(step, check_point):
+                    return True
+            if self.check_state(step, check_point):
+                return True
+            if completed_this_point:
+                i += 1
+        self.wait_map()
+        self.world.open_minimap()
+        in_minimap = sleep_until(self.world.in_minimap, timeout=5)
+        if not in_minimap:
+            logger.error(f"[{log_tag}] 打开小地图失败(序列结束)")
+            return True
+        return False
+
+    def _ensure_checkpoint_layer_if_needed(self, check_point: CheckPoint, step: Step) -> bool:
+        """
+        If ``check_point`` belongs to a different logical map layer than ``self.current_layer_id``,
+        run current layer's exit_pos then target layer's entrance_pos (minimap clicks), then set current_layer_id.
+        Call with minimap already open (first sequence skips open once).
+        Returns True if caller should return from the current phase.
+        """
+        target = self._DEFAULT_MAP_LAYER_ID if check_point.layer is None else check_point.layer
+        if self.current_layer_id == target:
+            return False
+        cur_exit, _ = self._layer_exit_entrance(self.current_layer_id)
+        if self._run_minimap_xy_sequence(cur_exit, step, check_point, "layer_exit", skip_open_minimap_first=True):
+            return True
+        _, tgt_ent = self._layer_exit_entrance(target)
+        if self._run_minimap_xy_sequence(tgt_ent, step, check_point, "layer_entrance", skip_open_minimap_first=True):
+            return True
+        self.current_layer_id = target
+        return False
 
     def _performance_monitor(self, operation_name: str):
         """
@@ -318,6 +423,8 @@ class FengmoMode:
                     continue
                 self.state_data.turn_start()
                 self.state_data.step = Step.COLLECT_JUNK
+                
+
                 if self.state_data.step == Step.COLLECT_JUNK:
                     self._collect_junk_phase()
                 logger.info(f"[run]进入二阶段当前状态: {self.state_data.step}")
@@ -423,6 +530,9 @@ class FengmoMode:
                                     self.state_data.step = Step.FIND_BOX
                                     self.world.closeUI()
                                     return
+                                if self._ensure_checkpoint_layer_if_needed(check_point, Step.COLLECT_JUNK):
+                                    return
+                                in_minimap = sleep_until(self.world.in_minimap,timeout=5)
                                 logger.info(f"[collect_junk_phase]点击小地图: {check_point}")
                                 self.device_manager.click(check_point.pos[0], check_point.pos[1])
                             self.wait_map()
@@ -530,6 +640,8 @@ class FengmoMode:
             if check_point is None:
                 logger.error("[find_box_phase]check_point为None，需要排查")
                 raise Exception("[find_box_phase]check_point为None，需要排查")
+            if self._ensure_checkpoint_layer_if_needed(check_point, Step.FIND_BOX):
+                return
             logger.info(f"[find_box_phase]点击小地图找到的最近点位:{check_point.id} {check_point.pos}")
             self.device_manager.click(check_point.pos[0], check_point.pos[1])
             self.wait_map()
@@ -620,6 +732,8 @@ class FengmoMode:
                 if check_point is None:
                     logger.error("[find_boss_phase]check_point为None，需要排查")
                     raise Exception("[find_boss_phase]check_point为None，需要排查")
+                if self._ensure_checkpoint_layer_if_needed(check_point, Step.FIND_BOSS):
+                    return
                 logger.info(f"[find_boss_phase]点击小地图最近Boss的点: {check_point.pos}")
                 self.device_manager.click(check_point.pos[0], check_point.pos[1])
                 self.wait_map()

@@ -234,9 +234,16 @@ class World:
             (51, 65, '040D14', 1),
             (35, 64, 'FCFFFF', 1),
         ]
+        points_colors3 = [
+            (51, 63, 'FFFEFF', 1),
+            (52, 86, 'F7F5F8', 1),
+            (64, 642, 'F5F0F7', 1),
+        ]
         results = self.ocr_handler.match_point_color(image, points_colors1)
         if not results:
             results = self.ocr_handler.match_point_color(image, points_colors2)
+        if not results:
+            results = self.ocr_handler.match_point_color(image, points_colors3)
         if results:
             logger.debug("检测到在小地图中")
             return True
