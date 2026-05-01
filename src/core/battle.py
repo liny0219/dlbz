@@ -701,6 +701,9 @@ class Battle:
             self.device_manager.click(*role_pos)
             logger.info(f"[Battle] 点击配置角色{role_id} {role_pos}")
             time.sleep(self.wait_time + self.wait_ui_time)
+        if is_sp:
+            self.device_manager.click(266,26)
+            time.sleep(self.wait_time + self.wait_ui_time)
         return True
 
     def cast_skill(self, index: int = 1,skill: int = 1, bp: int = 0, role_id: int = 0,  x: int = 0, y: int = 0,
